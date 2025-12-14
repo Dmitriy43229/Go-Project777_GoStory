@@ -1,0 +1,49 @@
+{
+    "go.gopath": "",
+    "go.goroot": "",
+    "go.useLanguageServer": true,
+    "go.toolsManagement.autoUpdate": true,
+    "go.formatTool": "gofmt",
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "file",
+    "go.testOnSave": false,
+    "go.testTimeout": "30s",
+    "go.coverOnSave": false,
+    "go.buildOnSave": "package",
+    "go.vetOnSave": "package",
+    "go.autocompleteUnimportedPackages": true,
+    "go.useCodeSnippetsOnFunctionSuggest": true,
+    "gopls": {
+        "ui.diagnostic.analyses": {
+            "unusedparams": false,
+            "unusedwrite": true,
+            "fieldalignment": false,
+            "shadow": true
+        },
+        "codelenses": {
+            "generate": true,
+            "gc_details": false,
+            "test": true,
+            "tidy": true
+        },
+        "hints": {
+            "assignVariableTypes": true,
+            "compositeLiteralFields": true,
+            "constantValues": true,
+            "parameterNames": true,
+            "rangeVariableTypes": true
+        },
+        "staticcheck": true,
+        "completeUnimported": true,
+        "deepCompletion": true
+    },
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
+        "editor.suggest.snippetsPreventQuickSuggestions": false
+    },
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000
+}

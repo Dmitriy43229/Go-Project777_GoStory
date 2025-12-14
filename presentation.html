@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Презентация проекта - UserManager Pro</title>
+    <style>
+        /* Темно-синий градиентный фон как на главной */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg,
+                    #0a192f 0%,
+                    /* Темно-синий */
+                    #112240 25%,
+                    /* Синий средней глубины */
+                    #1a365d 50%,
+                    /* Насыщенный синий */
+                    #2d3748 75%,
+                    /* Темно-серо-синий */
+                    #0a192f 100%
+                    /* Возврат к темно-синему */
+                );
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
+            margin: 0;
+            padding: 0;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Звездное небо как на главной */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 5s infinite;
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.2;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Контент поверх фона */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Навигация */
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .nav-item {
+            color: #bbdefb;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            transition: all 0.3s;
+            font-weight: 500;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Слайды презентации */
+        .presentation {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .slide {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(15px);
+            border-radius: 25px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(50px);
+            animation: slideUp 0.8s ease forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Технологии сетка */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tech-item:hover {
+            transform: translateY(-10px);
+            background: rgba(96, 165, 250, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .tech-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Хронология */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin: 2rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+            border-radius: 2px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border-left: 4px solid #60a5fa;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.5rem;
+            top: 2rem;
+            width: 20px;
+            height: 20px;
+            background: #60a5fa;
+            border-radius: 50%;
+            border: 4px solid #0a192f;
+            box-shadow: 0 0 0 4px #60a5fa;
+        }
+
+        /* Код сниппеты */
+        .code-snippet {
+            background: rgba(0, 0, 0, 0.3);
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 15px;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Кнопки навигации */
+        .presentation-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .action-button {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .action-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+        }
+
+        .action-button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .action-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Особенности */
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Переключатель темы */
+        .theme-toggle-container {
+            margin-left: 1rem;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: #bbdefb;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .theme-icon {
+            font-size: 1.2rem;
+        }
+
+        .theme-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Футер */
+        .footer {
+            margin-top: 4rem;
+            padding: 3rem 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: #bbdefb;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: white;
+        }
+
+        /* Светлая тема для презентации */
+        body.light-theme {
+            background: linear-gradient(135deg,
+                    #f8fafc 0%,
+                    #f1f5f9 25%,
+                    #e2e8f0 50%,
+                    #cbd5e1 75%,
+                    #f8fafc 100%);
+            color: #334155;
+        }
+
+        body.light-theme .slide {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .slide h2 {
+            background: linear-gradient(45deg, #1d4ed8, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.light-theme .tech-item {
+            background: rgba(255, 255, 255, 0.9);
+            color: #334155;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .tech-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+
+        body.light-theme .timeline-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 4px solid #3b82f6;
+        }
+
+        body.light-theme .timeline::before {
+            background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+        }
+
+        body.light-theme .timeline-item::before {
+            background: #3b82f6;
+            border-color: #f8fafc;
+        }
+
+        body.light-theme .code-snippet {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .feature-item {
+            background: rgba(0, 0, 0, 0.05);
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .nav-item {
+            color: #64748b;
+        }
+
+        body.light-theme .nav-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #334155;
+        }
+
+        body.light-theme .nav-item.active {
+            color: white;
+        }
+
+        body.light-theme .action-button.secondary {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #334155;
+        }
+
+        body.light-theme .footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .footer-link {
+            color: #64748b;
+        }
+
+        body.light-theme .footer-link:hover {
+            color: #334155;
+        }
+
+        body.light-theme .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #64748b;
+        }
+
+        /* Для звезд в светлой теме */
+        body.light-theme .star {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Дополнительная информация */
+        .info-box {
+            background: rgba(96, 165, 250, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #60a5fa;
+        }
+
+        .stats-box {
+            background: rgba(52, 211, 153, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #34d399;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .presentation {
+                padding: 1rem;
+            }
+
+            .slide {
+                padding: 2rem;
+            }
+
+            .slide h2 {
+                font-size: 2rem;
+            }
+
+            .tech-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-menu {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .slide {
+                padding: 1.5rem;
+            }
+
+            .slide h2 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Звездное небо -->
+    <div class="stars" id="stars"></div>
+
+    <div class="container">
+        <!-- Навигация -->
+        <div class="nav-menu">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                Главная
+            </a>
+            <a href="/about" class="nav-item">
+                <span class="nav-icon">📖</span>
+                О проекте
+            </a>
+            <a href="/presentation" class="nav-item active">
+                <span class="nav-icon">🎬</span>
+                Презентация
+            </a>
+            <div class="theme-toggle-container">
+                <button class="theme-toggle" id="themeToggle" title="Сменить тему">
+                    <span class="theme-icon">🌙</span>
+                    <span class="theme-text">Темная тема</span>
+                </button>
+            </div>
+        </div>
+
+        <main class="presentation">
+            <!-- Слайд 1: Заголовок -->
+            <div class="slide" style="animation-delay: 0.1s">
+                <h1 style="font-size: 3rem; text-align: center; margin-bottom: 1rem;">🎬 Презентация проекта</h1>
+                <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 1.5rem;">UserManager Pro</h2>
+                <p style="text-align: center; font-size: 1.2rem; max-width: 800px; margin: 0 auto;">
+                    Современная система управления пользователями с искусственным интеллектом,
+                    аналитикой в реальном времени и безупречным интерфейсом
+                </p>
+
+                <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                    <span
+                        style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600;">Go
+                        + JavaScript</span>
+                    <span
+                        style="background: rgba(255, 255, 255, 0.1); color: inherit; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600;">REST
+                        API</span>
+                    <span
+                        style="background: rgba(255, 255, 255, 0.1); color: inherit; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600;">Modern
+                        UI</span>
+                    <span
+                        style="background: rgba(255, 255, 255, 0.1); color: inherit; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600;">100%
+                        Responsive</span>
+                </div>
+            </div>
+
+            <!-- Слайд 2: Запуск проекта -->
+            <div class="slide" style="animation-delay: 0.2s">
+                <h2>🚀 Быстрый старт</h2>
+                <p>Запустите проект за 3 простых шага:</p>
+
+                <div class="info-box">
+                    <h3 style="margin-bottom: 1rem;">📋 Установка и запуск:</h3>
+                    <div class="code-snippet">
+                        <span style="color: #60a5fa"># 1. Клонирование репозитория</span><br>
+                        <span style="color: #bbdefb">$ git clone
+                            https://github.com/your-repo/user-manager</span><br><br>
+
+                        <span style="color: #60a5fa"># 2. Переход в директорию проекта</span><br>
+                        <span style="color: #bbdefb">$ cd user-manager</span><br><br>
+
+                        <span style="color: #60a5fa"># 3. Запуск сервера</span><br>
+                        <span style="color: #bbdefb">$ go run main.go</span><br><br>
+
+                        <span style="color: #34d399"># Сервер запускается на http://localhost:8068</span>
+                    </div>
+                </div>
+
+                <div class="stats-box">
+                    <h3 style="margin-bottom: 1rem;">📊 Технические характеристики:</h3>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #4ade80;">&lt;50ms</div>
+                            <div>Время ответа API</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #60a5fa;">100%</div>
+                            <div>Доступность</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #fbbf24;">24/7</div>
+                            <div>Режим работы</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #f87171;">0</div>
+                            <div>Зависимостей</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Слайд 3: Архитектура -->
+            <div class="slide" style="animation-delay: 0.3s">
+                <h2>⚙️ Архитектура проекта</h2>
+                <p>Мощная и масштабируемая архитектура:</p>
+
+                <div class="tech-grid">
+                    <div class="tech-item">
+                        <span class="tech-icon">🐹</span>
+                        <h3>Go Backend</h3>
+                        <p>Чистый Go без фреймворков</p>
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">
+                            • Высокая производительность<br>
+                            • Минимальные зависимости<br>
+                            • Встроенная стандартная библиотека
+                        </div>
+                    </div>
+
+                    <div class="tech-item">
+                        <span class="tech-icon">🎨</span>
+                        <h3>Modern Frontend</h3>
+                        <p>HTML5, CSS3, ES6+</p>
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">
+                            • Адаптивный дизайн<br>
+                            • Плавные анимации<br>
+                            • Современные API
+                        </div>
+                    </div>
+
+                    <div class="tech-item">
+                        <span class="tech-icon">🔧</span>
+                        <h3>REST API</h3>
+                        <p>JSON API с валидацией</p>
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">
+                            • Чистая архитектура<br>
+                            • Полная документация<br>
+                            • Защита от XSS
+                        </div>
+                    </div>
+
+                    <div class="tech-item">
+                        <span class="tech-icon">📱</span>
+                        <h3>Responsive</h3>
+                        <p>Адаптивный дизайн</p>
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">
+                            • Mobile First<br>
+                            • Все разрешения<br>
+                            • Touch friendly
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Слайд 4: Особенности -->
+            <div class="slide" style="animation-delay: 0.4s">
+                <h2>✨ Ключевые особенности</h2>
+
+                <div class="feature-list">
+                    <div class="feature-item">✅ Полный CRUD функционал</div>
+                    <div class="feature-item">✅ Валидация форм</div>
+                    <div class="feature-item">✅ Анимации и переходы</div>
+                    <div class="feature-item">✅ Уведомления в реальном времени</div>
+                    <div class="feature-item">✅ Адаптивный дизайн</div>
+                    <div class="feature-item">✅ Защита от XSS</div>
+                    <div class="feature-item">✅ Ленивая загрузка</div>
+                    <div class="feature-item">✅ Статистика в реальном времени</div>
+                    <div class="feature-item">✅ Темная/светлая тема</div>
+                    <div class="feature-item">✅ Графики и аналитика</div>
+                    <div class="feature-item">✅ Поиск и фильтрация</div>
+                    <div class="feature-item">✅ Экспорт данных</div>
+                </div>
+
+                <div class="info-box">
+                    <h3 style="margin-bottom: 1rem;">🎯 Уникальные возможности:</h3>
+                    <ul style="padding-left: 1.5rem;">
+                        <li>Интеллектуальный поиск пользователей</li>
+                        <li>Детальная аналитика активности</li>
+                        <li>Автоматическое определение доменов email</li>
+                        <li>Система уведомлений с типами (success, error, warning)</li>
+                        <li>Поддержка темы в реальном времени без перезагрузки</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Слайд 5: Этапы разработки -->
+            <div class="slide" style="animation-delay: 0.5s">
+                <h2>📈 Этапы разработки</h2>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h3 style="margin-bottom: 0.5rem;">1. Проектирование архитектуры</h3>
+                        <p>Определение стека технологий и структуры проекта. Создание wireframes и прототипов
+                            интерфейса.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h3 style="margin-bottom: 0.5rem;">2. Разработка Go бекенда</h3>
+                        <p>Создание REST API с валидацией и обработкой ошибок. Реализация CRUD операций и бизнес-логики.
+                        </p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h3 style="margin-bottom: 0.5rem;">3. Разработка фронтенда</h3>
+                        <p>Создание интерфейса с современными эффектами. Интеграция с API, реализация анимаций и
+                            взаимодействия.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h3 style="margin-bottom: 0.5rem;">4. Тестирование и отладка</h3>
+                        <p>Тестирование всех сценариев использования. Оптимизация производительности и исправление
+                            ошибок.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h3 style="margin-bottom: 0.5rem;">5. Деплой и документация</h3>
+                        <p>Развертывание приложения, создание документации API и пользовательской документации.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Слайд 6: API Документация -->
+            <div class="slide" style="animation-delay: 0.6s">
+                <h2>📚 API Документация</h2>
+
+                <div class="info-box">
+                    <h3 style="margin-bottom: 1rem;">🔧 Доступные эндпоинты:</h3>
+
+                    <div
+                        style="background: rgba(0, 0, 0, 0.2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                            <span
+                                style="background: #34d399; color: white; padding: 0.25rem 0.75rem; border-radius: 5px; font-weight: 600;">GET</span>
+                            <code>/api/users</code>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem;">Получить список всех пользователей</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(0, 0, 0, 0.2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                            <span
+                                style="background: #3b82f6; color: white; padding: 0.25rem 0.75rem; border-radius: 5px; font-weight: 600;">POST</span>
+                            <code>/api/users</code>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem;">Создать нового пользователя</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(0, 0, 0, 0.2); padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                            <span
+                                style="background: #f59e0b; color: white; padding: 0.25rem 0.75rem; border-radius: 5px; font-weight: 600;">PUT</span>
+                            <code>/api/users/{id}</code>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem;">Обновить пользователя</p>
+                    </div>
+
+                    <div style="background: rgba(0, 0, 0, 0.2); padding: 1rem; border-radius: 10px;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                            <span
+                                style="background: #ef4444; color: white; padding: 0.25rem 0.75rem; border-radius: 5px; font-weight: 600;">DELETE</span>
+                            <code>/api/users/{id}</code>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem;">Удалить пользователя</p>
+                    </div>
+                </div>
+
+                <div class="code-snippet">
+                    <span style="color: #60a5fa">// Пример запроса на создание пользователя</span><br>
+                    <span style="color: #bbdefb">POST /api/users</span><br>
+                    <span style="color: #60a5fa">Content-Type: application/json</span><br><br>
+                    <span style="color: #fbbf24">{</span><br>
+                    <span style="color: #fbbf24"> </span><span style="color: #34d399">"name"</span><span
+                        style="color: #fbbf24">: </span><span style="color: #f87171">"Иван Петров"</span><span
+                        style="color: #fbbf24">,</span><br>
+                    <span style="color: #fbbf24"> </span><span style="color: #34d399">"email"</span><span
+                        style="color: #fbbf24">: </span><span style="color: #f87171">"ivan@example.com"</span><br>
+                    <span style="color: #fbbf24">}</span>
+                </div>
+            </div>
+
+            <!-- Слайд 7: Будущее развитие -->
+            <div class="slide" style="animation-delay: 0.7s">
+                <h2>🚀 Планы на будущее</h2>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                    <div
+                        style="background: rgba(59, 130, 246, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #3b82f6;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">📱 Мобильное приложение</h3>
+                        <p>Разработка нативных приложений для iOS и Android с React Native</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(139, 92, 246, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #8b5cf6;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">🤖 AI-ассистент</h3>
+                        <p>Интеграция искусственного интеллекта для анализа данных и предсказаний</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(34, 211, 238, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #22d3ee;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">🌍 Мультиязычность</h3>
+                        <p>Поддержка нескольких языков интерфейса (EN, RU, DE, FR, ES)</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(16, 185, 129, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #10b981;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">🔗 API маркетплейс</h3>
+                        <p>Создание платформы для интеграций с другими сервисами</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(245, 158, 11, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #f59e0b;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">📊 Расширенная аналитика</h3>
+                        <p>Глубокий анализ поведения пользователей и генерация отчетов</p>
+                    </div>
+
+                    <div
+                        style="background: rgba(239, 68, 68, 0.1); padding: 1.5rem; border-radius: 15px; border-left: 4px solid #ef4444;">
+                        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">🔒 Улучшенная безопасность</h3>
+                        <p>Двухфакторная аутентификация и расширенные политики доступа</p>
+                    </div>
+                </div>
+
+                <div class="info-box" style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">📅 Дорожная карта развития:</h3>
+                    <ul style="padding-left: 1.5rem;">
+                        <li><strong>Q1 2025:</strong> Релиз версии 2.0 с улучшенным интерфейсом</li>
+                        <li><strong>Q2 2025:</strong> Добавление мобильного приложения</li>
+                        <li><strong>Q3 2025:</strong> Интеграция AI-ассистента</li>
+                        <li><strong>Q4 2025:</strong> Запуск API маркетплейса</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Навигация -->
+            <div class="presentation-nav">
+                <a href="/about" class="action-button secondary">
+                    ← Подробнее о проекте
+                </a>
+                <a href="/" class="action-button">
+                    На главную →
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">👥 UserManager Pro</div>
+            <div class="footer-links">
+                <a href="/" class="footer-link">Главная</a>
+                <a href="/about" class="footer-link">О проекте</a>
+                <a href="/presentation" class="footer-link">Презентация</a>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 1rem;">
+                © 2024 UserManager Pro. Все права защищены. Демо версия 1.0
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Создание звездного неба
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            starsContainer.innerHTML = '';
+
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+
+                const size = Math.random() * 3 + 1;
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const duration = Math.random() * 10 + 5;
+                const delay = Math.random() * 5;
+
+                star.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${x}%;
+                    top: ${y}%;
+                    animation-delay: ${delay}s;
+                    animation-duration: ${duration}s;
+                `;
+
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Переключение темы
+        function initThemeToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle?.querySelector('.theme-icon');
+            const themeText = themeToggle?.querySelector('.theme-text');
+
+            if (!themeToggle) return;
+
+            // Проверяем сохраненную тему
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                if (themeIcon) themeIcon.textContent = '☀️';
+                if (themeText) themeText.textContent = 'Светлая тема';
+            }
+
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('light-theme');
+
+                const isLight = document.body.classList.contains('light-theme');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+                if (themeIcon) {
+                    themeIcon.textContent = isLight ? '☀️' : '🌙';
+                }
+                if (themeText) {
+                    themeText.textContent = isLight ? 'Светлая тема' : 'Темная тема';
+                }
+
+                // Обновляем звезды
+                createStars();
+            });
+        }
+
+        // Анимации при скролле
+        function initScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.slide').forEach(slide => {
+                observer.observe(slide);
+            });
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function () {
+            initThemeToggle();
+            createStars();
+            initScrollAnimations();
+
+            window.addEventListener('resize', createStars);
+
+            // Добавляем параллакс эффект для слайдов
+            window.addEventListener('scroll', function () {
+                const scrolled = window.pageYOffset;
+                const slides = document.querySelectorAll('.slide');
+
+                slides.forEach((slide, index) => {
+                    const rate = scrolled * 0.05 * (index + 1);
+                    slide.style.transform = `translateY(${rate}px)`;
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

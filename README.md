@@ -76,10 +76,10 @@
 
 ```bash
 # 1. Клонирование репозитория
-git clone https://github.com/YOUR-USERNAME/user-manager.git
+git clone https://github.com/Dmitriy43229/Go-Project777_GoStory.git
 
 # 2. Переход в директорию проекта
-cd user-manager
+cd Go-Project777_GoStory
 
 # 3. Запуск сервера
 go run main.go

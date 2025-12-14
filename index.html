@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UserManager - Современный CRM</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Подключаем Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Темно-синий градиентный фон */
         body {
@@ -677,9 +679,9 @@
                     Запустить демо
                 </button>
 
-                <button class="action-button secondary" onclick="showStats()">
+                <button class="action-button secondary" onclick="refreshCharts()">
                     <span>📊</span>
-                    Показать статистику
+                    Обновить графики
                 </button>
 
                 <a href="/presentation" class="action-button secondary">
@@ -744,21 +746,21 @@
 
             <div class="charts-container">
                 <div class="chart-card">
-                    <h3 class="chart-title">📈 Активность пользователей</h3>
+                    <h3 class="chart-title">📈 Активность пользователей (последние 7 дней)</h3>
                     <div class="chart-wrapper">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3 class="chart-title">🎯 Распределение по доменам</h3>
+                    <h3 class="chart-title">🎯 Распределение по доменам email</h3>
                     <div class="chart-wrapper">
                         <canvas id="domainChart"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3 class="chart-title">📅 Новые пользователи</h3>
+                    <h3 class="chart-title">📅 Новые пользователи по месяцам (2025 год)</h3>
                     <div class="chart-wrapper">
                         <canvas id="growthChart"></canvas>
                     </div>
@@ -833,7 +835,7 @@
             </div>
 
             <div style="color: #94a3b8; font-size: 0.9rem;">
-                © 2024 UserManager Pro. Все права защищены.
+                © 2025 UserManager Pro. Все права защищены.
             </div>
         </footer>
     </div>
@@ -886,6 +888,13 @@
     <script src="script.js"></script>
 
     <script>
+        // Глобальные переменные для графиков
+        let charts = {
+            activity: null,
+            domain: null,
+            growth: null
+        };
+
         // Создание звездного неба
         function createStars() {
             const starsContainer = document.getElementById('stars');
@@ -944,157 +953,11 @@
                 }
 
                 // Обновляем графики при смене темы
-                if (window.charts) {
-                    setTimeout(refreshCharts, 100);
-                }
+                setTimeout(refreshCharts, 100);
 
                 // Обновляем звезды
                 createStars();
             });
-        }
-
-        // Графики статистики
-        let charts = {};
-
-        function initCharts() {
-            // Ждем загрузки Chart.js
-            if (typeof Chart === 'undefined') {
-                console.log('Chart.js не загружен');
-                return;
-            }
-
-            // График активности
-            const activityCtx = document.getElementById('activityChart')?.getContext('2d');
-            if (activityCtx) {
-                charts.activity = new Chart(activityCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                        datasets: [{
-                            label: 'Новые пользователи',
-                            data: [12, 19, 8, 15, 22, 18, 25],
-                            borderColor: '#60a5fa',
-                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: getChartTextColor()
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: getChartGridColor()
-                                },
-                                ticks: {
-                                    color: getChartTextColor()
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: getChartGridColor()
-                                },
-                                ticks: {
-                                    color: getChartTextColor()
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Круговая диаграмма доменов
-            const domainCtx = document.getElementById('domainChart')?.getContext('2d');
-            if (domainCtx) {
-                charts.domain = new Chart(domainCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['gmail.com', 'mail.ru', 'yandex.ru', 'outlook.com', 'Другие'],
-                        datasets: [{
-                            data: [35, 25, 20, 15, 5],
-                            backgroundColor: [
-                                '#60a5fa',
-                                '#34d399',
-                                '#fbbf24',
-                                '#f87171',
-                                '#a78bfa'
-                            ],
-                            borderWidth: 1,
-                            borderColor: getChartBorderColor()
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    color: getChartTextColor()
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // График роста
-            const growthCtx = document.getElementById('growthChart')?.getContext('2d');
-            if (growthCtx) {
-                charts.growth = new Chart(growthCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
-                        datasets: [{
-                            label: 'Всего пользователей',
-                            data: [50, 75, 100, 125, 150, 200],
-                            backgroundColor: '#34d399',
-                            borderColor: '#10b981',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: getChartTextColor()
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: getChartGridColor()
-                                },
-                                ticks: {
-                                    color: getChartTextColor()
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: getChartGridColor()
-                                },
-                                ticks: {
-                                    color: getChartTextColor()
-                                }
-                            }
-                        }
-                    }
-                });
-            }
         }
 
         // Вспомогательные функции для цветов графиков
@@ -1110,52 +973,398 @@
             return document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
         }
 
-        // Обновление графиков
-        function refreshCharts() {
-            if (!charts.activity) return;
-
-            // Обновляем данные с сервера
-            fetch('/api/users')
-                .then(response => response.json())
-                .then(users => {
-                    updateChartsWithRealData(users);
-                })
-                .catch(error => {
-                    console.error('Ошибка загрузки данных для графиков:', error);
-                });
+        // Инициализация графиков
+        function initCharts() {
+            // Сначала получаем данные с сервера
+            refreshCharts();
         }
 
-        function updateChartsWithRealData(users) {
-            if (!users || !charts.activity) return;
+        // Обновление всех графиков с реальными данными
+        async function refreshCharts() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
 
-            // Обновляем данные на графиках
-            const totalUsers = users.length;
+                // Обновляем статистику пользователей
+                document.getElementById('totalUsers').textContent = users.length;
 
-            // Обновляем круговую диаграмму
-            if (charts.domain) {
-                const domainStats = analyzeEmailDomains(users);
-                charts.domain.data.datasets[0].data = domainStats.data;
-                charts.domain.update();
-            }
+                // Обновляем все графики
+                updateActivityChart(users);
+                updateDomainChart(users);
+                updateGrowthChart(users);
 
-            // Обновляем график роста
-            if (charts.growth) {
-                const growthData = calculateGrowthData(users);
-                charts.growth.data.datasets[0].data = growthData;
-                charts.growth.update();
+                showNotification('Графики обновлены', 'success');
+            } catch (error) {
+                console.error('Ошибка загрузки данных для графиков:', error);
+                showNotification('Ошибка загрузки данных', 'error');
             }
         }
 
-        function analyzeEmailDomains(users) {
-            const domains = {};
+        // График активности (последние 7 дней)
+        function updateActivityChart(users) {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+
+            // Генерируем данные за последние 7 дней
+            const last7Days = [];
+            const activityData = [];
+
+            // Создаем объект для подсчета пользователей по датам
+            const userCountByDate = {};
+
+            // Получаем текущую дату
+            const today = new Date();
+
+            // Инициализируем последние 7 дней
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateString = date.toLocaleDateString('ru-RU', { weekday: 'short' });
+                last7Days.push(dateString);
+                userCountByDate[date.toDateString()] = 0;
+            }
+
+            // Подсчитываем пользователей по дате создания
             users.forEach(user => {
-                const domain = user.email.split('@')[1];
-                domains[domain] = (domains[domain] || 0) + 1;
+                if (user.created_at) {
+                    const userDate = new Date(user.created_at);
+                    const userDateString = userDate.toDateString();
+
+                    // Проверяем, попадает ли дата в последние 7 дней
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 6);
+
+                    if (userDate >= weekAgo && userDate <= today) {
+                        if (userCountByDate[userDateString] !== undefined) {
+                            userCountByDate[userDateString]++;
+                        }
+                    }
+                }
             });
 
+            // Формируем данные для графика
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                activityData.push(userCountByDate[date.toDateString()] || 0);
+            }
+
+            if (charts.activity) {
+                charts.activity.destroy();
+            }
+
+            charts.activity = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'Новые пользователи',
+                        data: activityData,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#60a5fa',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: getChartTextColor(),
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            titleColor: getChartTextColor(),
+                            bodyColor: getChartTextColor(),
+                            callbacks: {
+                                label: function (context) {
+                                    return `Новых пользователей: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: getChartGridColor()
+                            },
+                            ticks: {
+                                color: getChartTextColor(),
+                                stepSize: 1,
+                                precision: 0
+                            },
+                            title: {
+                                display: true,
+                                text: 'Количество',
+                                color: getChartTextColor()
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: getChartGridColor()
+                            },
+                            ticks: {
+                                color: getChartTextColor()
+                            },
+                            title: {
+                                display: true,
+                                text: 'Дни недели',
+                                color: getChartTextColor()
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // Круговая диаграмма доменов email
+        function updateDomainChart(users) {
+            const ctx = document.getElementById('domainChart').getContext('2d');
+
+            // Анализируем домены email
+            const domainStats = analyzeEmailDomains(users);
+
+            if (charts.domain) {
+                charts.domain.destroy();
+            }
+
+            charts.domain = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: domainStats.labels,
+                    datasets: [{
+                        data: domainStats.data,
+                        backgroundColor: [
+                            '#60a5fa',
+                            '#34d399',
+                            '#fbbf24',
+                            '#f87171',
+                            '#a78bfa',
+                            '#f472b6',
+                            '#8b5cf6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: getChartBorderColor(),
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: getChartTextColor(),
+                                font: {
+                                    size: 11
+                                },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            titleColor: getChartTextColor(),
+                            bodyColor: getChartTextColor(),
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1000
+                    }
+                }
+            });
+        }
+
+        // График роста по месяцам (весь 2025 год)
+        function updateGrowthChart(users) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+
+            // Месяцы всего 2025 года
+            const monthNames = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+
+            // Инициализируем массив для подсчета пользователей по месяцам
+            const usersByMonth = new Array(12).fill(0);
+            const currentYear = 2025; // Текущий год
+
+            // Подсчитываем пользователей по месяцам за текущий год
+            users.forEach(user => {
+                if (user.created_at) {
+                    const userDate = new Date(user.created_at);
+                    const userYear = userDate.getFullYear();
+                    const userMonth = userDate.getMonth(); // 0-11
+
+                    if (userYear === currentYear) {
+                        usersByMonth[userMonth]++;
+                    }
+                }
+            });
+
+            // Рассчитываем кумулятивные значения (нарастающий итог)
+            const cumulativeData = [];
+            let cumulative = 0;
+
+            for (let i = 0; i < 12; i++) {
+                cumulative += usersByMonth[i];
+                cumulativeData.push(cumulative);
+            }
+
+            if (charts.growth) {
+                charts.growth.destroy();
+            }
+
+            charts.growth = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthNames,
+                    datasets: [{
+                        label: 'Всего пользователей',
+                        data: cumulativeData,
+                        backgroundColor: monthNames.map((month, index) => {
+                            // Выделяем текущий месяц (Декабрь)
+                            const currentMonth = new Date().getMonth();
+                            return index === currentMonth ? '#fbbf24' : '#34d399';
+                        }),
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverBackgroundColor: monthNames.map((month, index) => {
+                            const currentMonth = new Date().getMonth();
+                            return index === currentMonth ? '#f59e0b' : '#10b981';
+                        })
+                    }, {
+                        label: 'Новых в месяц',
+                        data: usersByMonth,
+                        type: 'line',
+                        borderColor: '#f87171',
+                        backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#f87171',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: getChartTextColor(),
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            titleColor: getChartTextColor(),
+                            bodyColor: getChartTextColor(),
+                            callbacks: {
+                                label: function (context) {
+                                    if (context.datasetIndex === 0) {
+                                        return `Всего пользователей: ${context.raw}`;
+                                    } else {
+                                        return `Новых в этом месяце: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: getChartGridColor()
+                            },
+                            ticks: {
+                                color: getChartTextColor(),
+                                stepSize: Math.ceil(cumulative / 10) || 1
+                            },
+                            title: {
+                                display: true,
+                                text: 'Количество пользователей',
+                                color: getChartTextColor()
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: getChartGridColor()
+                            },
+                            ticks: {
+                                color: getChartTextColor(),
+                                maxRotation: 45
+                            },
+                            title: {
+                                display: true,
+                                text: 'Месяцы 2025 года',
+                                color: getChartTextColor()
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // Анализ доменов email
+        function analyzeEmailDomains(users) {
+            const domains = {};
+
+            users.forEach(user => {
+                if (user.email && user.email.includes('@')) {
+                    const domain = user.email.split('@')[1];
+                    domains[domain] = (domains[domain] || 0) + 1;
+                }
+            });
+
+            // Сортируем по количеству
             const sorted = Object.entries(domains)
                 .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
+                .slice(0, 7); // Берем топ-7 доменов
+
+            // Если доменов меньше 7, добавляем "Другие"
+            if (sorted.length < 7) {
+                const otherCount = users.length - sorted.reduce((sum, d) => sum + d[1], 0);
+                if (otherCount > 0) {
+                    sorted.push(['Другие', otherCount]);
+                }
+            }
 
             return {
                 labels: sorted.map(d => d[0]),
@@ -1163,18 +1372,15 @@
             };
         }
 
-        function calculateGrowthData(users) {
-            // Простая симуляция роста (можно заменить реальными данными)
-            return [10, 25, 40, 60, 85, users.length];
-        }
-
+        // Экспорт данных графиков
         function exportCharts() {
-            // Экспорт данных графиков в JSON
             const chartData = {
                 activity: charts.activity?.data,
                 domains: charts.domain?.data,
                 growth: charts.growth?.data,
-                exportedAt: new Date().toISOString()
+                exportedAt: new Date().toISOString(),
+                totalUsers: document.getElementById('totalUsers').textContent,
+                currentYear: 2025
             };
 
             const dataStr = JSON.stringify(chartData, null, 2);
@@ -1197,11 +1403,8 @@
             initThemeToggle();
             loadUsers();
 
-            // Загружаем Chart.js динамически
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            script.onload = initCharts;
-            document.head.appendChild(script);
+            // Инициализируем графики после загрузки пользователей
+            setTimeout(initCharts, 1000);
 
             // Убираем скелетоны через 2 секунды
             setTimeout(() => {
@@ -1210,13 +1413,6 @@
                     setTimeout(() => el.remove(), 500);
                 });
             }, 2000);
-
-            // Обновляем графики при загрузке пользователей
-            const originalLoadUsers = window.loadUsers;
-            window.loadUsers = async function () {
-                await originalLoadUsers();
-                setTimeout(refreshCharts, 500);
-            };
         });
 
         // Глобальные функции
@@ -1239,6 +1435,9 @@
                 showNotification('Пользователь успешно добавлен!', 'success');
                 closeModal();
                 loadUsers();
+
+                // Обновляем графики после добавления пользователя
+                setTimeout(refreshCharts, 500);
 
                 // Сброс формы
                 document.getElementById('userForm').reset();
@@ -1275,7 +1474,14 @@
             const demoUsers = [
                 { name: "Александр Иванов", email: "alex@example.com" },
                 { name: "Екатерина Петрова", email: "kate@example.com" },
-                { name: "Дмитрий Сидоров", email: "dmitry@example.com" }
+                { name: "Дмитрий Сидоров", email: "dmitry@example.com" },
+                { name: "Мария Смирнова", email: "maria@mail.ru" },
+                { name: "Иван Кузнецов", email: "ivan@yandex.ru" },
+                { name: "Ольга Новикова", email: "olga@gmail.com" },
+                { name: "Сергей Морозов", email: "sergey@outlook.com" },
+                { name: "Анна Волкова", email: "anna@mail.ru" },
+                { name: "Павел Козлов", email: "pavel@gmail.com" },
+                { name: "Елена Захарова", email: "elena@yandex.ru" }
             ];
 
             showNotification('Добавляем демо пользователей...', 'info');
@@ -1283,20 +1489,17 @@
             for (const user of demoUsers) {
                 try {
                     await createUser(user);
+                    // Небольшая задержка между запросами
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 } catch (error) {
                     console.error('Ошибка:', error);
                 }
             }
 
             await loadUsers();
+            // Обновляем графики после добавления демо данных
+            setTimeout(refreshCharts, 1000);
             showNotification('Демо данные успешно добавлены!', 'success');
-        }
-
-        function showStats() {
-            const stats = document.getElementById('statsDisplay');
-            if (stats) {
-                stats.style.display = stats.style.display === 'none' ? 'block' : 'none';
-            }
         }
 
         // Базовые функции API
@@ -1357,6 +1560,15 @@
                     <div style="flex: 1;">
                         <div style="font-weight: 600; font-size: 1.2rem; color: white;">${user.name}</div>
                         <div style="color: #bbdefb; margin-bottom: 0.5rem;">${user.email}</div>
+                        <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Создан: ${new Date(user.created_at).toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })}
+                        </div>
                         <div style="display: flex; gap: 0.5rem;">
                             <button onclick="editUser(${user.id})" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
                                 Редактировать
@@ -1380,12 +1592,14 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: ${type === 'success' ? '#4ade80' : '#f87171'};
+                background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : '#60a5fa'};
                 color: white;
                 padding: 1rem 1.5rem;
                 border-radius: 10px;
                 z-index: 1000;
                 animation: slideIn 0.3s;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                font-weight: 500;
             `;
 
             document.body.appendChild(notification);
@@ -1394,6 +1608,51 @@
                 notification.style.animation = 'slideOut 0.3s';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
+        }
+
+        // Функции для работы с пользователями (из script.js)
+        async function editUser(id) {
+            try {
+                const user = await apiRequest(`${API_BASE}/${id}`);
+                openEditModal(user);
+            } catch (error) {
+                console.error('Failed to load user for editing:', error);
+                showNotification('Ошибка загрузки пользователя', 'error');
+            }
+        }
+
+        function openEditModal(user) {
+            document.getElementById('userName').value = user.name;
+            document.getElementById('userEmail').value = user.email;
+            document.getElementById('userForm').onsubmit = async function (e) {
+                e.preventDefault();
+                await updateUser(user.id, {
+                    name: document.getElementById('userName').value,
+                    email: document.getElementById('userEmail').value
+                });
+                closeModal();
+                loadUsers();
+                setTimeout(refreshCharts, 500);
+            };
+            openModal();
+        }
+
+        async function deleteUserConfirm(id) {
+            if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                return;
+            }
+
+            try {
+                await apiRequest(`${API_BASE}/${id}`, {
+                    method: 'DELETE',
+                });
+                showNotification('Пользователь успешно удален', 'success');
+                await loadUsers();
+                setTimeout(refreshCharts, 500);
+            } catch (error) {
+                console.error('Failed to delete user:', error);
+                showNotification('Ошибка удаления пользователя', 'error');
+            }
         }
 
         // Стили для анимаций

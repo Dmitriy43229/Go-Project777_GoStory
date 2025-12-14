@@ -1,0 +1,38 @@
+# ============================================
+# .gitignore для проекта UserManager
+# ============================================
+
+# Go специфичные файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# Config files with sensitive data
+.env
+config.local.json

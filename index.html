@@ -520,6 +520,7 @@
             position: relative;
             width: 100%;
             max-width: 400px;
+            margin-right: 1rem;
         }
 
         .search-container::before {
@@ -624,6 +625,25 @@
             color: #059669;
         }
 
+        /* Обновляем стили для кнопок поиска */
+        .users-section > div:first-of-type {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        /* Делаем кнопку "Обновить" вровень с поиском */
+        .users-section .action-button {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
         /* Адаптивность */
         @media (max-width: 768px) {
             .main-title {
@@ -656,6 +676,21 @@
             .mode-details {
                 flex-direction: column;
                 gap: 0.5rem;
+            }
+
+            /* Улучшаем адаптивность для мобильных */
+            .users-section > div:first-of-type {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-container {
+                margin-right: 0;
+                max-width: 100%;
+            }
+            
+            .users-section .action-button {
+                width: 100%;
             }
         }
 
@@ -813,7 +848,7 @@
         <!-- Управление пользователями -->
         <section class="users-section">
             <h2 class="section-title">👥 Управление пользователями</h2>
-            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
                 <div class="search-container">
                     <input type="text" id="searchInput" class="search-input" placeholder="Поиск пользователей..."
                         onkeyup="searchUsers(this.value)">
@@ -841,23 +876,58 @@
         <!-- Графики статистики -->
         <section class="centered-container">
             <h2 class="section-title">📊 Статистика и аналитика</h2>
+            
+            <!-- Кнопки управления графиками -->
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
+                <button class="action-button" onclick="refreshCharts()">
+                    <span>🔄</span>
+                    Обновить графики
+                </button>
+                <button class="action-button secondary" onclick="exportCharts()">
+                    <span>📥</span>
+                    Экспорт данных
+                </button>
+            </div>
+            
             <div class="charts-container">
+                <!-- График 1: Активность пользователей -->
                 <div class="chart-card">
-                    <h3 class="chart-title">📈 Активность пользователей</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 class="chart-title">📈 Активность пользователей (последние 7 дней)</h3>
+                        <div style="color: #60a5fa; font-weight: 600;">Навык пользователя</div>
+                    </div>
                     <div class="chart-wrapper">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
+
+                <!-- График 2: Распределение по доменам -->
                 <div class="chart-card">
-                    <h3 class="chart-title">🎯 Распределение по доменам</h3>
+                    <h3 class="chart-title">🎯 Распределение по доменам email</h3>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <div style="color: #34d399;">Количество пользователей</div>
+                        <div style="color: #fbbf24;">Время пользователей</div>
+                    </div>
                     <div class="chart-wrapper">
                         <canvas id="domainChart"></canvas>
                     </div>
+                    <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
+                        Имеющая 2025 год
+                    </div>
                 </div>
+
+                <!-- График 3: Новые пользователи -->
                 <div class="chart-card">
-                    <h3 class="chart-title">📅 Новые пользователи</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 class="chart-title">📅 Новые пользователи по месяцам (2025 год)</h3>
+                        <div style="color: #34d399; font-weight: 600;">Всего пользователей</div>
+                    </div>
                     <div class="chart-wrapper">
                         <canvas id="growthChart"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                        <div style="color: #f87171;">Новые и месяц</div>
+                        <div style="color: #94a3b8;">Месяцы 2025 года</div>
                     </div>
                 </div>
             </div>
@@ -1019,21 +1089,25 @@
                 return;
             }
 
-            // График активности
+            // График активности пользователей (7 дней)
             const activityCtx = document.getElementById('activityChart');
             if (activityCtx) {
                 charts.activity = new Chart(activityCtx, {
                     type: 'line',
                     data: {
-                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                        labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
                         datasets: [{
                             label: 'Активность',
-                            data: [12, 19, 8, 15, 22, 18, 25],
+                            data: [65, 59, 80, 81, 56, 55, 40],
                             borderColor: '#60a5fa',
                             backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                            borderWidth: 2,
+                            borderWidth: 3,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointBackgroundColor: '#60a5fa',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
                         }]
                     },
                     options: {
@@ -1042,6 +1116,11 @@
                         plugins: {
                             legend: {
                                 display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff'
                             }
                         },
                         scales: {
@@ -1051,7 +1130,15 @@
                                     color: 'rgba(255, 255, 255, 0.1)'
                                 },
                                 ticks: {
-                                    color: '#bbdefb'
+                                    color: '#bbdefb',
+                                    callback: function(value) {
+                                        return value + ' чел.';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Количество пользователей',
+                                    color: '#94a3b8'
                                 }
                             },
                             x: {
@@ -1071,17 +1158,20 @@
             const domainCtx = document.getElementById('domainChart');
             if (domainCtx) {
                 charts.domain = new Chart(domainCtx, {
-                    type: 'doughnut',
+                    type: 'pie',
                     data: {
-                        labels: ['example.com', 'gmail.com', 'mail.ru', 'yandex.ru'],
+                        labels: ['example.com', 'gmail.com', 'mail.ru', 'yandex.ru', 'company.com'],
                         datasets: [{
-                            data: [35, 25, 20, 20],
+                            data: [30, 25, 20, 15, 10],
                             backgroundColor: [
                                 '#60a5fa',
                                 '#34d399',
                                 '#fbbf24',
-                                '#f87171'
-                            ]
+                                '#f87171',
+                                '#a78bfa'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#0a192f'
                         }]
                     },
                     options: {
@@ -1089,9 +1179,19 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'bottom',
+                                position: 'right',
                                 labels: {
-                                    color: '#bbdefb'
+                                    color: '#bbdefb',
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw}%`;
+                                    }
                                 }
                             }
                         }
@@ -1099,21 +1199,17 @@
                 });
             }
 
-            // График роста с точными данными
+            // График роста пользователей по месяцам
             const growthCtx = document.getElementById('growthChart');
             if (growthCtx) {
-                const now = new Date();
-                const currentMonth = now.getMonth();
                 const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+                const currentMonth = new Date().getMonth();
                 
-                // Берем последние 6 месяцев
+                // Берем 6 последних месяцев
                 const lastSixMonths = [];
-                const monthData = [];
-                
                 for (let i = 5; i >= 0; i--) {
                     const monthIndex = (currentMonth - i + 12) % 12;
                     lastSixMonths.push(months[monthIndex]);
-                    monthData.push(Math.floor(Math.random() * 40) + 10);
                 }
                 
                 charts.growth = new Chart(growthCtx, {
@@ -1122,8 +1218,12 @@
                         labels: lastSixMonths,
                         datasets: [{
                             label: 'Новые пользователи',
-                            data: monthData,
-                            backgroundColor: '#34d399'
+                            data: [42, 38, 45, 50, 47, 52],
+                            backgroundColor: '#34d399',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            barPercentage: 0.6
                         }]
                     },
                     options: {
@@ -1148,7 +1248,13 @@
                                     color: 'rgba(255, 255, 255, 0.1)'
                                 },
                                 ticks: {
-                                    color: '#bbdefb'
+                                    color: '#bbdefb',
+                                    stepSize: 10
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Количество новых',
+                                    color: '#94a3b8'
                                 }
                             },
                             x: {
@@ -1166,50 +1272,132 @@
 
             // Сохраняем ссылку на глобальные графики
             window.charts = charts;
-            
-            // Запускаем обновление в реальном времени
-            setInterval(updateChartsInRealTime, 5000); // Обновляем каждые 5 секунд
-            updateChartsInRealTime(); // Первоначальное обновление
         }
 
-        // Обновление данных графиков в реальном времени
-        function updateChartsInRealTime() {
-            if (!charts.activity) return;
-            
-            // Обновляем график активности случайными данными
-            const newData = charts.activity.data.datasets[0].data.map(() => 
-                Math.floor(Math.random() * 30) + 5
-            );
-            charts.activity.data.datasets[0].data = newData;
-            charts.activity.update('quiet');
-            
-            // Обновляем третий график (рост) с точной датой
-            if (charts.growth) {
-                const now = new Date();
-                const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                const lastUpdateEl = document.getElementById('lastUpdate');
-                if (lastUpdateEl) {
-                    lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
-                }
-                
-                // Обновляем данные графика
-                const newGrowthData = charts.growth.data.datasets[0].data.map(() => 
-                    Math.floor(Math.random() * 40) + 10
-                );
-                charts.growth.data.datasets[0].data = newGrowthData;
-                charts.growth.update('quiet');
+        // Обновление графиков данными из системы
+        function refreshCharts() {
+            if (!window.getUsersForCharts) {
+                console.log('Функция getUsersForCharts не найдена');
+                showNotification('❌ Невозможно обновить графики: функция не найдена', 'error');
+                return;
             }
+
+            const users = window.getUsersForCharts();
+            if (!users || !Array.isArray(users)) {
+                console.log('Нет данных для графиков');
+                showNotification('❌ Нет данных для отображения', 'warning');
+                return;
+            }
+
+            // Показываем загрузку
+            showNotification('📊 Обновление графиков...', 'info');
+
+            // Обновляем данные для графиков
+            setTimeout(() => {
+                try {
+                    // Обновляем график активности (симуляция)
+                    if (charts.activity) {
+                        const newData = Array.from({length: 7}, () => Math.floor(Math.random() * 30) + 20);
+                        charts.activity.data.datasets[0].data = newData;
+                        charts.activity.update();
+                    }
+
+                    // Обновляем круговую диаграмму доменов
+                    if (charts.domain) {
+                        const domains = {};
+                        users.forEach(user => {
+                            if (user.email) {
+                                const domain = user.email.split('@')[1];
+                                domains[domain] = (domains[domain] || 0) + 1;
+                            }
+                        });
+
+                        // Преобразуем в проценты
+                        const totalUsers = users.length;
+                        const domainLabels = Object.keys(domains).slice(0, 5);
+                        const domainData = domainLabels.map(label => Math.round((domains[label] / totalUsers) * 100));
+                        
+                        // Если меньше 5 доменов, добавляем остальные как "другие"
+                        if (domainLabels.length < 5) {
+                            const otherPercent = 100 - domainData.reduce((a, b) => a + b, 0);
+                            if (otherPercent > 0) {
+                                domainLabels.push('другие');
+                                domainData.push(otherPercent);
+                            }
+                        }
+
+                        charts.domain.data.labels = domainLabels;
+                        charts.domain.data.datasets[0].data = domainData;
+                        charts.domain.update();
+                    }
+
+                    // Обновляем график роста
+                    if (charts.growth) {
+                        // Генерируем новые данные для роста
+                        const newGrowthData = Array.from({length: 6}, () => Math.floor(Math.random() * 20) + 35);
+                        charts.growth.data.datasets[0].data = newGrowthData;
+                        charts.growth.update();
+                    }
+
+                    // Обновляем время последнего обновления
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+                    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const lastUpdateEl = document.getElementById('lastUpdate');
+                    if (lastUpdateEl) {
+                        lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
+                    }
+
+                    showNotification('✅ Графики успешно обновлены', 'success');
+                    
+                } catch (error) {
+                    console.error('Ошибка обновления графиков:', error);
+                    showNotification('❌ Ошибка обновления графиков', 'error');
+                }
+            }, 500);
+        }
+
+        // Экспорт данных графиков
+        function exportCharts() {
+            if (!charts || Object.keys(charts).length === 0) {
+                showNotification('❌ Нет данных для экспорта', 'warning');
+                return;
+            }
+
+            const data = {
+                exportedAt: new Date().toISOString(),
+                charts: {}
+            };
+
+            // Собираем данные из всех графиков
+            Object.entries(charts).forEach(([name, chart]) => {
+                data.charts[name] = {
+                    labels: chart.data.labels,
+                    datasets: chart.data.datasets.map(dataset => ({
+                        label: dataset.label || '',
+                        data: dataset.data
+                    }))
+                };
+            });
+
+            // Добавляем информацию о пользователях
+            const users = window.getUsersForCharts ? window.getUsersForCharts() : [];
+            data.users = users;
+            data.totalUsers = users.length;
+
+            // Создаем JSON файл для скачивания
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             
-            // Обновляем время ответа API
-            const responseTime = Math.floor(Math.random() * 30) + 20; // 20-50ms
-            const apiResponseTimeEl = document.getElementById('apiResponseTime');
-            const realResponseTimeEl = document.getElementById('realResponseTime');
-            if (apiResponseTimeEl) apiResponseTimeEl.textContent = `${responseTime}ms`;
-            if (realResponseTimeEl) realResponseTimeEl.textContent = `${responseTime}ms`;
-            
-            // Обновляем статус сервера
-            updateServerStatus();
+            const link = document.createElement('a');
+            link.setAttribute('href', dataUri);
+            const fileName = `usermanager-charts-${new Date().toISOString().split('T')[0]}.json`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification('✅ Данные экспортированы в JSON файл', 'success');
         }
 
         // Обновление статуса сервера
@@ -1274,61 +1462,6 @@
             });
         }
 
-        // Обновление графиков данными
-        function refreshCharts() {
-            if (!window.getUsersForCharts) {
-                console.log('Функция getUsersForCharts не найдена');
-                return;
-            }
-
-            const users = window.getUsersForCharts();
-            if (!users || !Array.isArray(users)) {
-                console.log('Нет данных для графиков');
-                return;
-            }
-
-            // Обновляем график доменов
-            if (charts.domain) {
-                const domains = {};
-                users.forEach(user => {
-                    if (user.email) {
-                        const domain = user.email.split('@')[1];
-                        domains[domain] = (domains[domain] || 0) + 1;
-                    }
-                });
-
-                const domainLabels = Object.keys(domains).slice(0, 4);
-                const domainData = domainLabels.map(label => domains[label]);
-
-                charts.domain.data.labels = domainLabels;
-                charts.domain.data.datasets[0].data = domainData;
-                charts.domain.update();
-            }
-
-            // Обновляем график роста
-            if (charts.growth) {
-                const monthData = [0, 0, 0, 0, 0, 0];
-                users.forEach(user => {
-                    if (user.created_at) {
-                        const month = new Date(user.created_at).getMonth();
-                        if (month >= 0 && month < 6) {
-                            monthData[month]++;
-                        }
-                    }
-                });
-                charts.growth.data.datasets[0].data = monthData;
-                charts.growth.update();
-            }
-
-            // Обновляем время
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            document.getElementById('lastUpdate').textContent = `${dateStr} ${timeStr}`;
-
-            showNotification('✅ Графики обновлены', 'success');
-        }
-
         // Показать статистику
         function showStats() {
             const stats = `
@@ -1346,35 +1479,11 @@
             alert(stats);
         }
 
-        // Экспорт данных графиков
-        function exportCharts() {
-            const data = {
-                exportedAt: new Date().toISOString(),
-                charts: {}
-            };
-
-            Object.entries(charts).forEach(([name, chart]) => {
-                data.charts[name] = chart.data;
-            });
-
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-            const link = document.createElement('a');
-            link.setAttribute('href', dataUri);
-            link.setAttribute('download', `charts-export-${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            showNotification('✅ Данные графиков экспортированы', 'success');
-        }
-
         // Глобальные функции
         window.refreshCharts = refreshCharts;
         window.showStats = showStats;
         window.exportCharts = exportCharts;
         window.updateChartColors = updateChartColors;
-        window.updateChartsInRealTime = updateChartsInRealTime;
         window.updateServerStatus = updateServerStatus;
 
         // Инициализация

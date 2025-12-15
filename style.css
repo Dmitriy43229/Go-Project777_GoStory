@@ -480,7 +480,9 @@ body {
 /* Поиск */
 .search-container {
     position: relative;
-    width: 300px;
+    width: 100px;
+    max-width: 400px;
+    margin-right: 1rem;
 }
 
 .search-input {
@@ -1799,5 +1801,41 @@ body.light-theme .mode-value {
     .mode-details {
         flex-direction: column;
         gap: 0.5rem;
+    }
+}
+
+/* Контейнер с поиском и кнопками */
+.users-section > div:first-of-type {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Делаем кнопку "Обновить" вровень с поиском */
+.users-section .action-button {
+    height: 48px; /* Такая же высота как у поиска */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+/* Улучшаем адаптивность для мобильных */
+@media (max-width: 768px) {
+    .users-section > div:first-of-type {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container {
+        margin-right: 0;
+        max-width: 100%;
+    }
+    
+    .users-section .action-button {
+        width: 100%;
     }
 }

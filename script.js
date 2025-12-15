@@ -670,9 +670,13 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// ================== ГРАФИКИ ==================
+// Функция для получения пользователей для графиков
 function getUsersForCharts() {
-    return [...localUsers];
+    const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
+    if (saved) {
+        return JSON.parse(saved);
+    }
+    return [];
 }
 
 // ================== ИНИЦИАЛИЗАЦИЯ ==================
@@ -718,6 +722,7 @@ window.deleteUserConfirm = deleteUserConfirm;
 window.searchUsers = searchUsers;
 window.loadUsers = loadUsers;
 window.loadDemoData = loadDemoData;
+window.getUsersForCharts = getUsersForCharts;
 
 // ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ API ==================
 function toggleApiMode() {
@@ -900,16 +905,6 @@ window.toggleApiMode = toggleApiMode;
 window.updateApiModeUI = updateApiModeUI;
 window.checkApiStatus = checkApiStatus;
 window.initApiMode = initApiMode;
-window.getUsersForCharts = getUsersForCharts;
-
-// Функция для получения пользователей для графиков
-function getUsersForCharts() {
-    const saved = localStorage.getItem('usermanager_local_data');
-    return saved ? JSON.parse(saved) : [];
-}
-
-
-
 
 // ================== СТИЛИ ==================
 const style = document.createElement('style');

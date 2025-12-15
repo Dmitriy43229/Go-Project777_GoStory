@@ -6,10 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UserManager - Современный CRM</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Подключаем Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Темно-синий градиентный фон 456356 */
+        /* Темно-синий градиентный фон */
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg,
@@ -408,6 +407,107 @@
             font-weight: 500;
         }
 
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-container {
+            background: rgba(26, 35, 126, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #bbdefb;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            color: #bbdefb;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
         /* Светлая тема */
         body.light-theme {
             background: linear-gradient(135deg,
@@ -500,6 +600,26 @@
             color: #334155;
         }
 
+        body.light-theme .modal-container {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        body.light-theme .modal-title {
+            background: linear-gradient(45deg, #1d4ed8, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.light-theme .form-label {
+            color: #334155;
+        }
+
+        body.light-theme .form-input {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #334155;
+        }
+
         /* Для звезд в светлой теме */
         body.light-theme .star {
             background: rgba(0, 0, 0, 0.1);
@@ -546,6 +666,16 @@
             }
         }
 
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
         .animate-fade-in {
             animation: fadeIn 0.8s ease forwards;
         }
@@ -556,6 +686,231 @@
 
         .animate-float {
             animation: float 6s ease-in-out infinite;
+        }
+
+        /* Стили для сетки пользователей */
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .user-card {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .skeleton-card {
+            animation: pulse 1.5s infinite;
+            pointer-events: none;
+        }
+
+        .skeleton-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        .skeleton-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-text {
+            color: #bbdefb;
+            margin-bottom: 1.5rem;
+        }
+
+        body.light-theme .empty-title {
+            color: #334155;
+        }
+
+        body.light-theme .empty-text {
+            color: #64748b;
+        }
+
+        /* Server status */
+        .server-status {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .status-indicator::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            background: #4CAF50;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+
+        .status-text {
+            color: #4CAF50;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Search input */
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        body.light-theme .search-input {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #334155;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-container::before {
+            content: '🔍';
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #bbdefb;
+        }
+
+        body.light-theme .search-container::before {
+            color: #64748b;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+
+            .feature-card-container {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .users-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-container {
+                gap: 1.5rem;
+            }
+
+            .stat-card {
+                min-width: 150px;
+                padding: 1.5rem;
+            }
+
+            .nav-menu {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .actions-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .action-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-title {
+                font-size: 2rem;
+            }
+
+            .main-title-container {
+                padding: 1.5rem;
+            }
+
+            .users-section {
+                padding: 1.5rem;
+            }
+
+            .modal-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -576,15 +931,15 @@
 
             <!-- Навигация -->
             <div class="nav-menu">
-                <a href="/" class="nav-item active">
+                <a href="index.html" class="nav-item active">
                     <span class="nav-icon">🏠</span>
                     Главная
                 </a>
-                <a href="/about" class="nav-item">
+                <a href="about.html" class="nav-item">
                     <span class="nav-icon">📖</span>
                     О проекте
                 </a>
-                <a href="/presentation" class="nav-item">
+                <a href="presentation.html" class="nav-item">
                     <span class="nav-icon">🎬</span>
                     Презентация
                 </a>
@@ -594,9 +949,8 @@
                         <span class="theme-text">Темная тема</span>
                     </button>
                 </div>
-                <div class="server-status"
-                    style="background: rgba(76, 175, 80, 0.2); padding: 0.5rem 1rem; border-radius: 20px;">
-                    <span class="status-indicator" style="background: #4CAF50;"></span>
+                <div class="server-status">
+                    <span class="status-indicator"></span>
                     <span class="status-text">Online</span>
                 </div>
             </div>
@@ -605,7 +959,7 @@
         <!-- Статистика проекта -->
         <section class="stats-container animate-fade-in" style="animation-delay: 0.2s">
             <div class="stat-card">
-                <div class="stat-number" id="totalUsers">2</div>
+                <div class="stat-number" id="totalUsers">0</div>
                 <div class="stat-label">Активных пользователей</div>
             </div>
 
@@ -679,12 +1033,12 @@
                     Запустить демо
                 </button>
 
-                <button class="action-button secondary" onclick="refreshCharts()">
+                <button class="action-button secondary" onclick="showStats()">
                     <span>📊</span>
-                    Обновить графики
+                    Показать статистику
                 </button>
 
-                <a href="/presentation" class="action-button secondary">
+                <a href="presentation.html" class="action-button secondary">
                     <span>🎬</span>
                     Смотреть презентацию
                 </a>
@@ -696,39 +1050,46 @@
             <h2 class="section-title">👥 Управление пользователями</h2>
 
             <div class="section-controls"
-                style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+                style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
                 <div class="search-container">
-                    <input type="text" id="searchInput" class="search-input"
-                        placeholder="🔍 Поиск по имени или email..." onkeyup="searchUsers(this.value)"
-                        style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.5s;">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Поиск по имени или email..."
+                        onkeyup="searchUsers(this.value)">
                 </div>
-                <button class="btn btn-icon" onclick="loadUsers()" title="Обновить"
-                    style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.5s;">
+                <button class="action-button secondary" onclick="loadUsers()" title="Обновить"
+                    style="padding: 0.875rem 1.5rem;">
                     <span>🔄</span>
+                    Обновить
                 </button>
             </div>
 
             <div class="users-grid" id="usersGrid">
                 <!-- Скелетоны при загрузке -->
-                <div class="user-card skeleton-card"
-                    style="background: rgba(255, 255, 255, 0.07); transition: all 0.5s;">
-                    <div class="skeleton-avatar"
-                        style="background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite;">
-                    </div>
+                <div class="user-card skeleton-card">
+                    <div class="skeleton-avatar"></div>
                     <div class="skeleton-content">
-                        <div class="skeleton-line"
-                            style="background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; width: 70%">
-                        </div>
-                        <div class="skeleton-line"
-                            style="background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; width: 50%">
-                        </div>
+                        <div class="skeleton-line" style="width: 70%"></div>
+                        <div class="skeleton-line" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="user-card skeleton-card">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-line" style="width: 70%"></div>
+                        <div class="skeleton-line" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="user-card skeleton-card">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-line" style="width: 70%"></div>
+                        <div class="skeleton-line" style="width: 50%"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Empty State -->
-            <div class="empty-state" id="emptyState" style="display: none; text-align: center; padding: 3rem;">
-                <div class="empty-icon" style="font-size: 4rem;">👤</div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">👤</div>
                 <h3 class="empty-title">Нет пользователей</h3>
                 <p class="empty-text">Добавьте первого пользователя, чтобы начать работу</p>
                 <button class="action-button" onclick="openModal()" style="margin-top: 1rem;">
@@ -746,21 +1107,21 @@
 
             <div class="charts-container">
                 <div class="chart-card">
-                    <h3 class="chart-title">📈 Активность пользователей (последние 7 дней)</h3>
+                    <h3 class="chart-title">📈 Активность пользователей</h3>
                     <div class="chart-wrapper">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3 class="chart-title">🎯 Распределение по доменам email</h3>
+                    <h3 class="chart-title">🎯 Распределение по доменам</h3>
                     <div class="chart-wrapper">
                         <canvas id="domainChart"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3 class="chart-title">📅 Новые пользователи по месяцам (2025 год)</h3>
+                    <h3 class="chart-title">📅 Новые пользователи</h3>
                     <div class="chart-wrapper">
                         <canvas id="growthChart"></canvas>
                     </div>
@@ -829,54 +1190,47 @@
             </div>
 
             <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-                <a href="/" style="color: #bbdefb; text-decoration: none;">Главная</a>
-                <a href="/about" style="color: #bbdefb; text-decoration: none;">О проекте</a>
-                <a href="/presentation" style="color: #bbdefb; text-decoration: none;">Презентация</a>
+                <a href="index.html" style="color: #bbdefb; text-decoration: none;">Главная</a>
+                <a href="about.html" style="color: #bbdefb; text-decoration: none;">О проекте</a>
+                <a href="presentation.html" style="color: #bbdefb; text-decoration: none;">Презентация</a>
             </div>
 
             <div style="color: #94a3b8; font-size: 0.9rem;">
-                © 2025 UserManager Pro. Все права защищены.
+                © 2024 UserManager Pro. Все права защищены.
             </div>
         </footer>
     </div>
 
     <!-- Модальное окно -->
     <div class="modal" id="userModal">
-        <div class="modal-overlay" onclick="closeModal()"></div>
-
-        <div class="modal-container"
-            style="background: #1a237e; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.5s;">
+        <div class="modal-container">
             <div class="modal-header">
-                <h3 class="modal-title"
-                    style="background: linear-gradient(45deg, #60a5fa, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                    Добавить пользователя
-                </h3>
-                <button class="modal-close" onclick="closeModal()" style="color: #bbdefb;">&times;</button>
+                <h3 class="modal-title" id="modalTitle">Добавить пользователя</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
 
             <form class="modal-form" id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="userId" name="userId">
+
                 <div class="form-group">
-                    <label for="userName" class="form-label" style="color: #bbdefb;">
+                    <label for="userName" class="form-label">
                         👤 Имя пользователя
                     </label>
-                    <input type="text" id="userName" class="form-input" placeholder="Введите полное имя" required
-                        style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
+                    <input type="text" id="userName" class="form-input" placeholder="Введите полное имя" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="userEmail" class="form-label" style="color: #bbdefb;">
+                    <label for="userEmail" class="form-label">
                         ✉️ Email адрес
                     </label>
-                    <input type="email" id="userEmail" class="form-input" placeholder="user@example.com" required
-                        style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
+                    <input type="email" id="userEmail" class="form-input" placeholder="user@example.com" required>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="action-button secondary" onclick="closeModal()"
-                        style="width: 100%; justify-content: center;">
+                    <button type="button" class="action-button secondary" onclick="closeModal()" style="flex: 1;">
                         Отмена
                     </button>
-                    <button type="submit" class="action-button" style="width: 100%; justify-content: center;">
+                    <button type="submit" class="action-button" style="flex: 1;">
                         <span>✓</span>
                         Сохранить пользователя
                     </button>
@@ -885,19 +1239,700 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
-
     <script>
-        // Глобальные переменные для графиков
-        let charts = {
-            activity: null,
-            domain: null,
-            growth: null
+        // ================== КОНФИГУРАЦИЯ ==================
+        const CONFIG = {
+            API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:8068'
+                : window.location.origin + '/api',
+            USE_LOCAL_STORAGE: true,
+            LOCAL_STORAGE_KEY: 'usermanager_local_data'
         };
 
-        // Создание звездного неба
+        let localUsers = [];
+        let isEditing = false;
+        let charts = {};
+
+        // ================== ИНИЦИАЛИЗАЦИЯ ==================
+        document.addEventListener('DOMContentLoaded', function () {
+            // Инициализация звездного неба
+            createStars();
+            window.addEventListener('resize', createStars);
+
+            // Инициализация переключения темы
+            initThemeToggle();
+
+            // Инициализация локальных данных
+            initLocalData();
+
+            // Загрузка пользователей
+            loadUsers();
+
+            // Загрузка Chart.js и инициализация графиков
+            loadChartJS();
+
+            // Убираем скелетоны через 2 секунды
+            setTimeout(() => {
+                document.querySelectorAll('.skeleton-card').forEach(el => {
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 500);
+                });
+            }, 2000);
+        });
+
+        // ================== ЛОКАЛЬНЫЕ ДАННЫЕ ==================
+        function initLocalData() {
+            if (!CONFIG.USE_LOCAL_STORAGE) return;
+
+            const saved = localStorage.getItem(CONFIG.LOCAL_STORAGE_KEY);
+            if (saved) {
+                try {
+                    localUsers = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Ошибка загрузки локальных данных:', e);
+                    localUsers = [];
+                }
+            } else {
+                // Начальные демо-данные
+                localUsers = [
+                    {
+                        id: 1,
+                        name: "Алексей Иванов",
+                        email: "alex@example.com",
+                        created_at: new Date(Date.now() - 86400000 * 3).toISOString()
+                    },
+                    {
+                        id: 2,
+                        name: "Мария Петрова",
+                        email: "maria@example.com",
+                        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+                    },
+                    {
+                        id: 3,
+                        name: "Иван Сидоров",
+                        email: "ivan@company.ru",
+                        created_at: new Date(Date.now() - 86400000).toISOString()
+                    }
+                ];
+                saveLocalData();
+            }
+            updateStats();
+        }
+
+        function saveLocalData() {
+            if (!CONFIG.USE_LOCAL_STORAGE) return;
+            localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(localUsers));
+            updateStats();
+        }
+
+        function updateStats() {
+            const element = document.getElementById('totalUsers');
+            if (element) {
+                element.textContent = localUsers.length;
+            }
+        }
+
+        // ================== API КЛИЕНТ ==================
+        async function apiRequest(url, options = {}) {
+            // Если мы на GitHub Pages, используем локальное хранилище
+            if (window.location.hostname.includes('github.io')) {
+                return mockApiRequest(url, options);
+            }
+
+            // Иначе пытаемся использовать реальный API
+            try {
+                const response = await fetch(CONFIG.API_URL + url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return response.status === 204 ? null : await response.json();
+            } catch (error) {
+                console.error('Real API error:', error);
+                // Если реальный API недоступен, используем локальное хранилище
+                if (CONFIG.USE_LOCAL_STORAGE) {
+                    return mockApiRequest(url, options);
+                }
+                throw error;
+            }
+        }
+
+        async function mockApiRequest(url, options = {}) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            const method = options.method || 'GET';
+
+            if (url === '/api/stats' || url === '/api/users/stats') {
+                return {
+                    total_users: localUsers.length,
+                    server_time: new Date().toISOString(),
+                    status: "online (локальный режим)",
+                    version: "1.0.0"
+                };
+            }
+
+            if (url === '/api/users' || url.startsWith('/api/users/')) {
+                const id = url.match(/\/api\/users\/(\d+)/)?.[1];
+
+                switch (method) {
+                    case 'GET':
+                        if (id) {
+                            const user = localUsers.find(u => u.id == id);
+                            if (!user) throw new Error('User not found');
+                            return user;
+                        }
+                        return [...localUsers];
+
+                    case 'POST':
+                        const newUser = JSON.parse(options.body || '{}');
+                        newUser.id = Date.now();
+                        newUser.created_at = new Date().toISOString();
+                        localUsers.push(newUser);
+                        saveLocalData();
+                        return newUser;
+
+                    case 'PUT':
+                        if (!id) throw new Error('ID required');
+                        const updateData = JSON.parse(options.body || '{}');
+                        const index = localUsers.findIndex(u => u.id == id);
+                        if (index === -1) throw new Error('User not found');
+
+                        localUsers[index] = { ...localUsers[index], ...updateData };
+                        saveLocalData();
+                        return localUsers[index];
+
+                    case 'DELETE':
+                        if (!id) throw new Error('ID required');
+                        const deleteIndex = localUsers.findIndex(u => u.id == id);
+                        if (deleteIndex === -1) throw new Error('User not found');
+
+                        localUsers.splice(deleteIndex, 1);
+                        saveLocalData();
+                        return null;
+
+                    default:
+                        throw new Error('Method not allowed');
+                }
+            }
+
+            throw new Error('Endpoint not found');
+        }
+
+        // ================== ОСНОВНЫЕ ФУНКЦИИ ==================
+        async function loadUsers() {
+            try {
+                const users = await apiRequest('/api/users');
+                displayUsers(users);
+                updateStats();
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                showNotification('Ошибка загрузки пользователей', 'error');
+            }
+        }
+
+        async function createUser(userData) {
+            return await apiRequest('/api/users', {
+                method: 'POST',
+                body: JSON.stringify(userData)
+            });
+        }
+
+        async function updateUser(id, userData) {
+            return await apiRequest(`/api/users/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(userData)
+            });
+        }
+
+        async function deleteUser(id) {
+            return await apiRequest(`/api/users/${id}`, {
+                method: 'DELETE'
+            });
+        }
+
+        // ================== ОТОБРАЖЕНИЕ ПОЛЬЗОВАТЕЛЕЙ ==================
+        function displayUsers(usersArray) {
+            const grid = document.getElementById('usersGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!usersArray || usersArray.length === 0) {
+                if (emptyState) emptyState.style.display = 'block';
+                if (grid) grid.innerHTML = '';
+                return;
+            }
+
+            if (emptyState) emptyState.style.display = 'none';
+
+            if (grid) {
+                grid.innerHTML = usersArray.map(user => `
+                    <div class="feature-card" style="text-align: left; display: flex; align-items: center; gap: 1.5rem; animation: fadeIn 0.5s ease;">
+                        <div style="width: 60px; height: 60px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
+                            ${getInitials(user.name)}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 1.2rem; color: white;">${escapeHtml(user.name)}</div>
+                            <div style="color: #bbdefb; margin-bottom: 0.5rem;">${escapeHtml(user.email)}</div>
+                            <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                Создан: ${formatDate(user.created_at)}
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="editUser(${user.id})" class="action-button secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                    ✏️ Редактировать
+                                </button>
+                                <button onclick="deleteUserConfirm(${user.id})" class="action-button secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem; background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function getInitials(name) {
+            return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+        }
+
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return 'Неизвестно';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ================== ФОРМА ПОЛЬЗОВАТЕЛЯ ==================
+        async function saveUser(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('userName').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            const userId = document.getElementById('userId').value;
+
+            if (!name || !email) {
+                showNotification('Заполните все поля', 'error');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showNotification('Введите корректный email', 'error');
+                return;
+            }
+
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner"></span> Сохранение...';
+
+                if (userId) {
+                    await updateUser(userId, { name, email });
+                    showNotification('✅ Пользователь обновлен', 'success');
+                } else {
+                    await createUser({ name, email });
+                    showNotification('✅ Пользователь добавлен', 'success');
+                }
+
+                closeModal();
+                await loadUsers();
+
+                // Обновляем графики
+                if (charts.activity) {
+                    setTimeout(refreshCharts, 500);
+                }
+
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+                showNotification('❌ Ошибка сохранения', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // ================== РЕДАКТИРОВАНИЕ И УДАЛЕНИЕ ==================
+        async function editUser(id) {
+            try {
+                const user = await apiRequest(`/api/users/${id}`);
+                openModal(user);
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                showNotification('❌ Пользователь не найден', 'error');
+            }
+        }
+
+        async function deleteUserConfirm(id) {
+            if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                return;
+            }
+
+            try {
+                await deleteUser(id);
+                showNotification('✅ Пользователь удален', 'success');
+                await loadUsers();
+
+                // Обновляем графики
+                if (charts.activity) {
+                    setTimeout(refreshCharts, 500);
+                }
+
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                showNotification('❌ Ошибка удаления', 'error');
+            }
+        }
+
+        // ================== МОДАЛЬНОЕ ОКНО ==================
+        function openModal(user = null) {
+            const modal = document.getElementById('userModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('userForm');
+
+            if (!modal || !title || !form) return;
+
+            if (user) {
+                title.textContent = '✏️ Редактировать пользователя';
+                document.getElementById('userId').value = user.id;
+                document.getElementById('userName').value = user.name;
+                document.getElementById('userEmail').value = user.email;
+            } else {
+                title.textContent = '➕ Добавить пользователя';
+                document.getElementById('userId').value = '';
+                form.reset();
+            }
+
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+
+            // Анимация появления
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('userModal');
+            if (!modal) return;
+
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+                document.getElementById('userForm').reset();
+                document.getElementById('userId').value = '';
+            }, 300);
+        }
+
+        // ================== ПОИСК ==================
+        function searchUsers(query) {
+            const cards = document.querySelectorAll('.feature-card');
+            const emptyState = document.getElementById('emptyState');
+            let found = false;
+
+            cards.forEach(card => {
+                const nameElement = card.querySelector('div:nth-child(2) > div:first-child');
+                const emailElement = card.querySelector('div:nth-child(2) > div:nth-child(2)');
+
+                const name = nameElement ? nameElement.textContent.toLowerCase() : '';
+                const email = emailElement ? emailElement.textContent.toLowerCase() : '';
+
+                if (name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())) {
+                    card.style.display = 'flex';
+                    found = true;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (!found && query && emptyState) {
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="font-size: 3rem;">🔍</div>
+                        <h3 style="margin: 1rem 0;">Ничего не найдено</h3>
+                        <p>Попробуйте изменить запрос</p>
+                    </div>
+                `;
+            } else if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        // ================== ДЕМО ДАННЫЕ ==================
+        async function loadDemoData() {
+            if (!confirm('Добавить демо-данные? Существующие пользователи останутся.')) {
+                return;
+            }
+
+            showNotification('Добавляем демо-данные...', 'info');
+
+            const demoUsers = [
+                { name: "Ольга Новикова", email: "olga@mail.ru" },
+                { name: "Сергей Морозов", email: "sergey@gmail.com" },
+                { name: "Анна Волкова", email: "anna@company.com" },
+                { name: "Павел Козлов", email: "pavel@yandex.ru" },
+                { name: "Елена Захарова", email: "elena@example.com" }
+            ];
+
+            for (const user of demoUsers) {
+                try {
+                    await createUser(user);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                }
+            }
+
+            await loadUsers();
+            showNotification('✅ Демо-данные добавлены!', 'success');
+        }
+
+        function showStats() {
+            // Простая реализация показа статистики
+            const stats = localUsers.length;
+            alert(`Статистика системы:\n\nВсего пользователей: ${stats}\nРаботает в ${CONFIG.USE_LOCAL_STORAGE ? 'локальном' : 'серверном'} режиме\nAPI: ${CONFIG.API_URL}`);
+        }
+
+        // ================== ГРАФИКИ ==================
+        function loadChartJS() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            script.onload = initCharts;
+            document.head.appendChild(script);
+        }
+
+        function initCharts() {
+            if (typeof Chart === 'undefined') {
+                console.log('Chart.js не загружен');
+                return;
+            }
+
+            // График активности
+            const activityCtx = document.getElementById('activityChart')?.getContext('2d');
+            if (activityCtx) {
+                charts.activity = new Chart(activityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                        datasets: [{
+                            label: 'Новые пользователи',
+                            data: [12, 19, 8, 15, 22, 18, 25],
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: getChartOptions('Активность пользователей по дням недели')
+                });
+            }
+
+            // Круговая диаграмма доменов
+            const domainCtx = document.getElementById('domainChart')?.getContext('2d');
+            if (domainCtx) {
+                charts.domain = new Chart(domainCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['gmail.com', 'mail.ru', 'yandex.ru', 'outlook.com', 'Другие'],
+                        datasets: [{
+                            data: [35, 25, 20, 15, 5],
+                            backgroundColor: [
+                                '#60a5fa',
+                                '#34d399',
+                                '#fbbf24',
+                                '#f87171',
+                                '#a78bfa'
+                            ],
+                            borderWidth: 1,
+                            borderColor: getChartBorderColor()
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: getChartTextColor()
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // График роста
+            const growthCtx = document.getElementById('growthChart')?.getContext('2d');
+            if (growthCtx) {
+                charts.growth = new Chart(growthCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+                        datasets: [{
+                            label: 'Всего пользователей',
+                            data: [50, 75, 100, 125, 150, 200],
+                            backgroundColor: '#34d399',
+                            borderColor: '#10b981',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: getChartOptions('Рост пользовательской базы')
+                });
+            }
+        }
+
+        function getChartOptions(title) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: getChartTextColor()
+                        }
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: getChartGridColor()
+                        },
+                        ticks: {
+                            color: getChartTextColor()
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: getChartGridColor()
+                        },
+                        ticks: {
+                            color: getChartTextColor()
+                        }
+                    }
+                }
+            };
+        }
+
+        function refreshCharts() {
+            if (!charts.activity) return;
+
+            // Обновляем данные с сервера
+            loadUsers().then(() => {
+                updateChartsWithRealData(localUsers);
+            });
+        }
+
+        function updateChartsWithRealData(users) {
+            if (!users || !charts.activity) return;
+
+            // Обновляем круговую диаграмму
+            if (charts.domain) {
+                const domainStats = analyzeEmailDomains(users);
+                charts.domain.data.labels = domainStats.labels;
+                charts.domain.data.datasets[0].data = domainStats.data;
+                charts.domain.update();
+            }
+
+            // Обновляем график роста
+            if (charts.growth) {
+                const growthData = calculateGrowthData(users);
+                charts.growth.data.datasets[0].data = growthData;
+                charts.growth.update();
+            }
+        }
+
+        function analyzeEmailDomains(users) {
+            const domains = {};
+            users.forEach(user => {
+                const domain = user.email.split('@')[1];
+                domains[domain] = (domains[domain] || 0) + 1;
+            });
+
+            const sorted = Object.entries(domains)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            return {
+                labels: sorted.map(d => d[0]),
+                data: sorted.map(d => d[1])
+            };
+        }
+
+        function calculateGrowthData(users) {
+            // Простая симуляция роста
+            return [10, 25, 40, 60, 85, users.length];
+        }
+
+        function exportCharts() {
+            const chartData = {
+                activity: charts.activity?.data,
+                domains: charts.domain?.data,
+                growth: charts.growth?.data,
+                exportedAt: new Date().toISOString(),
+                totalUsers: localUsers.length
+            };
+
+            const dataStr = JSON.stringify(chartData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+            const exportFileDefaultName = `user-manager-charts-${new Date().toISOString().split('T')[0]}.json`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+
+            showNotification('Данные графиков экспортированы', 'success');
+        }
+
+        function getChartTextColor() {
+            return document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0';
+        }
+
+        function getChartGridColor() {
+            return document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        }
+
+        function getChartBorderColor() {
+            return document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        }
+
+        // ================== УТИЛИТЫ ==================
         function createStars() {
             const starsContainer = document.getElementById('stars');
+            if (!starsContainer) return;
+
             starsContainer.innerHTML = '';
 
             for (let i = 0; i < 150; i++) {
@@ -923,7 +1958,6 @@
             }
         }
 
-        // Переключение темы
         function initThemeToggle() {
             const themeToggle = document.getElementById('themeToggle');
             const themeIcon = themeToggle?.querySelector('.theme-icon');
@@ -953,722 +1987,92 @@
                 }
 
                 // Обновляем графики при смене темы
-                setTimeout(refreshCharts, 100);
+                if (charts.activity) {
+                    setTimeout(refreshCharts, 100);
+                }
 
                 // Обновляем звезды
                 createStars();
             });
         }
 
-        // Вспомогательные функции для цветов графиков
-        function getChartTextColor() {
-            return document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0';
-        }
-
-        function getChartGridColor() {
-            return document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
-        }
-
-        function getChartBorderColor() {
-            return document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
-        }
-
-        // Инициализация графиков
-        function initCharts() {
-            // Сначала получаем данные с сервера
-            refreshCharts();
-        }
-
-        // Обновление всех графиков с реальными данными
-        async function refreshCharts() {
-            try {
-                const response = await fetch('/api/users');
-                const users = await response.json();
-
-                // Обновляем статистику пользователей
-                document.getElementById('totalUsers').textContent = users.length;
-
-                // Обновляем все графики
-                updateActivityChart(users);
-                updateDomainChart(users);
-                updateGrowthChart(users);
-
-                showNotification('Графики обновлены', 'success');
-            } catch (error) {
-                console.error('Ошибка загрузки данных для графиков:', error);
-                showNotification('Ошибка загрузки данных', 'error');
-            }
-        }
-
-        // График активности (последние 7 дней)
-        function updateActivityChart(users) {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-
-            // Генерируем данные за последние 7 дней
-            const last7Days = [];
-            const activityData = [];
-
-            // Создаем объект для подсчета пользователей по датам
-            const userCountByDate = {};
-
-            // Получаем текущую дату
-            const today = new Date();
-
-            // Инициализируем последние 7 дней
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
-                const dateString = date.toLocaleDateString('ru-RU', { weekday: 'short' });
-                last7Days.push(dateString);
-                userCountByDate[date.toDateString()] = 0;
-            }
-
-            // Подсчитываем пользователей по дате создания
-            users.forEach(user => {
-                if (user.created_at) {
-                    const userDate = new Date(user.created_at);
-                    const userDateString = userDate.toDateString();
-
-                    // Проверяем, попадает ли дата в последние 7 дней
-                    const weekAgo = new Date(today);
-                    weekAgo.setDate(weekAgo.getDate() - 6);
-
-                    if (userDate >= weekAgo && userDate <= today) {
-                        if (userCountByDate[userDateString] !== undefined) {
-                            userCountByDate[userDateString]++;
-                        }
-                    }
-                }
-            });
-
-            // Формируем данные для графика
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
-                activityData.push(userCountByDate[date.toDateString()] || 0);
-            }
-
-            if (charts.activity) {
-                charts.activity.destroy();
-            }
-
-            charts.activity = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: last7Days,
-                    datasets: [{
-                        label: 'Новые пользователи',
-                        data: activityData,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#60a5fa',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: getChartTextColor(),
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
-                            titleColor: getChartTextColor(),
-                            bodyColor: getChartTextColor(),
-                            callbacks: {
-                                label: function (context) {
-                                    return `Новых пользователей: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: getChartGridColor()
-                            },
-                            ticks: {
-                                color: getChartTextColor(),
-                                stepSize: 1,
-                                precision: 0
-                            },
-                            title: {
-                                display: true,
-                                text: 'Количество',
-                                color: getChartTextColor()
-                            }
-                        },
-                        x: {
-                            grid: {
-                                color: getChartGridColor()
-                            },
-                            ticks: {
-                                color: getChartTextColor()
-                            },
-                            title: {
-                                display: true,
-                                text: 'Дни недели',
-                                color: getChartTextColor()
-                            }
-                        }
-                    },
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-        }
-
-        // Круговая диаграмма доменов email
-        function updateDomainChart(users) {
-            const ctx = document.getElementById('domainChart').getContext('2d');
-
-            // Анализируем домены email
-            const domainStats = analyzeEmailDomains(users);
-
-            if (charts.domain) {
-                charts.domain.destroy();
-            }
-
-            charts.domain = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: domainStats.labels,
-                    datasets: [{
-                        data: domainStats.data,
-                        backgroundColor: [
-                            '#60a5fa',
-                            '#34d399',
-                            '#fbbf24',
-                            '#f87171',
-                            '#a78bfa',
-                            '#f472b6',
-                            '#8b5cf6'
-                        ],
-                        borderWidth: 2,
-                        borderColor: getChartBorderColor(),
-                        hoverOffset: 15
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: getChartTextColor(),
-                                font: {
-                                    size: 11
-                                },
-                                padding: 15
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
-                            titleColor: getChartTextColor(),
-                            bodyColor: getChartTextColor(),
-                            callbacks: {
-                                label: function (context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '60%',
-                    animation: {
-                        animateScale: true,
-                        animateRotate: true,
-                        duration: 1000
-                    }
-                }
-            });
-        }
-
-        // График роста по месяцам (весь 2025 год)
-        function updateGrowthChart(users) {
-            const ctx = document.getElementById('growthChart').getContext('2d');
-
-            // Месяцы всего 2025 года
-            const monthNames = [
-                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ];
-
-            // Инициализируем массив для подсчета пользователей по месяцам
-            const usersByMonth = new Array(12).fill(0);
-            const currentYear = 2025; // Текущий год
-
-            // Подсчитываем пользователей по месяцам за текущий год
-            users.forEach(user => {
-                if (user.created_at) {
-                    const userDate = new Date(user.created_at);
-                    const userYear = userDate.getFullYear();
-                    const userMonth = userDate.getMonth(); // 0-11
-
-                    if (userYear === currentYear) {
-                        usersByMonth[userMonth]++;
-                    }
-                }
-            });
-
-            // Рассчитываем кумулятивные значения (нарастающий итог)
-            const cumulativeData = [];
-            let cumulative = 0;
-
-            for (let i = 0; i < 12; i++) {
-                cumulative += usersByMonth[i];
-                cumulativeData.push(cumulative);
-            }
-
-            if (charts.growth) {
-                charts.growth.destroy();
-            }
-
-            charts.growth = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: monthNames,
-                    datasets: [{
-                        label: 'Всего пользователей',
-                        data: cumulativeData,
-                        backgroundColor: monthNames.map((month, index) => {
-                            // Выделяем текущий месяц (Декабрь)
-                            const currentMonth = new Date().getMonth();
-                            return index === currentMonth ? '#fbbf24' : '#34d399';
-                        }),
-                        borderColor: '#10b981',
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        hoverBackgroundColor: monthNames.map((month, index) => {
-                            const currentMonth = new Date().getMonth();
-                            return index === currentMonth ? '#f59e0b' : '#10b981';
-                        })
-                    }, {
-                        label: 'Новых в месяц',
-                        data: usersByMonth,
-                        type: 'line',
-                        borderColor: '#f87171',
-                        backgroundColor: 'rgba(248, 113, 113, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#f87171',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: getChartTextColor(),
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: document.body.classList.contains('light-theme') ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
-                            titleColor: getChartTextColor(),
-                            bodyColor: getChartTextColor(),
-                            callbacks: {
-                                label: function (context) {
-                                    if (context.datasetIndex === 0) {
-                                        return `Всего пользователей: ${context.raw}`;
-                                    } else {
-                                        return `Новых в этом месяце: ${context.raw}`;
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: getChartGridColor()
-                            },
-                            ticks: {
-                                color: getChartTextColor(),
-                                stepSize: Math.ceil(cumulative / 10) || 1
-                            },
-                            title: {
-                                display: true,
-                                text: 'Количество пользователей',
-                                color: getChartTextColor()
-                            }
-                        },
-                        x: {
-                            grid: {
-                                color: getChartGridColor()
-                            },
-                            ticks: {
-                                color: getChartTextColor(),
-                                maxRotation: 45
-                            },
-                            title: {
-                                display: true,
-                                text: 'Месяцы 2025 года',
-                                color: getChartTextColor()
-                            }
-                        }
-                    },
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-        }
-
-        // Анализ доменов email
-        function analyzeEmailDomains(users) {
-            const domains = {};
-
-            users.forEach(user => {
-                if (user.email && user.email.includes('@')) {
-                    const domain = user.email.split('@')[1];
-                    domains[domain] = (domains[domain] || 0) + 1;
-                }
-            });
-
-            // Сортируем по количеству
-            const sorted = Object.entries(domains)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 7); // Берем топ-7 доменов
-
-            // Если доменов меньше 7, добавляем "Другие"
-            if (sorted.length < 7) {
-                const otherCount = users.length - sorted.reduce((sum, d) => sum + d[1], 0);
-                if (otherCount > 0) {
-                    sorted.push(['Другие', otherCount]);
-                }
-            }
-
-            return {
-                labels: sorted.map(d => d[0]),
-                data: sorted.map(d => d[1])
-            };
-        }
-
-        // Экспорт данных графиков
-        function exportCharts() {
-            const chartData = {
-                activity: charts.activity?.data,
-                domains: charts.domain?.data,
-                growth: charts.growth?.data,
-                exportedAt: new Date().toISOString(),
-                totalUsers: document.getElementById('totalUsers').textContent,
-                currentYear: 2025
-            };
-
-            const dataStr = JSON.stringify(chartData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-            const exportFileDefaultName = `user-manager-charts-${new Date().toISOString().split('T')[0]}.json`;
-
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
-
-            showNotification('Данные графиков экспортированы', 'success');
-        }
-
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', function () {
-            createStars();
-            window.addEventListener('resize', createStars);
-            initThemeToggle();
-            loadUsers();
-
-            // Инициализируем графики после загрузки пользователей
-            setTimeout(initCharts, 1000);
-
-            // Убираем скелетоны через 2 секунды
-            setTimeout(() => {
-                document.querySelectorAll('.skeleton-card').forEach(el => {
-                    el.style.opacity = '0';
-                    setTimeout(() => el.remove(), 500);
-                });
-            }, 2000);
-        });
-
-        // Глобальные функции
-        function openModal() {
-            document.getElementById('userModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('userModal').style.display = 'none';
-        }
-
-        async function saveUser(event) {
-            event.preventDefault();
-
-            const name = document.getElementById('userName').value;
-            const email = document.getElementById('userEmail').value;
-
-            try {
-                await createUser({ name, email });
-                showNotification('Пользователь успешно добавлен!', 'success');
-                closeModal();
-                loadUsers();
-
-                // Обновляем графики после добавления пользователя
-                setTimeout(refreshCharts, 500);
-
-                // Сброс формы
-                document.getElementById('userForm').reset();
-            } catch (error) {
-                showNotification('Ошибка при сохранении', 'error');
-            }
-        }
-
-        function searchUsers(query) {
-            const users = document.querySelectorAll('.user-card:not(.skeleton-card)');
-            const emptyState = document.getElementById('emptyState');
-            let found = false;
-
-            users.forEach(user => {
-                const name = user.querySelector('.user-name')?.textContent.toLowerCase() || '';
-                const email = user.querySelector('.user-email')?.textContent.toLowerCase() || '';
-
-                if (name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())) {
-                    user.style.display = 'flex';
-                    found = true;
-                } else {
-                    user.style.display = 'none';
-                }
-            });
-
-            if (!found && query) {
-                emptyState.style.display = 'block';
-            } else {
-                emptyState.style.display = 'none';
-            }
-        }
-
-        async function loadDemoData() {
-            const demoUsers = [
-                { name: "Александр Иванов", email: "alex@example.com" },
-                { name: "Екатерина Петрова", email: "kate@example.com" },
-                { name: "Дмитрий Сидоров", email: "dmitry@example.com" },
-                { name: "Мария Смирнова", email: "maria@mail.ru" },
-                { name: "Иван Кузнецов", email: "ivan@yandex.ru" },
-                { name: "Ольга Новикова", email: "olga@gmail.com" },
-                { name: "Сергей Морозов", email: "sergey@outlook.com" },
-                { name: "Анна Волкова", email: "anna@mail.ru" },
-                { name: "Павел Козлов", email: "pavel@gmail.com" },
-                { name: "Елена Захарова", email: "elena@yandex.ru" }
-            ];
-
-            showNotification('Добавляем демо пользователей...', 'info');
-
-            for (const user of demoUsers) {
-                try {
-                    await createUser(user);
-                    // Небольшая задержка между запросами
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                } catch (error) {
-                    console.error('Ошибка:', error);
-                }
-            }
-
-            await loadUsers();
-            // Обновляем графики после добавления демо данных
-            setTimeout(refreshCharts, 1000);
-            showNotification('Демо данные успешно добавлены!', 'success');
-        }
-
-        // Базовые функции API
-        const API_BASE = '/api/users';
-
-        async function apiRequest(url, options = {}) {
-            try {
-                const response = await fetch(url, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers,
-                    },
-                    ...options,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                return response.status === 204 ? null : await response.json();
-            } catch (error) {
-                console.error('API request failed:', error);
-                showNotification('Ошибка соединения', 'error');
-                throw error;
-            }
-        }
-
-        async function createUser(userData) {
-            return await apiRequest(API_BASE, {
-                method: 'POST',
-                body: JSON.stringify(userData),
-            });
-        }
-
-        async function loadUsers() {
-            try {
-                const users = await apiRequest(API_BASE);
-                displayUsers(users);
-                document.getElementById('totalUsers').textContent = users.length;
-            } catch (error) {
-                console.error('Failed to load users:', error);
-            }
-        }
-
-        function displayUsers(users) {
-            const grid = document.getElementById('usersGrid');
-
-            if (!users || users.length === 0) {
-                document.getElementById('emptyState').style.display = 'block';
-                return;
-            }
-
-            grid.innerHTML = users.map(user => `
-                <div class="feature-card" style="text-align: left; display: flex; align-items: center; gap: 1.5rem;">
-                    <div style="width: 60px; height: 60px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
-                        ${user.name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2)}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 1.2rem; color: white;">${user.name}</div>
-                        <div style="color: #bbdefb; margin-bottom: 0.5rem;">${user.email}</div>
-                        <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">
-                            Создан: ${new Date(user.created_at).toLocaleDateString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}
-                        </div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button onclick="editUser(${user.id})" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
-                                Редактировать
-                            </button>
-                            <button onclick="deleteUserConfirm(${user.id})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
-                                Удалить
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('emptyState').style.display = 'none';
-        }
-
         function showNotification(message, type = 'success') {
-            // Создаем уведомление
+            const colors = {
+                success: '#4ade80',
+                error: '#f87171',
+                warning: '#fbbf24',
+                info: '#60a5fa'
+            };
+
             const notification = document.createElement('div');
             notification.textContent = message;
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : '#60a5fa'};
+                background: ${colors[type] || colors.info};
                 color: white;
-                padding: 1rem 1.5rem;
-                border-radius: 10px;
-                z-index: 1000;
-                animation: slideIn 0.3s;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 font-weight: 500;
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
             `;
 
             document.body.appendChild(notification);
 
             setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s';
+                notification.style.animation = 'slideOut 0.3s ease';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
         }
 
-        // Функции для работы с пользователями (из script.js)
-        async function editUser(id) {
-            try {
-                const user = await apiRequest(`${API_BASE}/${id}`);
-                openEditModal(user);
-            } catch (error) {
-                console.error('Failed to load user for editing:', error);
-                showNotification('Ошибка загрузки пользователя', 'error');
-            }
-        }
+        // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.editUser = editUser;
+        window.deleteUserConfirm = deleteUserConfirm;
+        window.searchUsers = searchUsers;
+        window.loadUsers = loadUsers;
+        window.loadDemoData = loadDemoData;
+        window.showStats = showStats;
+        window.refreshCharts = refreshCharts;
+        window.exportCharts = exportCharts;
 
-        function openEditModal(user) {
-            document.getElementById('userName').value = user.name;
-            document.getElementById('userEmail').value = user.email;
-            document.getElementById('userForm').onsubmit = async function (e) {
-                e.preventDefault();
-                await updateUser(user.id, {
-                    name: document.getElementById('userName').value,
-                    email: document.getElementById('userEmail').value
-                });
-                closeModal();
-                loadUsers();
-                setTimeout(refreshCharts, 500);
-            };
-            openModal();
-        }
-
-        async function deleteUserConfirm(id) {
-            if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
-                return;
-            }
-
-            try {
-                await apiRequest(`${API_BASE}/${id}`, {
-                    method: 'DELETE',
-                });
-                showNotification('Пользователь успешно удален', 'success');
-                await loadUsers();
-                setTimeout(refreshCharts, 500);
-            } catch (error) {
-                console.error('Failed to delete user:', error);
-                showNotification('Ошибка удаления пользователя', 'error');
-            }
-        }
-
-        // Стили для анимаций
+        // ================== СТИЛИ ДЛЯ АНИМАЦИЙ ==================
         const style = document.createElement('style');
         style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
             @keyframes slideIn {
                 from { transform: translateX(100%); opacity: 0; }
                 to { transform: translateX(0); opacity: 1; }
             }
+            
             @keyframes slideOut {
                 from { transform: translateX(0); opacity: 1; }
                 to { transform: translateX(100%); opacity: 0; }
             }
-            @keyframes shimmer {
-                0% { background-position: -200% 0; }
-                100% { background-position: 200% 0; }
+            
+            .spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255,255,255,.3);
+                border-radius: 50%;
+                border-top-color: white;
+                animation: spin 0.8s linear infinite;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
             }
         `;
         document.head.appendChild(style);

@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+	"strings"
 )
 
 // User структура для пользователя
@@ -31,12 +31,31 @@ var db *InMemoryDB
 func init() {
 	db = &InMemoryDB{
 		users:  make(map[int]User),
-		nextID: 3,
+		nextID: 4,
 	}
-	// Начальные данные с датой создания
+	// Начальные данные
 	now := time.Now()
-	db.users[1] = User{ID: 1, Name: "Алексей Иванов", Email: "alex@example.com", CreatedAt: now.Add(-24 * time.Hour)}
-	db.users[2] = User{ID: 2, Name: "Мария Петрова", Email: "maria@example.com", CreatedAt: now.Add(-12 * time.Hour)}
+	db.users[1] = User{ID: 1, Name: "Алексей Иванов", Email: "alex@example.com", CreatedAt: now.Add(-72 * time.Hour)}
+	db.users[2] = User{ID: 2, Name: "Мария Петрова", Email: "maria@example.com", CreatedAt: now.Add(-48 * time.Hour)}
+	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
+}
+
+// CORS middleware
+func enableCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Разрешаем запросы с любых доменов
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		next(w, r)
+	}
 }
 
 // Add добавляет пользователя
@@ -51,15 +70,6 @@ func (db *InMemoryDB) Add(user User) User {
 	return user
 }
 
-// GetByID возвращает пользователя по ID
-func (db *InMemoryDB) GetByID(id int) (User, bool) {
-	db.mutex.RLock()
-	defer db.mutex.RUnlock()
-
-	user, exists := db.users[id]
-	return user, exists
-}
-
 // GetAll возвращает всех пользователей
 func (db *InMemoryDB) GetAll() []User {
 	db.mutex.RLock()
@@ -72,13 +82,22 @@ func (db *InMemoryDB) GetAll() []User {
 	return users
 }
 
+// GetByID возвращает пользователя по ID
+func (db *InMemoryDB) GetByID(id int) (User, bool) {
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	user, exists := db.users[id]
+	return user, exists
+}
+
 // Update обновляет пользователя
 func (db *InMemoryDB) Update(user User) bool {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	if existingUser, exists := db.users[user.ID]; exists {
-		user.CreatedAt = existingUser.CreatedAt // Сохраняем оригинальную дату создания
+		user.CreatedAt = existingUser.CreatedAt
 		db.users[user.ID] = user
 		return true
 	}
@@ -99,39 +118,14 @@ func (db *InMemoryDB) Delete(id int) bool {
 
 // Обработчики HTTP
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	tmpl, err := template.ParseFiles("index.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	tmpl.Execute(w, nil)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "UserManager Pro API",
+		"version": "1.0.0",
+		"docs":    "/api/info",
+	})
 }
 
-func aboutHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("about.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	tmpl.Execute(w, nil)
-}
-
-// Presentation page
-func presentationHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("presentation.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	tmpl.Execute(w, nil)
-}
-
-// API handlers
 func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -147,7 +141,6 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Валидация
 		if user.Name == "" || user.Email == "" {
 			http.Error(w, `{"error": "Name and email are required"}`, http.StatusBadRequest)
 			return
@@ -166,7 +159,13 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Извлекаем ID из URL
-	idStr := r.URL.Path[len("/api/users/"):]
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 4 {
+		http.Error(w, `{"error": "Invalid URL"}`, http.StatusBadRequest)
+		return
+	}
+	
+	idStr := pathParts[3]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, `{"error": "Invalid user ID"}`, http.StatusBadRequest)
@@ -189,7 +188,6 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Валидация
 		if user.Name == "" || user.Email == "" {
 			http.Error(w, `{"error": "Name and email are required"}`, http.StatusBadRequest)
 			return
@@ -214,7 +212,6 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Stats handler
 func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	
@@ -223,33 +220,58 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 		"server_time": time.Now(),
 		"status":      "online",
 		"version":     "1.0.0",
+		"go_version":  "1.23.1",
 	}
 	
 	json.NewEncoder(w).Encode(stats)
 }
 
-func main() {
-	// Статические файлы
-	fs := http.FileServer(http.Dir("."))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	
-	// Маршруты
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/about", aboutHandler)
-	http.HandleFunc("/presentation", presentationHandler)
-	http.HandleFunc("/api/users", apiUsersHandler)
-	http.HandleFunc("/api/users/", apiUserHandler)
-	http.HandleFunc("/api/stats", apiStatsHandler)
+	info := map[string]interface{}{
+		"name":        "UserManager Pro API",
+		"version":     "1.0.0",
+		"description": "Go Backend API for UserManager Pro",
+		"author":      "Dmitriy Kobelev",
+		"endpoints": map[string]string{
+			"GET /api/users": "Get all users",
+			"POST /api/users": "Create user",
+			"GET /api/users/{id}": "Get user by ID",
+			"PUT /api/users/{id}": "Update user",
+			"DELETE /api/users/{id}": "Delete user",
+			"GET /api/stats": "Server statistics",
+			"GET /api/info": "This info",
+		},
+		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
+	}
+	
+	json.NewEncoder(w).Encode(info)
+}
+
+func main() {
+	// Маршруты API с CORS
+	http.HandleFunc("/api/users", enableCORS(apiUsersHandler))
+	http.HandleFunc("/api/users/", enableCORS(apiUserHandler))
+	http.HandleFunc("/api/stats", enableCORS(apiStatsHandler))
+	http.HandleFunc("/api/info", enableCORS(apiInfoHandler))
+	
+	// Главная страница
+	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
-	fmt.Printf("🚀 Сервер запущен на http://localhost%s\n", port)
+	fmt.Printf("🚀 Go API сервер запущен на порту %s\n", port)
 	fmt.Printf("📊 База данных инициализирована с %d пользователями\n", len(db.users))
-	fmt.Println("✨ Доступные эндпоинты:")
-	fmt.Println("   - /                 - Главная страница")
-	fmt.Println("   - /about            - О проекте")
-	fmt.Println("   - /presentation     - Презентация проекта")
-	fmt.Println("   - /api/users        - API пользователей")
-	fmt.Println("   - /api/stats        - Статистика сервера")
+	fmt.Println("🌐 API Endpoints:")
+	fmt.Println("   GET  /api/users      - Все пользователи")
+	fmt.Println("   POST /api/users      - Создать пользователя")
+	fmt.Println("   GET  /api/users/{id} - Получить пользователя")
+	fmt.Println("   PUT  /api/users/{id} - Обновить пользователя")
+	fmt.Println("   DELETE /api/users/{id} - Удалить пользователя")
+	fmt.Println("   GET  /api/stats      - Статистика сервера")
+	fmt.Println("   GET  /api/info       - Информация об API")
+	fmt.Println("\n🔗 Frontend доступен по адресу:")
+	fmt.Println("   https://dmitriy43229.github.io/Go-Project777_GoStory/")
 
 	log.Fatal(http.ListenAndServe(port, nil))
 }

@@ -4,10 +4,184 @@
 // ============================================
 
 const CONFIG = {
-    USE_REAL_API: false, // по умолчанию, будет установлено в initApiMode()
+    USE_REAL_API: false,
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data'
 };
+
+// ================== ЗАЩИТА ЛОКАЛЬНОГО РЕЖИМА ==================
+const LOCAL_MODE_PASSWORD = "admin123"; // Пароль для локального режима
+let isLocalModeUnlocked = false;
+
+// Проверка доступа к локальному режиму
+function checkLocalModeAccess() {
+    // Если мы на GitHub Pages или используем серверный режим, доступ открыт
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
+    if (isGitHubPages || CONFIG.USE_REAL_API) {
+        isLocalModeUnlocked = true;
+        return true;
+    }
+
+    // Проверяем, есть ли сохраненный доступ
+    const savedAccess = localStorage.getItem('usermanager_local_access');
+    if (savedAccess === LOCAL_MODE_PASSWORD) {
+        isLocalModeUnlocked = true;
+        return true;
+    }
+
+    // Если доступа нет, показываем окно ввода пароля
+    return showLocalModePasswordPrompt();
+}
+
+// Окно ввода пароля для локального режима
+function showLocalModePasswordPrompt() {
+    const modalHTML = `
+        <div id="passwordModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        ">
+            <div style="
+                background: rgba(26, 35, 126, 0.95);
+                border-radius: 20px;
+                padding: 3rem;
+                width: 90%;
+                max-width: 400px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            ">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                <h3 style="color: white; margin-bottom: 0.5rem;">Доступ к локальному режиму</h3>
+                <p style="color: #bbdefb; margin-bottom: 2rem;">
+                    Локальный режим защищен паролем. Введите пароль для доступа.
+                </p>
+                
+                <input type="password" 
+                       id="localPasswordInput" 
+                       placeholder="Введите пароль" 
+                       style="
+                           width: 100%;
+                           padding: 1rem;
+                           background: rgba(255, 255, 255, 0.1);
+                           border: 1px solid rgba(255, 255, 255, 0.3);
+                           border-radius: 10px;
+                           color: white;
+                           font-size: 1rem;
+                           margin-bottom: 1rem;
+                           text-align: center;
+                       ">
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button onclick="exitLocalMode()" style="
+                        flex: 1;
+                        padding: 1rem;
+                        background: rgba(239, 68, 68, 0.2);
+                        border: 1px solid rgba(239, 68, 68, 0.4);
+                        color: #fca5a5;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: 600;
+                    ">
+                        Выход
+                    </button>
+                    <button onclick="submitLocalPassword()" style="
+                        flex: 1;
+                        padding: 1rem;
+                        background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+                        border: none;
+                        color: white;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: 600;
+                    ">
+                        Войти
+                    </button>
+                </div>
+                
+                <div id="passwordError" style="
+                    color: #f87171;
+                    margin-top: 1rem;
+                    display: none;
+                ">
+                    ❌ Неверный пароль
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modal = document.createElement('div');
+    modal.innerHTML = modalHTML;
+    document.body.appendChild(modal);
+
+    // Фокус на поле ввода
+    setTimeout(() => {
+        const input = document.getElementById('localPasswordInput');
+        if (input) input.focus();
+    }, 100);
+
+    return false;
+}
+
+// Обработка отправки пароля
+function submitLocalPassword() {
+    const input = document.getElementById('localPasswordInput');
+    const errorEl = document.getElementById('passwordError');
+    
+    if (!input || !errorEl) return;
+
+    if (input.value === LOCAL_MODE_PASSWORD) {
+        // Сохраняем доступ
+        localStorage.setItem('usermanager_local_access', LOCAL_MODE_PASSWORD);
+        isLocalModeUnlocked = true;
+        
+        // Закрываем модальное окно
+        const modal = document.getElementById('passwordModal');
+        if (modal) modal.remove();
+        
+        // Перезагружаем страницу
+        location.reload();
+    } else {
+        // Показываем ошибку
+        errorEl.style.display = 'block';
+        input.style.borderColor = '#f87171';
+        input.value = '';
+        
+        // Анимация ошибки
+        input.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            input.style.animation = '';
+        }, 500);
+    }
+}
+
+// Выход из локального режима
+function exitLocalMode() {
+    // Переключаемся на серверный режим
+    CONFIG.USE_REAL_API = true;
+    localStorage.setItem('usermanager_use_real_api', 'true');
+    localStorage.removeItem('usermanager_local_access');
+    
+    // Закрываем модальное окно
+    const modal = document.getElementById('passwordModal');
+    if (modal) modal.remove();
+    
+    // Обновляем UI и перезагружаем
+    if (typeof updateApiModeUI === 'function') {
+        updateApiModeUI();
+    }
+    setTimeout(() => location.reload(), 500);
+}
 
 // ================== МОК-API ДЛЯ GITHUB PAGES ==================
 const MOCK_USERS = [
@@ -60,16 +234,14 @@ const MOCK_USERS = [
 
 // Мок-функции для API
 const mockApi = {
-    // Получить всех пользователей
     async getUsers() {
-        await new Promise(resolve => setTimeout(resolve, 300)); // Имитация задержки
+        await new Promise(resolve => setTimeout(resolve, 300));
         return {
             success: true,
             users: [...MOCK_USERS]
         };
     },
 
-    // Создать пользователя
     async createUser(userData) {
         await new Promise(resolve => setTimeout(resolve, 300));
         const newUser = {
@@ -86,7 +258,6 @@ const mockApi = {
         };
     },
 
-    // Обновить пользователя
     async updateUser(id, userData) {
         await new Promise(resolve => setTimeout(resolve, 300));
         const index = MOCK_USERS.findIndex(u => u.id === id);
@@ -104,7 +275,6 @@ const mockApi = {
         };
     },
 
-    // Удалить пользователя
     async deleteUser(id) {
         await new Promise(resolve => setTimeout(resolve, 300));
         const index = MOCK_USERS.findIndex(u => u.id === id);
@@ -179,11 +349,15 @@ async function apiRequest(url, options = {}) {
             console.error('Ошибка серверного API:', error);
 
             // Автоматическое переключение при ошибке
-            if (!CONFIG.USE_REAL_API) return; // Уже переключились
+            if (!CONFIG.USE_REAL_API) return;
 
             showNotification('⚠️ Сервер недоступен. Переключаюсь на локальный режим', 'warning');
 
-            // Переключаемся на локальный режим
+            // Переключаемся на локальный режим (но с проверкой пароля)
+            if (!checkLocalModeAccess()) {
+                return;
+            }
+            
             CONFIG.USE_REAL_API = false;
             localStorage.setItem('usermanager_use_real_api', 'false');
             updateApiModeUI();
@@ -194,6 +368,10 @@ async function apiRequest(url, options = {}) {
             return await mockApiRequest(url, options);
         }
     } else {
+        // Проверяем доступ к локальному режиму
+        if (!isLocalModeUnlocked && !checkLocalModeAccess()) {
+            throw new Error('Доступ к локальному режиму запрещен');
+        }
         return await mockApiRequest(url, options);
     }
 }
@@ -287,7 +465,6 @@ async function loadUsers() {
 
     const isGitHubPages = window.location.hostname.includes('github.io');
 
-    // ВАЖНО: Добавить эту проверку ПЕРВОЙ
     if (isGitHubPages && CONFIG.USE_REAL_API) {
         console.log('✅ Используем мок-данные на GitHub Pages');
         showLoading(true);
@@ -303,7 +480,7 @@ async function loadUsers() {
         } finally {
             showLoading(false);
         }
-        return; // Выходим, не идем к реальному API
+        return;
     }
 
     showLoading(true);
@@ -326,7 +503,7 @@ async function createUser(userData) {
         const result = await mockApi.createUser(userData);
         if (result.success) {
             showNotification(result.message, 'success');
-            loadUsers(); // перезагрузить список
+            loadUsers();
         }
         return;
     }
@@ -345,7 +522,7 @@ async function updateUser(id, userData) {
         const result = await mockApi.updateUser(id, userData);
         if (result.success) {
             showNotification(result.message, 'success');
-            loadUsers(); // перезагрузить список
+            loadUsers();
         }
         return;
     }
@@ -364,7 +541,7 @@ async function deleteUser(id) {
         const result = await mockApi.deleteUser(id);
         if (result.success) {
             showNotification(result.message, 'success');
-            loadUsers(); // перезагрузить список
+            loadUsers();
         }
         return;
     }
@@ -632,7 +809,6 @@ function showLoading(show) {
 }
 
 function showNotification(message, type = 'success') {
-    // Удаляем старые уведомления
     const oldNotifications = document.querySelectorAll('.notification');
     oldNotifications.forEach(n => n.remove());
 
@@ -679,78 +855,31 @@ function getUsersForCharts() {
     return [];
 }
 
-// ================== ИНИЦИАЛИЗАЦИЯ ==================
-document.addEventListener('DOMContentLoaded', function () {
-    initLocalData();
-    loadUsers();
-
-    const form = document.getElementById('userForm');
-    if (form) {
-        form.onsubmit = saveUser;
-
-        if (!document.getElementById('userId')) {
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.id = 'userId';
-            idInput.name = 'userId';
-            form.appendChild(idInput);
-        }
-    }
-
-    document.addEventListener('click', function (e) {
-        if (e.target.id === 'userModal' || e.target.classList.contains('modal-overlay')) {
-            closeModal();
-        }
-    });
-
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeModal();
-    });
-
-    window.getUsersForCharts = getUsersForCharts;
-    window.loadDemoData = loadDemoData;
-
-    // Инициализация режима API
-    initApiMode();
-});
-
-// ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.editUser = editUser;
-window.deleteUserConfirm = deleteUserConfirm;
-window.searchUsers = searchUsers;
-window.loadUsers = loadUsers;
-window.loadDemoData = loadDemoData;
-window.getUsersForCharts = getUsersForCharts;
-
 // ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ API ==================
 function toggleApiMode() {
-    // Получаем текущий режим из localStorage
+    // Получаем текущий режим
     const currentMode = localStorage.getItem('usermanager_use_real_api');
     const newMode = currentMode === 'false' ? 'true' : 'false';
 
+    // Если переключаемся на локальный режим
+    if (newMode === 'false') {
+        const hasAccess = checkLocalModeAccess();
+        if (!hasAccess) {
+            return;
+        }
+    }
+
     // Сохраняем новый режим
     localStorage.setItem('usermanager_use_real_api', newMode);
-
-    // Обновляем глобальную переменную CONFIG
     CONFIG.USE_REAL_API = (newMode === 'true');
 
-    console.log('Переключение режима API:', newMode === 'true' ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
-
-    // Проверяем GitHub Pages
-    const isGitHubPages = window.location.hostname.includes('github.io');
-
     // Уведомление
-    if (newMode === 'true') {
-        if (isGitHubPages) {
-            showNotification('🌐 Включен ДЕМО-РЕЖИМ с тестовыми данными', 'info');
-        } else {
-            showNotification('🌐 Включен СЕРВЕРНЫЙ режим (Go API)', 'info');
-        }
-    } else {
-        showNotification('💾 Включен ЛОКАЛЬНЫЙ режим', 'warning');
-    }
+    const isServerMode = newMode === 'true';
+    const message = isServerMode
+        ? '🌐 Включен СЕРВЕРНЫЙ режим (Go API)'
+        : '🔒 Включен ЛОКАЛЬНЫЙ режим (защищенный)';
+
+    showNotification(message, isServerMode ? 'info' : 'warning');
 
     // Обновляем UI
     updateApiModeUI();
@@ -776,7 +905,7 @@ function updateApiModeUI() {
         if (icon) icon.textContent = '🌐';
         if (text) text.textContent = 'Серверный';
         if (button) {
-            button.title = 'Переключиться на локальный режим';
+            button.title = 'Переключиться на локальный режим (требуется пароль)';
             button.style.background = 'rgba(59, 130, 246, 0.2)';
             button.style.borderColor = 'rgba(59, 130, 246, 0.4)';
         }
@@ -785,7 +914,7 @@ function updateApiModeUI() {
             status.style.color = '#60a5fa';
         }
     } else {
-        if (icon) icon.textContent = '💾';
+        if (icon) icon.textContent = '🔒';
         if (text) text.textContent = 'Локальный';
         if (button) {
             button.title = 'Переключиться на серверный режим';
@@ -797,28 +926,6 @@ function updateApiModeUI() {
             status.style.color = '#a78bfa';
         }
     }
-
-    // Также обновляем кнопки на других страницах
-    const allApiButtons = document.querySelectorAll('.api-mode-btn, [onclick*="toggleApiMode"]');
-    allApiButtons.forEach(btn => {
-        if (CONFIG.USE_REAL_API) {
-            btn.title = 'Переключиться на локальный режим';
-            btn.style.background = 'rgba(59, 130, 246, 0.2)';
-            btn.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-            const iconSpan = btn.querySelector('span:first-child');
-            const textSpan = btn.querySelector('span:last-child');
-            if (iconSpan) iconSpan.textContent = '🌐';
-            if (textSpan) textSpan.textContent = 'Серверный';
-        } else {
-            btn.title = 'Переключиться на серверный режим';
-            btn.style.background = 'rgba(139, 92, 246, 0.2)';
-            btn.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-            const iconSpan = btn.querySelector('span:first-child');
-            const textSpan = btn.querySelector('span:last-child');
-            if (iconSpan) iconSpan.textContent = '💾';
-            if (textSpan) textSpan.textContent = 'Локальный';
-        }
-    });
 }
 
 // Проверка статуса сервера
@@ -826,7 +933,7 @@ async function checkApiStatus() {
     if (!CONFIG.USE_REAL_API) {
         const statusEl = document.getElementById('serverStatus');
         if (statusEl) {
-            statusEl.innerHTML = '💾 Локальный';
+            statusEl.innerHTML = '🔒 Локальный';
             statusEl.style.color = '#a78bfa';
         }
         return;
@@ -875,22 +982,19 @@ function initApiMode() {
         CONFIG.USE_REAL_API = (savedMode === 'true');
     } else {
         // Если не сохранен, устанавливаем по умолчанию
-        // На GitHub Pages по умолчанию локальный режим
         const isGitHubPages = window.location.hostname.includes('github.io');
-        CONFIG.USE_REAL_API = !isGitHubPages; // На GitHub Pages = false, локально = true
-
-        // Сохраняем настройку по умолчанию
+        CONFIG.USE_REAL_API = !isGitHubPages;
         localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API.toString());
     }
 
     console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
-    console.log('GitHub Pages?', window.location.hostname.includes('github.io'));
 
-    // Если НЕ GitHub Pages и включен серверный режим
-    if (!window.location.hostname.includes('github.io') && CONFIG.USE_REAL_API) {
-        // Проверяем статус реального сервера
-        setTimeout(checkApiStatus, 500);
-        setInterval(checkApiStatus, 30000);
+    // Если включен локальный режим, проверяем доступ
+    if (!CONFIG.USE_REAL_API) {
+        const hasAccess = checkLocalModeAccess();
+        if (!hasAccess) {
+            return;
+        }
     }
 
     // Обновляем UI
@@ -900,11 +1004,69 @@ function initApiMode() {
     }
 }
 
-// ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ РЕЖИМА API ==================
+// ================== ИНИЦИАЛИЗАЦИЯ ==================
+document.addEventListener('DOMContentLoaded', function () {
+    // Проверяем доступ перед инициализацией
+    const savedMode = localStorage.getItem('usermanager_use_real_api');
+    const isLocalMode = savedMode === 'false';
+    
+    if (isLocalMode) {
+        const hasAccess = checkLocalModeAccess();
+        if (!hasAccess) {
+            return;
+        }
+    }
+    
+    initLocalData();
+    loadUsers();
+
+    const form = document.getElementById('userForm');
+    if (form) {
+        form.onsubmit = saveUser;
+
+        if (!document.getElementById('userId')) {
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.id = 'userId';
+            idInput.name = 'userId';
+            form.appendChild(idInput);
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.id === 'userModal' || e.target.classList.contains('modal-overlay')) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    window.getUsersForCharts = getUsersForCharts;
+    window.loadDemoData = loadDemoData;
+
+    // Инициализация режима API
+    initApiMode();
+});
+
+// ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.editUser = editUser;
+window.deleteUserConfirm = deleteUserConfirm;
+window.searchUsers = searchUsers;
+window.loadUsers = loadUsers;
+window.loadDemoData = loadDemoData;
+window.getUsersForCharts = getUsersForCharts;
 window.toggleApiMode = toggleApiMode;
 window.updateApiModeUI = updateApiModeUI;
 window.checkApiStatus = checkApiStatus;
 window.initApiMode = initApiMode;
+window.showLocalModePasswordPrompt = showLocalModePasswordPrompt;
+window.submitLocalPassword = submitLocalPassword;
+window.exitLocalMode = exitLocalMode;
+window.checkLocalModeAccess = checkLocalModeAccess;
 
 // ================== СТИЛИ ==================
 const style = document.createElement('style');
@@ -968,6 +1130,23 @@ style.textContent = `
     
     .btn-delete:hover {
         background: rgba(239, 68, 68, 0.3);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    #localPasswordInput:focus {
+        outline: none;
+        border-color: #60a5fa !important;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
     }
 `;
 document.head.appendChild(style);

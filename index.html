@@ -1520,6 +1520,24 @@
             console.log('UserManager Pro готов!');
         });
     </script>
+    <script>
+    // Проверка доступа для локального режима
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedMode = localStorage.getItem('usermanager_use_real_api');
+        const isLocalMode = savedMode === 'false';
+        
+        if (isLocalMode) {
+            // Проверяем сохраненный доступ
+            const savedAccess = localStorage.getItem('usermanager_local_access');
+            if (savedAccess !== "admin123") {
+                // Показываем окно ввода пароля
+                if (typeof showLocalModePasswordPrompt === 'function') {
+                    showLocalModePasswordPrompt();
+                }
+            }
+        }
+    });
+</script>
 </body>
 
 </html>

@@ -4,7 +4,7 @@
 // ============================================
 
 const CONFIG = {
-    USE_REAL_API: localStorage.getItem('usermanager_use_real_api') !== 'false',
+    USE_REAL_API: false, // по умолчанию, будет установлено в initApiMode()
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data'
 };
@@ -801,31 +801,33 @@ async function checkApiStatus() {
 function initApiMode() {
     console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
 
-    // Проверяем GitHub Pages
-    const isGitHubPages = window.location.hostname.includes('github.io');
+     const isGitHubPages = window.location.hostname.includes('github.io');
     console.log('GitHub Pages?:', isGitHubPages);
-
-    if (isGitHubPages) {
-        console.log('GitHub Pages: можно использовать демо-режим');
-
-        // На GitHub Pages разрешаем "серверный" режим с мок-данными
-        if (CONFIG.USE_REAL_API) {
-            console.log('GitHub Pages: ДЕМО-режим с тестовыми данными');
-            setTimeout(() => {
-                showNotification('🌐 GitHub Pages: используется демо-режим с тестовыми данными', 'info');
-            }, 1000);
-        }
-    } else {
-        // НЕ GitHub Pages - обычная логика
-        console.log('Локальный хост: настоящий серверный режим');
-
-        if (CONFIG.USE_REAL_API) {
-            // Проверяем статус реального сервера
-            setTimeout(checkApiStatus, 500);
-            setInterval(checkApiStatus, 30000);
-        }
+    console.log('Текущий режим из CONFIG:', CONFIG.USE_REAL_API);
+    
+    // Если на GitHub Pages и включен серверный режим
+    if (isGitHubPages && CONFIG.USE_REAL_API) {
+        console.log('GitHub Pages: ДЕМО-режим с тестовыми данными');
+        
+        // Показываем уведомление
+        setTimeout(() => {
+            showNotification('🌐 GitHub Pages: используется демо-режим с тестовыми данными', 'info');
+        }, 1000);
+        
+        // На GitHub Pages принудительно ставим локальный, если выбрали серверный?
+        // НЕТ! Оставляем как есть - будет демо-режим
+    }
+    
+    // Если НЕ GitHub Pages и включен серверный режим
+    if (!isGitHubPages && CONFIG.USE_REAL_API) {
+        // Проверяем статус реального сервера
+        setTimeout(checkApiStatus, 500);
+        setInterval(checkApiStatus, 30000);
     }
 
+
+
+    // Обновляем UI
     updateApiModeUI();
     console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
 }

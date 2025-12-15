@@ -187,6 +187,9 @@ async function apiRequest(url, options = {}) {
             CONFIG.USE_REAL_API = false;
             localStorage.setItem('usermanager_use_real_api', 'false');
             updateApiModeUI();
+            if (typeof updateServerStatus === 'function') {
+                updateServerStatus();
+            }
 
             return await mockApiRequest(url, options);
         }
@@ -746,6 +749,9 @@ function toggleApiMode() {
 
     // Обновляем UI
     updateApiModeUI();
+    if (typeof updateServerStatus === 'function') {
+        updateServerStatus();
+    }
 
     // Перезагружаем данные
     setTimeout(() => {
@@ -884,6 +890,9 @@ function initApiMode() {
 
     // Обновляем UI
     updateApiModeUI();
+    if (typeof updateServerStatus === 'function') {
+        updateServerStatus();
+    }
 }
 
 // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ РЕЖИМА API ==================

@@ -1293,14 +1293,23 @@
     document.head.appendChild(style);
 </script>
 <script>
-    // Проверка администратора для других страниц
+     // Проверка сессии администратора для других страниц
     document.addEventListener('DOMContentLoaded', function() {
+        const savedSession = localStorage.getItem('usermanager_admin_session');
+        const sessionExpiry = localStorage.getItem('usermanager_admin_expiry');
         const savedMode = localStorage.getItem('usermanager_use_real_api');
         const isLocalMode = savedMode === 'false';
-        const savedAdmin = localStorage.getItem('usermanager_admin_access');
-        const isAdmin = savedAdmin === "admin123";
         
-        // Если локальный режим без прав администратора
+        // Проверяем активную сессию
+        let isAdmin = false;
+        if (savedSession && sessionExpiry) {
+            const now = Date.now();
+            if (now < parseInt(sessionExpiry)) {
+                isAdmin = true;
+            }
+        }
+        
+        // Если локальный режим без активной сессии администратора
         if (!isAdmin && isLocalMode) {
             // Переключаем на серверный режим
             localStorage.setItem('usermanager_use_real_api', 'true');

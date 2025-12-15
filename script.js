@@ -12,9 +12,30 @@ const CONFIG = {
 // ================== СИСТЕМА АДМИНИСТРАТОРА ==================
 const ADMIN_PASSWORD = "admin123"; // Только вы знаете этот пароль
 let isAdmin = false;
+let adminSessionId = null;
 
 // Проверка администратора
 function checkAdminAccess() {
+    // Проверяем сохраненную сессию администратора
+    const savedSession = localStorage.getItem('usermanager_admin_session');
+    const sessionExpiry = localStorage.getItem('usermanager_admin_expiry');
+    
+    // Если есть активная сессия и она не истекла
+    if (savedSession && sessionExpiry) {
+        const now = Date.now();
+        if (now < parseInt(sessionExpiry)) {
+            isAdmin = true;
+            adminSessionId = savedSession;
+            console.log('✅ Администратор: активная сессия восстановлена');
+            return true;
+        } else {
+            // Сессия истекла
+            localStorage.removeItem('usermanager_admin_session');
+            localStorage.removeItem('usermanager_admin_expiry');
+            console.log('⚠️ Администратор: сессия истекла');
+        }
+    }
+    
     // Проверяем GitHub Pages - там всегда только серверный режим
     const isGitHubPages = window.location.hostname.includes('github.io');
     
@@ -26,14 +47,23 @@ function checkAdminAccess() {
         return false;
     }
 
-    // Проверяем, есть ли сохраненные права администратора
-    const savedAdmin = localStorage.getItem('usermanager_admin_access');
-    if (savedAdmin === ADMIN_PASSWORD) {
-        isAdmin = true;
-        return true;
-    }
-
     return false;
+}
+
+// Создание сессии администратора
+function createAdminSession() {
+    // Генерируем уникальный ID сессии
+    const sessionId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // Устанавливаем срок действия сессии на 24 часа
+    const expiryTime = Date.now() + (24 * 60 * 60 * 1000); // 24 часа
+    
+    localStorage.setItem('usermanager_admin_session', sessionId);
+    localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+    
+    adminSessionId = sessionId;
+    isAdmin = true;
+    
+    console.log('✅ Администратор: новая сессия создана', sessionId);
 }
 
 // Окно входа для администратора
@@ -186,9 +216,8 @@ function submitAdminPassword() {
     if (!input || !errorEl) return;
 
     if (input.value === ADMIN_PASSWORD) {
-        // Сохраняем права администратора
-        localStorage.setItem('usermanager_admin_access', ADMIN_PASSWORD);
-        isAdmin = true;
+        // Создаем сессию администратора
+        createAdminSession();
         
         // Закрываем модальное окно
         const modal = document.getElementById('adminModal');
@@ -198,12 +227,14 @@ function submitAdminPassword() {
         updateApiModeUI();
         
         // Показываем уведомление
-        showNotification('👑 Вы вошли как администратор', 'success');
+        showNotification('👑 Вы вошли как администратор. Сессия активна 24 часа.', 'success');
         
-        // Перезагружаем страницу для применения изменений
+        // НЕ перезагружаем страницу, просто обновляем UI
         setTimeout(() => {
-            location.reload();
-        }, 1000);
+            // Обновляем состояние
+            isAdmin = true;
+            updateApiModeUI();
+        }, 300);
     } else {
         // Показываем ошибку
         errorEl.style.display = 'block';
@@ -226,6 +257,10 @@ function continueAsGuest() {
     localStorage.setItem('usermanager_use_real_api', 'true');
     isAdmin = false;
     
+    // Удаляем сессию администратора если была
+    localStorage.removeItem('usermanager_admin_session');
+    localStorage.removeItem('usermanager_admin_expiry');
+    
     // Закрываем модальное окно
     const modal = document.getElementById('adminModal');
     if (modal) modal.remove();
@@ -233,35 +268,32 @@ function continueAsGuest() {
     // Обновляем UI
     updateApiModeUI();
     
-    // Перезагружаем страницу
-    setTimeout(() => {
-        location.reload();
-    }, 500);
+    // Показываем уведомление
+    showNotification('👋 Вы работаете в режиме гостя (серверный режим)', 'info');
 }
 
 // Выйти из администратора
 function logoutAdmin() {
-    localStorage.removeItem('usermanager_admin_access');
-    isAdmin = false;
+    // Удаляем сессию
+    localStorage.removeItem('usermanager_admin_session');
+    localStorage.removeItem('usermanager_admin_expiry');
     
     // Переключаемся на серверный режим
     CONFIG.USE_REAL_API = true;
     localStorage.setItem('usermanager_use_real_api', 'true');
+    isAdmin = false;
     
     // Обновляем UI
     updateApiModeUI();
     
     // Показываем уведомление
     showNotification('👋 Вы вышли из режима администратора', 'info');
-    
-    // Перезагружаем страницу
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
 }
 
 // ================== УПРАВЛЕНИЕ РЕЖИМАМИ ==================
 function toggleApiMode() {
+    console.log('toggleApiMode вызван, isAdmin:', isAdmin);
+    
     // Если не администратор, показываем окно входа
     if (!isAdmin) {
         showNotification('🔒 Только администратор может переключать режимы', 'warning');
@@ -272,6 +304,8 @@ function toggleApiMode() {
     // Только администратор может переключать режимы
     const currentMode = localStorage.getItem('usermanager_use_real_api');
     const newMode = currentMode === 'false' ? 'true' : 'false';
+
+    console.log('Переключение режима:', currentMode, '->', newMode);
 
     // Сохраняем новый режим
     localStorage.setItem('usermanager_use_real_api', newMode);
@@ -300,6 +334,8 @@ function toggleApiMode() {
 }
 
 function updateApiModeUI() {
+    console.log('updateApiModeUI вызван, isAdmin:', isAdmin, 'CONFIG.USE_REAL_API:', CONFIG.USE_REAL_API);
+    
     const button = document.getElementById('apiModeButton');
     const icon = document.getElementById('apiModeIcon');
     const text = document.getElementById('apiModeText');
@@ -317,6 +353,10 @@ function updateApiModeUI() {
             button.disabled = !isAdmin;
             button.style.opacity = isAdmin ? '1' : '0.5';
             button.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
+            button.onclick = isAdmin ? toggleApiMode : function() {
+                showNotification('🔒 Только администратор может переключать режимы', 'warning');
+                showAdminLoginModal();
+            };
         }
         if (status) {
             status.textContent = 'Серверный режим';
@@ -334,6 +374,10 @@ function updateApiModeUI() {
             button.disabled = !isAdmin;
             button.style.opacity = isAdmin ? '1' : '0.5';
             button.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
+            button.onclick = isAdmin ? toggleApiMode : function() {
+                showNotification('🔒 Только администратор может переключать режимы', 'warning');
+                showAdminLoginModal();
+            };
         }
         if (status) {
             status.textContent = 'Локальный режим';
@@ -347,6 +391,8 @@ function updateApiModeUI() {
 
 // Кнопка администратора
 function updateAdminButtonUI() {
+    console.log('updateAdminButtonUI вызван, isAdmin:', isAdmin);
+    
     let adminBtn = document.getElementById('adminButton');
     
     if (!adminBtn && document.querySelector('.nav-menu')) {
@@ -363,7 +409,13 @@ function updateAdminButtonUI() {
         // Добавляем кнопку в навигацию
         const navMenu = document.querySelector('.nav-menu');
         if (navMenu) {
-            navMenu.appendChild(adminBtn);
+            // Вставляем перед кнопкой переключения темы
+            const themeToggle = document.querySelector('.theme-toggle-container');
+            if (themeToggle) {
+                navMenu.insertBefore(adminBtn, themeToggle);
+            } else {
+                navMenu.appendChild(adminBtn);
+            }
         }
     } else if (adminBtn) {
         // Обновляем существующую кнопку
@@ -378,6 +430,7 @@ function updateAdminButtonUI() {
             adminBtn.style.background = 'rgba(245, 158, 11, 0.2)';
             adminBtn.style.borderColor = 'rgba(245, 158, 11, 0.4)';
             adminBtn.style.color = '#fbbf24';
+            adminBtn.style.fontWeight = '600';
         } else {
             adminBtn.style.background = 'rgba(255, 255, 255, 0.1)';
             adminBtn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
@@ -386,6 +439,49 @@ function updateAdminButtonUI() {
     }
 }
 
+// ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
+function initApiMode() {
+    console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
+
+    // Проверяем права администратора (восстанавливаем сессию)
+    checkAdminAccess();
+
+    // Проверяем сохраненный режим из localStorage
+    const savedMode = localStorage.getItem('usermanager_use_real_api');
+
+    // Если режим не сохранен, устанавливаем по умолчанию
+    if (savedMode === null) {
+        // По умолчанию - серверный режим
+        CONFIG.USE_REAL_API = true;
+        localStorage.setItem('usermanager_use_real_api', 'true');
+    } else {
+        CONFIG.USE_REAL_API = (savedMode === 'true');
+    }
+
+    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+    console.log('Администратор:', isAdmin ? 'ДА' : 'НЕТ');
+
+    // Если локальный режим и не администратор, переключаем на серверный
+    if (!CONFIG.USE_REAL_API && !isAdmin) {
+        console.log('⚠️ Локальный режим без администратора - переключаем на серверный');
+        CONFIG.USE_REAL_API = true;
+        localStorage.setItem('usermanager_use_real_api', 'true');
+        
+        // Показываем уведомление
+        setTimeout(() => {
+            showNotification('🔒 Локальный режим доступен только администратору', 'warning');
+        }, 1000);
+    }
+
+    // Обновляем UI
+    updateApiModeUI();
+    if (typeof updateServerStatus === 'function') {
+        updateServerStatus();
+    }
+}
+
+// ================== ОСТАЛЬНАЯ ЧАСТЬ ФАЙЛА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ==================
+// (Оставьте весь остальной код из предыдущей версии, начиная с МОК-API ДЛЯ GITHUB PAGES)
 // ================== МОК-API ДЛЯ GITHUB PAGES ==================
 const MOCK_USERS = [
     {
@@ -1082,52 +1178,12 @@ async function checkApiStatus() {
     }
 }
 
-// ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
-function initApiMode() {
-    console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
-
-    // Проверяем права администратора
-    checkAdminAccess();
-
-    // Проверяем сохраненный режим из localStorage
-    const savedMode = localStorage.getItem('usermanager_use_real_api');
-
-    // Если режим не сохранен, устанавливаем по умолчанию
-    if (savedMode === null) {
-        // По умолчанию - серверный режим
-        CONFIG.USE_REAL_API = true;
-        localStorage.setItem('usermanager_use_real_api', 'true');
-    } else {
-        CONFIG.USE_REAL_API = (savedMode === 'true');
-    }
-
-    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
-    console.log('Администратор:', isAdmin ? 'ДА' : 'НЕТ');
-
-    // Обновляем UI
-    updateApiModeUI();
-    if (typeof updateServerStatus === 'function') {
-        updateServerStatus();
-    }
-}
-
 // ================== ИНИЦИАЛИЗАЦИЯ ==================
 document.addEventListener('DOMContentLoaded', function () {
-    // Инициализация режима API
-    initApiMode();
+    console.log('=== ЗАГРУЗКА СТРАНИЦЫ ===');
     
-    // Если не администратор и локальный режим, показываем окно входа
-    if (!isAdmin && !CONFIG.USE_REAL_API) {
-        // Переключаем на серверный режим для гостей
-        CONFIG.USE_REAL_API = true;
-        localStorage.setItem('usermanager_use_real_api', 'true');
-        updateApiModeUI();
-        
-        // Показываем сообщение
-        setTimeout(() => {
-            showNotification('🔒 Локальный режим доступен только администратору', 'warning');
-        }, 500);
-    }
+    // Инициализация режима API (восстанавливает сессию администратора)
+    initApiMode();
     
     // Обычная инициализация
     initLocalData();
@@ -1158,6 +1214,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.getUsersForCharts = getUsersForCharts;
     window.loadDemoData = loadDemoData;
+    
+    // Проверяем сессию администратора каждые 30 минут
+    setInterval(() => {
+        if (isAdmin) {
+            checkAdminAccess(); // Обновляем статус сессии
+        }
+    }, 30 * 60 * 1000);
 });
 
 // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================

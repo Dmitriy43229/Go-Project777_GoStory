@@ -40,7 +40,7 @@ func init() {
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
 }
 
-// CORS middleware
+// CORS middleware 37463274
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Разрешаем запросы с любых доменов

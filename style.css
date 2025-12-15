@@ -1664,3 +1664,46 @@ body {
     background: linear-gradient(45deg, #2196f3, #00bcd4);
     border: none;
 }
+
+/* Стили для переключателя режима API */
+.api-mode-toggle {
+    margin-left: 0.5rem;
+}
+
+.api-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 20px;
+    color: #93c5fd;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    font-family: inherit;
+}
+
+.api-mode-btn:hover {
+    background: rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
+}
+
+.api-mode-btn.local-mode {
+    background: rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #c4b5fd;
+}
+
+.api-mode-btn.local-mode:hover {
+    background: rgba(139, 92, 246, 0.3);
+}
+
+.api-status-text {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-left: 0.5rem;
+}

@@ -325,6 +325,27 @@
             font-weight: 500;
         }
 
+        /* Кнопка переключения режима API */
+        .api-mode-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: #bbdefb;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            margin-left: 1rem;
+        }
+
+        .api-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
         /* Футер */
         .footer {
             margin-top: 4rem;
@@ -462,6 +483,12 @@
             color: #64748b;
         }
 
+        body.light-theme .api-mode-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #64748b;
+        }
+
         /* Для звезд в светлой теме */
         body.light-theme .star {
             background: rgba(0, 0, 0, 0.1);
@@ -532,18 +559,26 @@
     <div class="container">
         <!-- Навигация -->
         <div class="nav-menu">
-            <a href="/" class="nav-item">
+            <a href="index.html" class="nav-item">
                 <span class="nav-icon">🏠</span>
                 Главная
             </a>
-            <a href="/about" class="nav-item">
+            <a href="about.html" class="nav-item">
                 <span class="nav-icon">📖</span>
                 О проекте
             </a>
-            <a href="/presentation" class="nav-item active">
+            <a href="presentation.html" class="nav-item active">
                 <span class="nav-icon">🎬</span>
                 Презентация
             </a>
+
+            <!-- Кнопка переключения режима API -->
+            <button class="api-mode-btn" onclick="toggleApiMode()" title="Переключить режим работы">
+                <span id="apiModeIcon">🌐</span>
+                <span id="apiModeText">Серверный</span>
+            </button>
+
+            <!-- Переключатель темы -->
             <div class="theme-toggle-container">
                 <button class="theme-toggle" id="themeToggle" title="Сменить тему">
                     <span class="theme-icon">🌙</span>
@@ -860,10 +895,10 @@
 
             <!-- Навигация -->
             <div class="presentation-nav">
-                <a href="/about" class="action-button secondary">
+                <a href="about.html" class="action-button secondary">
                     ← Подробнее о проекте
                 </a>
-                <a href="/" class="action-button">
+                <a href="index.html" class="action-button">
                     На главную →
                 </a>
             </div>
@@ -875,9 +910,9 @@
         <div class="footer-content">
             <div class="footer-logo">👥 UserManager Pro</div>
             <div class="footer-links">
-                <a href="/" class="footer-link">Главная</a>
-                <a href="/about" class="footer-link">О проекте</a>
-                <a href="/presentation" class="footer-link">Презентация</a>
+                <a href="index.html" class="footer-link">Главная</a>
+                <a href="about.html" class="footer-link">О проекте</a>
+                <a href="presentation.html" class="footer-link">Презентация</a>
             </div>
             <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 1rem;">
                 © 2024 UserManager Pro. Все права защищены. Демо версия 1.0
@@ -889,6 +924,8 @@
         // Создание звездного неба
         function createStars() {
             const starsContainer = document.getElementById('stars');
+            if (!starsContainer) return;
+
             starsContainer.innerHTML = '';
 
             for (let i = 0; i < 150; i++) {
@@ -948,6 +985,100 @@
             });
         }
 
+        // Переключение режима API
+        function toggleApiMode() {
+            const currentMode = localStorage.getItem('usermanager_use_real_api');
+            const newMode = currentMode === 'false' ? 'true' : 'false';
+
+            localStorage.setItem('usermanager_use_real_api', newMode);
+
+            const isServerMode = newMode === 'true';
+            const message = isServerMode
+                ? '🌐 Включен СЕРВЕРНЫЙ режим (Go API)'
+                : '💾 Включен ЛОКАЛЬНЫЙ режим';
+
+            // Показываем уведомление
+            showNotification(message, isServerMode ? 'info' : 'warning');
+
+            // Обновляем UI
+            updateApiModeUI();
+
+            // Перезагружаем страницу для применения изменений
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+
+        // Обновление UI режима API
+        function updateApiModeUI() {
+            const isServerMode = localStorage.getItem('usermanager_use_real_api') !== 'false';
+            const icon = document.getElementById('apiModeIcon');
+            const text = document.getElementById('apiModeText');
+            const button = document.querySelector('.api-mode-btn');
+
+            if (icon) icon.textContent = isServerMode ? '🌐' : '💾';
+            if (text) text.textContent = isServerMode ? 'Серверный' : 'Локальный';
+            if (button) {
+                button.title = isServerMode
+                    ? 'Переключиться на локальный режим'
+                    : 'Переключиться на серверный режим';
+            }
+        }
+
+        // Показать уведомление
+        function showNotification(message, type = 'success') {
+            // Удаляем старые уведомления
+            const oldNotifications = document.querySelectorAll('.notification');
+            oldNotifications.forEach(n => n.remove());
+
+            const colors = {
+                success: '#4ade80',
+                error: '#f87171',
+                warning: '#fbbf24',
+                info: '#60a5fa'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${colors[type] || colors.info};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                font-weight: 500;
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Добавляем стили для анимаций уведомлений
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
         // Анимации при скролле
         function initScrollAnimations() {
             const observer = new IntersectionObserver((entries) => {
@@ -963,15 +1094,8 @@
             });
         }
 
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function () {
-            initThemeToggle();
-            createStars();
-            initScrollAnimations();
-
-            window.addEventListener('resize', createStars);
-
-            // Добавляем параллакс эффект для слайдов
+        // Параллакс эффект для слайдов
+        function initParallax() {
             window.addEventListener('scroll', function () {
                 const scrolled = window.pageYOffset;
                 const slides = document.querySelectorAll('.slide');
@@ -981,6 +1105,23 @@
                     slide.style.transform = `translateY(${rate}px)`;
                 });
             });
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('Презентация загружается...');
+
+            initThemeToggle();
+            createStars();
+            initScrollAnimations();
+            initParallax();
+
+            // Инициализация режима API
+            updateApiModeUI();
+
+            window.addEventListener('resize', createStars);
+
+            console.log('Презентация загружена');
         });
     </script>
 </body>

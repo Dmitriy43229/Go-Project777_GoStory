@@ -4,8 +4,8 @@
 // ============================================
 
 const CONFIG = {
-    USE_REAL_API: false, // true - использовать Go API, false - локальные данные
-    API_URL: 'https://ваш-go-api.на-хостинге.com/api',
+    USE_REAL_API: localStorage.getItem('usermanager_use_real_api') !== 'false',
+    API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data'
 };
 
@@ -57,10 +57,28 @@ function updateStats() {
 
 // ================== API КЛИЕНТ ==================
 async function apiRequest(url, options = {}) {
+    console.log(`[${CONFIG.USE_REAL_API ? 'СЕРВЕР' : 'ЛОКАЛЬНЫЙ'}] ${options.method || 'GET'} ${url}`);
+
     if (CONFIG.USE_REAL_API) {
-        return realApiRequest(url, options);
+        try {
+            return await realApiRequest(url, options);
+        } catch (error) {
+            console.error('Ошибка серверного API:', error);
+
+            // Автоматическое переключение при ошибке
+            if (!CONFIG.USE_REAL_API) return; // Уже переключились
+
+            showNotification('⚠️ Сервер недоступен. Переключаюсь на локальный режим', 'warning');
+
+            // Переключаемся на локальный режим
+            CONFIG.USE_REAL_API = false;
+            localStorage.setItem('usermanager_use_real_api', 'false');
+            updateApiModeUI();
+
+            return await mockApiRequest(url, options);
+        }
     } else {
-        return mockApiRequest(url, options);
+        return await mockApiRequest(url, options);
     }
 }
 
@@ -439,6 +457,10 @@ function showLoading(show) {
 }
 
 function showNotification(message, type = 'success') {
+    // Удаляем старые уведомления
+    const oldNotifications = document.querySelectorAll('.notification');
+    oldNotifications.forEach(n => n.remove());
+
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
@@ -508,6 +530,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.getUsersForCharts = getUsersForCharts;
     window.loadDemoData = loadDemoData;
+
+    // Инициализация режима API
+    if (typeof initApiMode === 'function') {
+        initApiMode();
+    } else {
+        updateApiModeUI();
+    }
 });
 
 // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================
@@ -518,6 +547,161 @@ window.deleteUserConfirm = deleteUserConfirm;
 window.searchUsers = searchUsers;
 window.loadUsers = loadUsers;
 window.loadDemoData = loadDemoData;
+
+// ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ ==================
+function toggleApiMode() {
+    CONFIG.USE_REAL_API = !CONFIG.USE_REAL_API;
+    localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API);
+
+    updateApiModeUI();
+
+    showNotification(
+        CONFIG.USE_REAL_API
+            ? '🌐 Включен СЕРВЕРНЫЙ режим (Go API)'
+            : '💾 Включен ЛОКАЛЬНЫЙ режим',
+        CONFIG.USE_REAL_API ? 'info' : 'warning'
+    );
+
+    // Перезагружаем данные
+    setTimeout(() => {
+        loadUsers();
+    }, 300);
+}
+
+function updateApiModeUI() {
+    const button = document.getElementById('apiModeButton');
+    const icon = document.getElementById('apiModeIcon');
+    const text = document.getElementById('apiModeText');
+    const status = document.getElementById('apiStatus');
+
+    if (CONFIG.USE_REAL_API) {
+        if (icon) icon.textContent = '🌐';
+        if (text) text.textContent = 'Серверный';
+        if (button) {
+            button.title = 'Переключиться на локальный режим';
+            button.style.background = 'rgba(59, 130, 246, 0.2)';
+            button.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+        }
+        if (status) {
+            status.textContent = 'Серверный режим';
+            status.style.color = '#60a5fa';
+        }
+    } else {
+        if (icon) icon.textContent = '💾';
+        if (text) text.textContent = 'Локальный';
+        if (button) {
+            button.title = 'Переключиться на серверный режим';
+            button.style.background = 'rgba(139, 92, 246, 0.2)';
+            button.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+        }
+        if (status) {
+            status.textContent = 'Локальный режим';
+            status.style.color = '#a78bfa';
+        }
+    }
+
+    // Также обновляем кнопки на других страницах
+    const allApiButtons = document.querySelectorAll('.api-mode-btn, [onclick*="toggleApiMode"]');
+    allApiButtons.forEach(btn => {
+        if (CONFIG.USE_REAL_API) {
+            btn.title = 'Переключиться на локальный режим';
+            btn.style.background = 'rgba(59, 130, 246, 0.2)';
+            btn.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+            const iconSpan = btn.querySelector('span:first-child');
+            const textSpan = btn.querySelector('span:last-child');
+            if (iconSpan) iconSpan.textContent = '🌐';
+            if (textSpan) textSpan.textContent = 'Серверный';
+        } else {
+            btn.title = 'Переключиться на серверный режим';
+            btn.style.background = 'rgba(139, 92, 246, 0.2)';
+            btn.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+            const iconSpan = btn.querySelector('span:first-child');
+            const textSpan = btn.querySelector('span:last-child');
+            if (iconSpan) iconSpan.textContent = '💾';
+            if (textSpan) textSpan.textContent = 'Локальный';
+        }
+    });
+}
+
+// Проверка статуса сервера
+async function checkApiStatus() {
+    if (!CONFIG.USE_REAL_API) {
+        const statusEl = document.getElementById('serverStatus');
+        if (statusEl) {
+            statusEl.innerHTML = '💾 Локальный';
+            statusEl.style.color = '#a78bfa';
+        }
+        return;
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const response = await fetch(CONFIG.API_URL.replace('/api', '') + '/health', {
+            method: 'GET',
+            signal: controller.signal
+        }).catch(() => null);
+
+        clearTimeout(timeoutId);
+
+        const statusEl = document.getElementById('serverStatus');
+        if (statusEl) {
+            if (response && response.ok) {
+                statusEl.innerHTML = '🟢 Онлайн';
+                statusEl.style.color = '#4ade80';
+            } else {
+                statusEl.innerHTML = '🔴 Офлайн';
+                statusEl.style.color = '#f87171';
+            }
+        }
+    } catch (error) {
+        console.log('Проверка статуса:', error.message);
+        const statusEl = document.getElementById('serverStatus');
+        if (statusEl) {
+            statusEl.innerHTML = '🔴 Ошибка';
+            statusEl.style.color = '#f87171';
+        }
+    }
+}
+
+// ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
+function initApiMode() {
+    // Проверяем GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+        console.log('GitHub Pages: принудительно локальный режим');
+        CONFIG.USE_REAL_API = false;
+        localStorage.setItem('usermanager_use_real_api', 'false');
+
+        // Показываем уведомление
+        setTimeout(() => {
+            showNotification('🌐 GitHub Pages: работает в локальном режиме', 'info');
+        }, 1500);
+    }
+
+    updateApiModeUI();
+
+    // Проверяем статус сервера (только в серверном режиме)
+    if (CONFIG.USE_REAL_API) {
+        setTimeout(checkApiStatus, 500);
+        setInterval(checkApiStatus, 30000); // Каждые 30 секунд
+    }
+
+    console.log('Режим API:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+}
+
+// Вызов в DOMContentLoaded (в конце файла)
+document.addEventListener('DOMContentLoaded', function () {
+    // ... существующий код ...
+
+    initApiMode();
+});
+
+// ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ РЕЖИМА API ==================
+window.toggleApiMode = toggleApiMode;
+window.updateApiModeUI = updateApiModeUI;
+window.checkApiStatus = checkApiStatus;
+window.initApiMode = initApiMode;
 
 // ================== СТИЛИ ==================
 const style = document.createElement('style');

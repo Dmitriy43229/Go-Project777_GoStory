@@ -14,20 +14,31 @@ const ADMIN_PASSWORD = "admin123"; // Только вы знаете этот п
 let isAdmin = false;
 let adminSessionId = null;
 
-// Проверка администратора
-function checkAdminAccess() {
-    // Проверяем сохраненную сессию администратора
+// Инициализация системы безопасности
+function initSecuritySystem() {
+    console.log('=== ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ БЕЗОПАСНОСТИ ===');
+    
+    // Проверяем GitHub Pages - там всегда только серверный режим
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
+    if (isGitHubPages) {
+        console.log('🌐 GitHub Pages: принудительный серверный режим');
+        localStorage.setItem('usermanager_use_real_api', 'true');
+        CONFIG.USE_REAL_API = true;
+        isAdmin = false;
+        return;
+    }
+    
+    // 1. Проверяем и восстанавливаем сессию администратора
     const savedSession = localStorage.getItem('usermanager_admin_session');
     const sessionExpiry = localStorage.getItem('usermanager_admin_expiry');
     
-    // Если есть активная сессия и она не истекла
     if (savedSession && sessionExpiry) {
         const now = Date.now();
         if (now < parseInt(sessionExpiry)) {
             isAdmin = true;
             adminSessionId = savedSession;
             console.log('✅ Администратор: активная сессия восстановлена');
-            return true;
         } else {
             // Сессия истекла
             localStorage.removeItem('usermanager_admin_session');
@@ -36,18 +47,41 @@ function checkAdminAccess() {
         }
     }
     
-    // Проверяем GitHub Pages - там всегда только серверный режим
-    const isGitHubPages = window.location.hostname.includes('github.io');
+    // 2. Проверяем сохраненный режим из localStorage
+    const savedMode = localStorage.getItem('usermanager_use_real_api');
     
-    if (isGitHubPages) {
-        // На GitHub Pages всегда серверный режим без возможности переключения
-        localStorage.setItem('usermanager_use_real_api', 'true');
+    // Если режим не сохранен, устанавливаем по умолчанию
+    if (savedMode === null) {
+        // По умолчанию - серверный режим для всех
         CONFIG.USE_REAL_API = true;
-        isAdmin = false;
-        return false;
+        localStorage.setItem('usermanager_use_real_api', 'true');
+    } else {
+        CONFIG.USE_REAL_API = (savedMode === 'true');
     }
-
-    return false;
+    
+    // 3. ВАЖНОЕ ПРАВИЛО: если не администратор - только серверный режим!
+    if (!isAdmin) {
+        if (!CONFIG.USE_REAL_API) {
+            console.log('🔒 Не администратор пытается войти в локальный режим - блокируем!');
+            CONFIG.USE_REAL_API = true;
+            localStorage.setItem('usermanager_use_real_api', 'true');
+            
+            // Показываем уведомление на главной странице
+            if (window.location.pathname.includes('index.html') || 
+                window.location.pathname === '/' || 
+                window.location.pathname.includes('/index.html')) {
+                setTimeout(() => {
+                    showNotification('🔒 Локальный режим доступен только администратору', 'warning');
+                }, 1000);
+            }
+        }
+    }
+    
+    console.log('Режим:', CONFIG.USE_REAL_API ? '🌐 СЕРВЕРНЫЙ' : '🔒 ЛОКАЛЬНЫЙ');
+    console.log('Администратор:', isAdmin ? 'ДА 👑' : 'НЕТ');
+    
+    // 4. Обновляем UI (если есть элементы на странице)
+    setTimeout(updateApiModeUI, 100);
 }
 
 // Создание сессии администратора
@@ -55,7 +89,7 @@ function createAdminSession() {
     // Генерируем уникальный ID сессии
     const sessionId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     // Устанавливаем срок действия сессии на 24 часа
-    const expiryTime = Date.now() + (24 * 60 * 60 * 1000); // 24 часа
+    const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
     
     localStorage.setItem('usermanager_admin_session', sessionId);
     localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
@@ -63,129 +97,274 @@ function createAdminSession() {
     adminSessionId = sessionId;
     isAdmin = true;
     
-    console.log('✅ Администратор: новая сессия создана', sessionId);
+    console.log('✅ Администратор: новая сессия создана');
 }
 
-// Окно входа для администратора
-function showAdminLoginModal() {
+// Удаление сессии администратора
+function deleteAdminSession() {
+    localStorage.removeItem('usermanager_admin_session');
+    localStorage.removeItem('usermanager_admin_expiry');
+    
+    adminSessionId = null;
+    isAdmin = false;
+    
+    console.log('👋 Администратор: сессия удалена');
+}
+
+// ================== УНИВЕРСАЛЬНОЕ ОКНО ВХОДА ==================
+function showUniversalLoginModal() {
+    // Проверяем, не открыто ли уже окно
+    if (document.getElementById('universalAdminModal')) {
+        return;
+    }
+    
     const modalHTML = `
-        <div id="adminModal" style="
+        <div id="universalAdminModal" style="
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.98);
+            backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10000;
-            animation: fadeIn 0.5s ease;
+            z-index: 99999;
+            animation: fadeIn 0.4s ease;
         ">
             <div style="
-                background: linear-gradient(135deg, rgba(26, 35, 126, 0.95), rgba(13, 71, 161, 0.95));
-                border-radius: 25px;
-                padding: 3rem 2rem;
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+                border-radius: 28px;
+                padding: 3.5rem 2.5rem;
                 width: 90%;
-                max-width: 450px;
-                border: 2px solid rgba(96, 165, 250, 0.3);
+                max-width: 500px;
+                border: 2px solid rgba(96, 165, 250, 0.25);
                 text-align: center;
-                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+                box-shadow: 
+                    0 40px 100px rgba(0, 0, 0, 0.7),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
                 animation: slideUp 0.5s ease;
+                position: relative;
+                overflow: hidden;
             ">
+                <!-- Декоративные элементы -->
                 <div style="
-                    width: 80px;
-                    height: 80px;
-                    margin: 0 auto 1.5rem;
-                    background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+                    position: absolute;
+                    top: -100px;
+                    right: -100px;
+                    width: 300px;
+                    height: 300px;
+                    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
                     border-radius: 50%;
+                "></div>
+                
+                <div style="
+                    position: absolute;
+                    bottom: -80px;
+                    left: -80px;
+                    width: 200px;
+                    height: 200px;
+                    background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+                    border-radius: 50%;
+                "></div>
+                
+                <!-- Контент -->
+                <div style="position: relative; z-index: 2;">
+                    <div style="
+                        width: 100px;
+                        height: 100px;
+                        margin: 0 auto 2rem;
+                        background: linear-gradient(45deg, #3b82f6, #1d4ed8, #8b5cf6);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 3.5rem;
+                        color: white;
+                        box-shadow: 
+                            0 20px 50px rgba(59, 130, 246, 0.4),
+                            inset 0 4px 20px rgba(255, 255, 255, 0.3);
+                        animation: pulse 2s infinite;
+                    ">
+                        👑
+                    </div>
+                    
+                    <h3 style="
+                        color: white; 
+                        margin-bottom: 0.75rem; 
+                        font-size: 2.2rem;
+                        font-weight: 800;
+                        background: linear-gradient(45deg, #60a5fa, #a78bfa);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    ">
+                        Панель администратора
+                    </h3>
+                    
+                    <p style="
+                        color: #cbd5e1; 
+                        margin-bottom: 2.5rem; 
+                        line-height: 1.6;
+                        font-size: 1.1rem;
+                        max-width: 400px;
+                        margin-left: auto;
+                        margin-right: auto;
+                    ">
+                        Только администратор может управлять системой. 
+                        Введите пароль для доступа к управлению режимами работы.
+                    </p>
+                    
+                    <div style="margin-bottom: 2rem; position: relative;">
+                        <input type="password" 
+                               id="universalPasswordInput" 
+                               placeholder="Пароль администратора" 
+                               style="
+                                   width: 100%;
+                                   padding: 1.25rem 1.75rem;
+                                   background: rgba(255, 255, 255, 0.07);
+                                   border: 2px solid rgba(255, 255, 255, 0.15);
+                                   border-radius: 16px;
+                                   color: white;
+                                   font-size: 1.1rem;
+                                   text-align: center;
+                                   font-family: 'Courier New', monospace;
+                                   letter-spacing: 2px;
+                                   transition: all 0.3s;
+                                   outline: none;
+                               "
+                               onfocus="this.style.borderColor='#60a5fa'; this.style.boxShadow='0 0 0 4px rgba(96, 165, 250, 0.2)';"
+                               onblur="this.style.borderColor='rgba(255, 255, 255, 0.15)'; this.style.boxShadow='none';">
+                        <div style="
+                            position: absolute;
+                            bottom: -25px;
+                            left: 0;
+                            right: 0;
+                            text-align: center;
+                            font-size: 0.85rem;
+                            color: #94a3b8;
+                        ">
+                            Только администратор знает пароль
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 3rem;">
+                        <button onclick="universalGuestContinue()" style="
+                            flex: 1;
+                            padding: 1.25rem;
+                            background: rgba(255, 255, 255, 0.05);
+                            border: 2px solid rgba(255, 255, 255, 0.1);
+                            color: #cbd5e1;
+                            border-radius: 14px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 1rem;
+                            transition: all 0.3s;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 0.75rem;
+                        "
+                        onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.transform='translateY(0)';">
+                            <span>👤</span>
+                            <span>Продолжить как гость</span>
+                        </button>
+                        
+                        <button onclick="universalAdminLogin()" style="
+                            flex: 1;
+                            padding: 1.25rem;
+                            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+                            border: none;
+                            color: white;
+                            border-radius: 14px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 1rem;
+                            transition: all 0.3s;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 0.75rem;
+                            box-shadow: 0 12px 35px rgba(59, 130, 246, 0.35);
+                        "
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 40px rgba(59, 130, 246, 0.5)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 35px rgba(59, 130, 246, 0.35)';">
+                            <span>🔓</span>
+                            <span>Войти как администратор</span>
+                        </button>
+                    </div>
+                    
+                    <div id="universalError" style="
+                        color: #f87171;
+                        margin-top: 2rem;
+                        display: none;
+                        font-size: 0.95rem;
+                        padding: 1rem;
+                        background: rgba(239, 68, 68, 0.1);
+                        border-radius: 12px;
+                        border: 1px solid rgba(239, 68, 68, 0.2);
+                    ">
+                        ❌ Неверный пароль администратора
+                    </div>
+                    
+                    <div style="
+                        margin-top: 3rem;
+                        padding-top: 2rem;
+                        border-top: 1px solid rgba(255, 255, 255, 0.1);
+                    ">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align: left;">
+                            <div>
+                                <div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>🌐</span>
+                                    <span>Серверный режим</span>
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.9rem;">
+                                    • Доступен всем<br>
+                                    • Работает с Go API<br>
+                                    • Общие данные
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div style="color: #a78bfa; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>🔒</span>
+                                    <span>Локальный режим</span>
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.9rem;">
+                                    • Только для администратора<br>
+                                    • Локальные данные<br>
+                                    • Полный контроль
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Кнопка закрытия -->
+                <button onclick="universalCloseModal()" style="
+                    position: absolute;
+                    top: 1.5rem;
+                    right: 1.5rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    color: #94a3b8;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 1.5rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 2.5rem;
-                    color: white;
-                    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
-                ">
-                    👑
-                </div>
-                
-                <h3 style="color: white; margin-bottom: 0.5rem; font-size: 1.8rem;">
-                    Панель администратора
-                </h3>
-                
-                <p style="color: #bbdefb; margin-bottom: 2rem; line-height: 1.5;">
-                    Только администратор может управлять режимами работы системы.
-                    Введите пароль администратора для доступа к панели управления.
-                </p>
-                
-                <input type="password" 
-                       id="adminPasswordInput" 
-                       placeholder="Пароль администратора" 
-                       style="
-                           width: 100%;
-                           padding: 1rem 1.5rem;
-                           background: rgba(255, 255, 255, 0.08);
-                           border: 2px solid rgba(255, 255, 255, 0.15);
-                           border-radius: 12px;
-                           color: white;
-                           font-size: 1rem;
-                           margin-bottom: 1.5rem;
-                           text-align: center;
-                           font-family: monospace;
-                           letter-spacing: 1px;
-                           transition: all 0.3s;
-                       ">
-                
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button onclick="continueAsGuest()" style="
-                        flex: 1;
-                        padding: 1rem;
-                        background: rgba(255, 255, 255, 0.08);
-                        border: 2px solid rgba(255, 255, 255, 0.15);
-                        color: #bbdefb;
-                        border-radius: 12px;
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: 0.95rem;
-                        transition: all 0.3s;
-                    ">
-                        Продолжить как гость
-                    </button>
-                    
-                    <button onclick="submitAdminPassword()" style="
-                        flex: 1;
-                        padding: 1rem;
-                        background: linear-gradient(45deg, #3b82f6, #1d4ed8);
-                        border: none;
-                        color: white;
-                        border-radius: 12px;
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: 0.95rem;
-                        transition: all 0.3s;
-                        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-                    ">
-                        Войти как администратор
-                    </button>
-                </div>
-                
-                <div id="adminError" style="
-                    color: #f87171;
-                    margin-top: 1.5rem;
-                    display: none;
-                    font-size: 0.9rem;
-                ">
-                    ❌ Неверный пароль администратора
-                </div>
-                
-                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">
-                        <strong>Режимы работы:</strong><br>
-                        • <span style="color: #60a5fa;">🌐 Серверный</span> - доступен всем<br>
-                        • <span style="color: #a78bfa;">🔒 Локальный</span> - только для администратора
-                    </p>
-                </div>
+                    transition: all 0.3s;
+                    z-index: 3;
+                "
+                onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.color='white';"
+                onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.color='#94a3b8';">
+                    ×
+                </button>
             </div>
         </div>
     `;
@@ -196,22 +375,54 @@ function showAdminLoginModal() {
 
     // Фокус на поле ввода
     setTimeout(() => {
-        const input = document.getElementById('adminPasswordInput');
+        const input = document.getElementById('universalPasswordInput');
         if (input) {
             input.focus();
             input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    submitAdminPassword();
+                    universalAdminLogin();
                 }
             });
         }
     }, 100);
+    
+    // Блокируем скролл страницы
+    document.body.style.overflow = 'hidden';
 }
 
-// Вход как администратор
-function submitAdminPassword() {
-    const input = document.getElementById('adminPasswordInput');
-    const errorEl = document.getElementById('adminError');
+function universalCloseModal() {
+    const modal = document.getElementById('universalAdminModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.4s ease';
+        setTimeout(() => modal.remove(), 400);
+    }
+    
+    // Разблокируем скролл
+    document.body.style.overflow = '';
+}
+
+function universalGuestContinue() {
+    // Устанавливаем серверный режим для гостя
+    CONFIG.USE_REAL_API = true;
+    localStorage.setItem('usermanager_use_real_api', 'true');
+    isAdmin = false;
+    
+    // Удаляем сессию администратора если была
+    deleteAdminSession();
+    
+    // Закрываем модальное окно
+    universalCloseModal();
+    
+    // Обновляем UI
+    updateApiModeUI();
+    
+    // Показываем уведомление
+    showNotification('👋 Вы работаете в серверном режиме как гость', 'info');
+}
+
+function universalAdminLogin() {
+    const input = document.getElementById('universalPasswordInput');
+    const errorEl = document.getElementById('universalError');
     
     if (!input || !errorEl) return;
 
@@ -220,8 +431,7 @@ function submitAdminPassword() {
         createAdminSession();
         
         // Закрываем модальное окно
-        const modal = document.getElementById('adminModal');
-        if (modal) modal.remove();
+        universalCloseModal();
         
         // Обновляем UI
         updateApiModeUI();
@@ -229,17 +439,19 @@ function submitAdminPassword() {
         // Показываем уведомление
         showNotification('👑 Вы вошли как администратор. Сессия активна 24 часа.', 'success');
         
-        // НЕ перезагружаем страницу, просто обновляем UI
+        // Перенаправляем на главную страницу
         setTimeout(() => {
-            // Обновляем состояние
-            isAdmin = true;
-            updateApiModeUI();
-        }, 300);
+            if (!window.location.pathname.includes('index.html') && 
+                window.location.pathname !== '/' && 
+                !window.location.pathname.includes('/index.html')) {
+                window.location.href = 'index.html';
+            }
+        }, 1500);
     } else {
         // Показываем ошибку
         errorEl.style.display = 'block';
         input.style.borderColor = '#f87171';
-        input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+        input.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.2)';
         input.value = '';
         
         // Анимация ошибки
@@ -250,38 +462,14 @@ function submitAdminPassword() {
     }
 }
 
-// Продолжить как гость
-function continueAsGuest() {
-    // Устанавливаем серверный режим по умолчанию
-    CONFIG.USE_REAL_API = true;
-    localStorage.setItem('usermanager_use_real_api', 'true');
-    isAdmin = false;
-    
-    // Удаляем сессию администратора если была
-    localStorage.removeItem('usermanager_admin_session');
-    localStorage.removeItem('usermanager_admin_expiry');
-    
-    // Закрываем модальное окно
-    const modal = document.getElementById('adminModal');
-    if (modal) modal.remove();
-    
-    // Обновляем UI
-    updateApiModeUI();
-    
-    // Показываем уведомление
-    showNotification('👋 Вы работаете в режиме гостя (серверный режим)', 'info');
-}
-
 // Выйти из администратора
 function logoutAdmin() {
-    // Удаляем сессию
-    localStorage.removeItem('usermanager_admin_session');
-    localStorage.removeItem('usermanager_admin_expiry');
-    
-    // Переключаемся на серверный режим
+    // Устанавливаем серверный режим
     CONFIG.USE_REAL_API = true;
     localStorage.setItem('usermanager_use_real_api', 'true');
-    isAdmin = false;
+    
+    // Удаляем сессию
+    deleteAdminSession();
     
     // Обновляем UI
     updateApiModeUI();
@@ -297,7 +485,7 @@ function toggleApiMode() {
     // Если не администратор, показываем окно входа
     if (!isAdmin) {
         showNotification('🔒 Только администратор может переключать режимы', 'warning');
-        showAdminLoginModal();
+        showUniversalLoginModal();
         return;
     }
 
@@ -336,14 +524,38 @@ function toggleApiMode() {
 function updateApiModeUI() {
     console.log('updateApiModeUI вызван, isAdmin:', isAdmin, 'CONFIG.USE_REAL_API:', CONFIG.USE_REAL_API);
     
+    // Обновляем кнопки на всех страницах
+    const allApiButtons = document.querySelectorAll('.api-mode-btn');
+    const allModeIcons = document.querySelectorAll('#apiModeIcon, .api-mode-btn span:first-child');
+    const allModeTexts = document.querySelectorAll('#apiModeText, .api-mode-btn span:last-child');
+    
+    // Для главной страницы (index.html)
     const button = document.getElementById('apiModeButton');
     const icon = document.getElementById('apiModeIcon');
     const text = document.getElementById('apiModeText');
-    const status = document.getElementById('apiStatus');
+    const status = document.getElementById('serverStatus');
+    const modeText = document.getElementById('modeText');
+    const modeIcon = document.getElementById('modeIcon');
 
     if (CONFIG.USE_REAL_API) {
+        // СЕРВЕРНЫЙ режим
         if (icon) icon.textContent = '🌐';
         if (text) text.textContent = 'Серверный';
+        if (modeText) modeText.textContent = 'Серверный режим';
+        if (modeIcon) modeIcon.textContent = '🌐';
+        if (status) {
+            status.textContent = '🟢 Онлайн';
+            status.style.color = '#4ade80';
+        }
+        
+        // Обновляем все кнопки API
+        allModeIcons.forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = '🌐';
+        });
+        allModeTexts.forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = 'Серверный';
+        });
+        
         if (button) {
             button.title = isAdmin ? 
                 'Администратор: переключить на локальный режим' : 
@@ -355,16 +567,46 @@ function updateApiModeUI() {
             button.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
             button.onclick = isAdmin ? toggleApiMode : function() {
                 showNotification('🔒 Только администратор может переключать режимы', 'warning');
-                showAdminLoginModal();
+                showUniversalLoginModal();
             };
         }
-        if (status) {
-            status.textContent = 'Серверный режим';
-            status.style.color = '#60a5fa';
-        }
+        
+        // Обновляем все кнопки на странице
+        allApiButtons.forEach(btn => {
+            if (btn.id !== 'apiModeButton') {
+                btn.title = isAdmin ? 
+                    'Администратор: переключить на локальный режим' : 
+                    'Только администратор может менять режим';
+                btn.style.background = 'rgba(59, 130, 246, 0.2)';
+                btn.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                btn.disabled = !isAdmin;
+                btn.style.opacity = isAdmin ? '1' : '0.5';
+                btn.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
+                btn.onclick = isAdmin ? toggleApiMode : function() {
+                    showNotification('🔒 Только администратор может переключать режимы', 'warning');
+                    showUniversalLoginModal();
+                };
+            }
+        });
     } else {
+        // ЛОКАЛЬНЫЙ режим (только для администратора)
         if (icon) icon.textContent = '🔒';
         if (text) text.textContent = 'Локальный';
+        if (modeText) modeText.textContent = 'Локальный режим';
+        if (modeIcon) modeIcon.textContent = '🔒';
+        if (status) {
+            status.textContent = '🔒 Локальный';
+            status.style.color = '#a78bfa';
+        }
+        
+        // Обновляем все кнопки API
+        allModeIcons.forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = '🔒';
+        });
+        allModeTexts.forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = 'Локальный';
+        });
+        
         if (button) {
             button.title = isAdmin ? 
                 'Администратор: переключить на серверный режим' : 
@@ -376,22 +618,43 @@ function updateApiModeUI() {
             button.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
             button.onclick = isAdmin ? toggleApiMode : function() {
                 showNotification('🔒 Только администратор может переключать режимы', 'warning');
-                showAdminLoginModal();
+                showUniversalLoginModal();
             };
         }
-        if (status) {
-            status.textContent = 'Локальный режим';
-            status.style.color = '#a78bfa';
-        }
+        
+        // Обновляем все кнопки на странице
+        allApiButtons.forEach(btn => {
+            if (btn.id !== 'apiModeButton') {
+                btn.title = isAdmin ? 
+                    'Администратор: переключить на серверный режим' : 
+                    'Только администратор может менять режим';
+                btn.style.background = 'rgba(139, 92, 246, 0.2)';
+                btn.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                btn.disabled = !isAdmin;
+                btn.style.opacity = isAdmin ? '1' : '0.5';
+                btn.style.cursor = isAdmin ? 'pointer' : 'not-allowed';
+                btn.onclick = isAdmin ? toggleApiMode : function() {
+                    showNotification('🔒 Только администратор может переключать режимы', 'warning');
+                    showUniversalLoginModal();
+                };
+            }
+        });
     }
 
     // Обновляем кнопку администратора
     updateAdminButtonUI();
 }
 
-// Кнопка администратора
+// Кнопка администратора (только на главной странице)
 function updateAdminButtonUI() {
     console.log('updateAdminButtonUI вызван, isAdmin:', isAdmin);
+    
+    // Только на главной странице показываем кнопку администратора
+    const isMainPage = window.location.pathname.includes('index.html') || 
+                      window.location.pathname === '/' || 
+                      window.location.pathname.includes('/index.html');
+    
+    if (!isMainPage) return;
     
     let adminBtn = document.getElementById('adminButton');
     
@@ -404,7 +667,7 @@ function updateAdminButtonUI() {
             '<span>👑</span><span>Администратор</span>' : 
             '<span>🔐</span><span>Войти</span>';
         adminBtn.title = isAdmin ? 'Выйти из режима администратора' : 'Войти как администратор';
-        adminBtn.onclick = isAdmin ? logoutAdmin : showAdminLoginModal;
+        adminBtn.onclick = isAdmin ? logoutAdmin : showUniversalLoginModal;
         
         // Добавляем кнопку в навигацию
         const navMenu = document.querySelector('.nav-menu');
@@ -423,7 +686,7 @@ function updateAdminButtonUI() {
             '<span>👑</span><span>Администратор</span>' : 
             '<span>🔐</span><span>Войти</span>';
         adminBtn.title = isAdmin ? 'Выйти из режима администратора' : 'Войти как администратор';
-        adminBtn.onclick = isAdmin ? logoutAdmin : showAdminLoginModal;
+        adminBtn.onclick = isAdmin ? logoutAdmin : showUniversalLoginModal;
         
         // Стили для администратора
         if (isAdmin) {
@@ -439,49 +702,38 @@ function updateAdminButtonUI() {
     }
 }
 
-// ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
-function initApiMode() {
-    console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
-
-    // Проверяем права администратора (восстанавливаем сессию)
-    checkAdminAccess();
-
-    // Проверяем сохраненный режим из localStorage
-    const savedMode = localStorage.getItem('usermanager_use_real_api');
-
-    // Если режим не сохранен, устанавливаем по умолчанию
-    if (savedMode === null) {
-        // По умолчанию - серверный режим
-        CONFIG.USE_REAL_API = true;
-        localStorage.setItem('usermanager_use_real_api', 'true');
-    } else {
-        CONFIG.USE_REAL_API = (savedMode === 'true');
-    }
-
-    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
-    console.log('Администратор:', isAdmin ? 'ДА' : 'НЕТ');
-
-    // Если локальный режим и не администратор, переключаем на серверный
-    if (!CONFIG.USE_REAL_API && !isAdmin) {
-        console.log('⚠️ Локальный режим без администратора - переключаем на серверный');
+// ================== ЗАЩИТА ДРУГИХ СТРАНИЦ ==================
+function protectOtherPages() {
+    // Эта функция вызывается на страницах about.html и presentation.html
+    
+    const isAboutPage = window.location.pathname.includes('about.html');
+    const isPresentationPage = window.location.pathname.includes('presentation.html');
+    
+    if (!isAboutPage && !isPresentationPage) return;
+    
+    console.log(`🔒 Защита страницы: ${isAboutPage ? 'О проекте' : 'Презентация'}`);
+    
+    // 1. Удаляем все кнопки переключения режима API (оставляем только на главной)
+    const allApiButtons = document.querySelectorAll('.api-mode-btn');
+    allApiButtons.forEach(btn => {
+        btn.remove();
+    });
+    
+    // 2. Если локальный режим и не администратор - переключаем на серверный
+    if (!isAdmin && !CONFIG.USE_REAL_API) {
+        console.log('⚠️ Обнаружен локальный режим без администратора на другой странице');
         CONFIG.USE_REAL_API = true;
         localStorage.setItem('usermanager_use_real_api', 'true');
         
-        // Показываем уведомление
+        // Показываем сообщение и перенаправляем на главную
         setTimeout(() => {
-            showNotification('🔒 Локальный режим доступен только администратору', 'warning');
+            const message = '🔒 Локальный режим доступен только администратору на главной странице.\n\nВы будете перенаправлены на главную страницу.';
+            alert(message);
+            window.location.href = 'index.html';
         }, 1000);
-    }
-
-    // Обновляем UI
-    updateApiModeUI();
-    if (typeof updateServerStatus === 'function') {
-        updateServerStatus();
     }
 }
 
-// ================== ОСТАЛЬНАЯ ЧАСТЬ ФАЙЛА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ==================
-// (Оставьте весь остальной код из предыдущей версии, начиная с МОК-API ДЛЯ GITHUB PAGES)
 // ================== МОК-API ДЛЯ GITHUB PAGES ==================
 const MOCK_USERS = [
     {
@@ -1182,13 +1434,23 @@ async function checkApiStatus() {
 document.addEventListener('DOMContentLoaded', function () {
     console.log('=== ЗАГРУЗКА СТРАНИЦЫ ===');
     
-    // Инициализация режима API (восстанавливает сессию администратора)
-    initApiMode();
+    // 1. Инициализация системы безопасности (восстанавливает сессию администратора)
+    initSecuritySystem();
     
-    // Обычная инициализация
-    initLocalData();
-    loadUsers();
-
+    // 2. Защита других страниц (about.html, presentation.html)
+    protectOtherPages();
+    
+    // 3. Инициализация данных (только для главной страницы)
+    const isMainPage = window.location.pathname.includes('index.html') || 
+                      window.location.pathname === '/' || 
+                      window.location.pathname.includes('/index.html');
+    
+    if (isMainPage) {
+        initLocalData();
+        loadUsers();
+    }
+    
+    // 4. Общие обработчики событий
     const form = document.getElementById('userForm');
     if (form) {
         form.onsubmit = saveUser;
@@ -1212,13 +1474,25 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.key === 'Escape') closeModal();
     });
 
+    // 5. Делаем функции глобально доступными
     window.getUsersForCharts = getUsersForCharts;
     window.loadDemoData = loadDemoData;
     
-    // Проверяем сессию администратора каждые 30 минут
+    // 6. Проверяем сессию администратора каждые 30 минут
     setInterval(() => {
         if (isAdmin) {
-            checkAdminAccess(); // Обновляем статус сессии
+            const savedSession = localStorage.getItem('usermanager_admin_session');
+            const sessionExpiry = localStorage.getItem('usermanager_admin_expiry');
+            
+            if (savedSession && sessionExpiry) {
+                const now = Date.now();
+                if (now >= parseInt(sessionExpiry)) {
+                    // Сессия истекла
+                    deleteAdminSession();
+                    updateApiModeUI();
+                    showNotification('👋 Сессия администратора истекла', 'warning');
+                }
+            }
         }
     }, 30 * 60 * 1000);
 });
@@ -1235,11 +1509,11 @@ window.getUsersForCharts = getUsersForCharts;
 window.toggleApiMode = toggleApiMode;
 window.updateApiModeUI = updateApiModeUI;
 window.checkApiStatus = checkApiStatus;
-window.initApiMode = initApiMode;
-window.showAdminLoginModal = showAdminLoginModal;
-window.submitAdminPassword = submitAdminPassword;
+window.showUniversalLoginModal = showUniversalLoginModal;
 window.logoutAdmin = logoutAdmin;
-window.continueAsGuest = continueAsGuest;
+window.universalAdminLogin = universalAdminLogin;
+window.universalGuestContinue = universalGuestContinue;
+window.universalCloseModal = universalCloseModal;
 
 // ================== СТИЛИ ==================
 const style = document.createElement('style');
@@ -1247,6 +1521,11 @@ style.textContent = `
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
     }
     
     @keyframes slideIn {
@@ -1257,6 +1536,16 @@ style.textContent = `
     @keyframes slideOut {
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .spinner {
@@ -1311,14 +1600,19 @@ style.textContent = `
         20%, 40%, 60%, 80% { transform: translateX(5px); }
     }
     
-    @keyframes slideUp {
-        from { transform: translateY(30px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    
     .api-mode-btn:disabled {
         cursor: not-allowed !important;
         opacity: 0.5 !important;
+    }
+    
+    /* Для навигации на других страницах */
+    .nav-menu .api-mode-btn {
+        display: none !important;
+    }
+    
+    /* Только для главной страницы */
+    body.index-page .nav-menu .api-mode-btn {
+        display: flex !important;
     }
 `;
 document.head.appendChild(style);

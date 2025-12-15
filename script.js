@@ -9,6 +9,119 @@ const CONFIG = {
     STORAGE_KEY: 'usermanager_local_data'
 };
 
+// ================== МОК-API ДЛЯ GITHUB PAGES ==================
+const MOCK_USERS = [
+    {
+        id: 1,
+        name: "Иван Петров",
+        email: "ivan@example.com",
+        role: "Администратор",
+        status: "active",
+        createdAt: "2024-01-15T10:30:00Z",
+        lastLogin: "2024-03-20T14:25:00Z"
+    },
+    {
+        id: 2,
+        name: "Мария Сидорова",
+        email: "maria@example.com",
+        role: "Менеджер",
+        status: "active",
+        createdAt: "2024-02-10T09:15:00Z",
+        lastLogin: "2024-03-19T11:45:00Z"
+    },
+    {
+        id: 3,
+        name: "Алексей Иванов",
+        email: "alex@example.com",
+        role: "Пользователь",
+        status: "inactive",
+        createdAt: "2024-03-01T16:20:00Z",
+        lastLogin: "2024-03-05T10:10:00Z"
+    },
+    {
+        id: 4,
+        name: "Екатерина Смирнова",
+        email: "ekaterina@example.com",
+        role: "Редактор",
+        status: "active",
+        createdAt: "2024-01-25T13:40:00Z",
+        lastLogin: "2024-03-21T09:30:00Z"
+    },
+    {
+        id: 5,
+        name: "Дмитрий Кобелев",
+        email: "dmitry@example.com",
+        role: "Разработчик",
+        status: "active",
+        createdAt: "2024-03-10T08:00:00Z",
+        lastLogin: "2024-03-22T17:15:00Z"
+    }
+];
+
+// Мок-функции для API
+const mockApi = {
+    // Получить всех пользователей
+    async getUsers() {
+        await new Promise(resolve => setTimeout(resolve, 300)); // Имитация задержки
+        return {
+            success: true,
+            users: [...MOCK_USERS]
+        };
+    },
+
+    // Создать пользователя
+    async createUser(userData) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const newUser = {
+            id: Date.now(),
+            ...userData,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+        };
+        MOCK_USERS.push(newUser);
+        return {
+            success: true,
+            user: newUser,
+            message: "Пользователь создан"
+        };
+    },
+
+    // Обновить пользователя
+    async updateUser(id, userData) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const index = MOCK_USERS.findIndex(u => u.id === id);
+        if (index === -1) {
+            return {
+                success: false,
+                error: "Пользователь не найден"
+            };
+        }
+        MOCK_USERS[index] = { ...MOCK_USERS[index], ...userData };
+        return {
+            success: true,
+            user: MOCK_USERS[index],
+            message: "Пользователь обновлен"
+        };
+    },
+
+    // Удалить пользователя
+    async deleteUser(id) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const index = MOCK_USERS.findIndex(u => u.id === id);
+        if (index === -1) {
+            return {
+                success: false,
+                error: "Пользователь не найден"
+            };
+        }
+        MOCK_USERS.splice(index, 1);
+        return {
+            success: true,
+            message: "Пользователь удален"
+        };
+    }
+};
+
 let localUsers = [];
 
 // ================== ИНИЦИАЛИЗАЦИЯ ДАННЫХ ==================
@@ -550,19 +663,28 @@ window.loadDemoData = loadDemoData;
 
 // ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ ==================
 function toggleApiMode() {
-    // Проверяем, не на GitHub ли мы
-    if (window.location.hostname.includes('github.io')) {
-        showNotification('❌ На GitHub Pages доступен только локальный режим', 'error');
-        return; // Не даем переключиться
-    }
-
     // Переключаем режим
     CONFIG.USE_REAL_API = !CONFIG.USE_REAL_API;
 
-    // Сохраняем как строку
+    // Сохраняем
     localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API.toString());
-    console.log('Сохранен режим:', CONFIG.USE_REAL_API ? 'true' : 'false');
+    console.log('Переключение режима. Новое значение:', CONFIG.USE_REAL_API);
 
+    // Проверяем GitHub Pages
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    // Уведомление (ЗАМЕНИТЬ ЭТУ ЧАСТЬ)
+    if (CONFIG.USE_REAL_API) {
+        if (isGitHubPages) {
+            showNotification('🌐 Включен ДЕМО-РЕЖИМ с тестовыми данными', 'info');
+        } else {
+            showNotification('🌐 Включен СЕРВЕРНЫЙ режим (Go API)', 'info');
+        }
+    } else {
+        showNotification('💾 Включен ЛОКАЛЬНЫЙ режим', 'warning');
+    }
+
+    // Обновляем UI
     updateApiModeUI();
 
     showNotification(
@@ -677,48 +799,35 @@ async function checkApiStatus() {
 
 // ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
 function initApiMode() {
-    // Всегда сначала читаем сохраненное значение
-    const savedValue = localStorage.getItem('usermanager_use_real_api');
-    console.log('Сохраненное значение режима:', savedValue);
+    console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
 
-    // Если мы на GitHub Pages - всегда локальный режим
+    // Проверяем GitHub Pages
     const isGitHubPages = window.location.hostname.includes('github.io');
+    console.log('GitHub Pages?:', isGitHubPages);
 
     if (isGitHubPages) {
-        // GitHub Pages - принудительно локальный режим
-        CONFIG.USE_REAL_API = false;
-        localStorage.setItem('usermanager_use_real_api', 'false');
+        console.log('GitHub Pages: можно использовать демо-режим');
 
-        console.log('GitHub Pages: принудительно локальный режим');
-
-        // Показываем уведомление
-        setTimeout(() => {
-            showNotification('🌐 GitHub Pages: работает в локальном режиме', 'info');
-        }, 1500);
+        // На GitHub Pages разрешаем "серверный" режим с мок-данными
+        if (CONFIG.USE_REAL_API) {
+            console.log('GitHub Pages: ДЕМО-режим с тестовыми данными');
+            setTimeout(() => {
+                showNotification('🌐 GitHub Pages: используется демо-режим с тестовыми данными', 'info');
+            }, 1000);
+        }
     } else {
-        // НЕ GitHub Pages - используем сохраненное значение
-        if (savedValue === null) {
-            // Нет сохраненного значения - по умолчанию локальный
-            CONFIG.USE_REAL_API = false;
-            localStorage.setItem('usermanager_use_real_api', 'false');
-            console.log('Установлен режим по умолчанию: ЛОКАЛЬНЫЙ');
-        } else {
-            // Есть сохраненное значение - преобразуем строку в boolean
-            CONFIG.USE_REAL_API = savedValue === 'true';
-            console.log('Загружен сохраненный режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+        // НЕ GitHub Pages - обычная логика
+        console.log('Локальный хост: настоящий серверный режим');
+
+        if (CONFIG.USE_REAL_API) {
+            // Проверяем статус реального сервера
+            setTimeout(checkApiStatus, 500);
+            setInterval(checkApiStatus, 30000);
         }
     }
 
-    // Обновляем UI
     updateApiModeUI();
-
-    // Проверяем статус сервера (только в серверном режиме)
-    if (CONFIG.USE_REAL_API) {
-        setTimeout(checkApiStatus, 500);
-        setInterval(checkApiStatus, 30000); // Каждые 30 секунд
-    }
-
-    console.log('Режим API:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
 }
 
 // Вызов в DOMContentLoaded (в конце файла)

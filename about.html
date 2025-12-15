@@ -726,6 +726,12 @@
                 <span id="apiModeText">Серверный</span>
             </button>
 
+            <!-- После кнопки переключения режима API -->
+            <button class="api-mode-btn" onclick="showAdminLoginModal()" title="Войти как администратор">
+                <span>🔐</span>
+                <span>Войти</span>
+            </button>
+
             <!-- Переключатель темы -->
             <div class="theme-toggle-container">
                 <button class="theme-toggle" id="themeToggle" title="Сменить тему">
@@ -1293,7 +1299,7 @@
         });
     </script>
     <script>
-    // Проверка доступа при загрузке страницы
+      // Проверка доступа при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         const savedMode = localStorage.getItem('usermanager_use_real_api');
         const isLocalMode = savedMode === 'false';
@@ -1445,6 +1451,28 @@
         }
     `;
     document.head.appendChild(style);
+</script>
+<script>
+    // Проверка администратора для других страниц
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedMode = localStorage.getItem('usermanager_use_real_api');
+        const isLocalMode = savedMode === 'false';
+        const savedAdmin = localStorage.getItem('usermanager_admin_access');
+        const isAdmin = savedAdmin === "admin123";
+        
+        // Если локальный режим без прав администратора
+        if (!isAdmin && isLocalMode) {
+            // Переключаем на серверный режим
+            localStorage.setItem('usermanager_use_real_api', 'true');
+            
+            // Показываем сообщение
+            setTimeout(() => {
+                alert('🔒 Локальный режим доступен только администратору\n\nВы были переключены на серверный режим.');
+                // Возвращаем на главную
+                window.location.href = 'index.html';
+            }, 500);
+        }
+    });
 </script>
 </body>
 

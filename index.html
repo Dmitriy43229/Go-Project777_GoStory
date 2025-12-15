@@ -1521,20 +1521,21 @@
         });
     </script>
     <script>
-    // Проверка доступа для локального режима
+     // Автоматическая проверка администратора при загрузке
     document.addEventListener('DOMContentLoaded', function() {
+        // Если не администратор и локальный режим, показываем окно входа
         const savedMode = localStorage.getItem('usermanager_use_real_api');
         const isLocalMode = savedMode === 'false';
+        const savedAdmin = localStorage.getItem('usermanager_admin_access');
+        const isAdmin = savedAdmin === "admin123";
         
-        if (isLocalMode) {
-            // Проверяем сохраненный доступ
-            const savedAccess = localStorage.getItem('usermanager_local_access');
-            if (savedAccess !== "admin123") {
-                // Показываем окно ввода пароля
-                if (typeof showLocalModePasswordPrompt === 'function') {
-                    showLocalModePasswordPrompt();
+        if (!isAdmin && isLocalMode) {
+            // Показываем окно входа администратора
+            setTimeout(() => {
+                if (typeof showAdminLoginModal === 'function') {
+                    showAdminLoginModal();
                 }
-            }
+            }, 1000);
         }
     });
 </script>

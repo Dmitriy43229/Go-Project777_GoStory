@@ -69,6 +69,8 @@ const mockApi = {
         };
     },
 
+
+
     // Создать пользователя
     async createUser(userData) {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -280,6 +282,30 @@ async function mockApiRequest(url, options = {}) {
 
 // ================== ОСНОВНЫЕ ФУНКЦИИ ==================
 async function loadUsers() {
+
+    console.log('loadUsers: GitHub=', window.location.hostname.includes('github.io'), 'API=', CONFIG.USE_REAL_API);
+
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    // ВАЖНО: Добавить эту проверку ПЕРВОЙ
+    if (isGitHubPages && CONFIG.USE_REAL_API) {
+        console.log('✅ Используем мок-данные на GitHub Pages');
+        showLoading(true);
+        try {
+            const result = await mockApi.getUsers();
+            console.log('Мок-данные получены:', result.users.length, 'пользователей');
+            displayUsers(result.users);
+            updateStats(result.users.length);
+            showNotification(`Загружено ${result.users.length} тестовых пользователей`, 'success');
+        } catch (error) {
+            console.error('Ошибка загрузки мок-данных:', error);
+            showNotification('Ошибка загрузки тестовых данных', 'error');
+        } finally {
+            showLoading(false);
+        }
+        return; // Выходим, не идем к реальному API
+    }
+
     showLoading(true);
     try {
         const users = await apiRequest('/api/users');
@@ -293,6 +319,19 @@ async function loadUsers() {
 }
 
 async function createUser(userData) {
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    if (isGitHubPages && CONFIG.USE_REAL_API) {
+        console.log('Создание тестового пользователя');
+        const result = await mockApi.createUser(userData);
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadUsers(); // перезагрузить список
+        }
+        return;
+    }
+    // ... ваш оригинальный код
+
     return await apiRequest('/api/users', {
         method: 'POST',
         body: JSON.stringify(userData)
@@ -300,6 +339,21 @@ async function createUser(userData) {
 }
 
 async function updateUser(id, userData) {
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    if (isGitHubPages && CONFIG.USE_REAL_API) {
+        console.log('Создание тестового пользователя');
+        const result = await mockApi.createUser(userData);
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadUsers(); // перезагрузить список
+        }
+        return;
+    }
+
+    // ... ваш оригинальный код
+
+
     return await apiRequest(`/api/users/${id}`, {
         method: 'PUT',
         body: JSON.stringify(userData)
@@ -307,6 +361,19 @@ async function updateUser(id, userData) {
 }
 
 async function deleteUser(id) {
+
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    if (isGitHubPages && CONFIG.USE_REAL_API) {
+        console.log('Создание тестового пользователя');
+        const result = await mockApi.createUser(userData);
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadUsers(); // перезагрузить список
+        }
+        return;
+    }
+
     return await apiRequest(`/api/users/${id}`, {
         method: 'DELETE'
     });
@@ -801,23 +868,23 @@ async function checkApiStatus() {
 function initApiMode() {
     console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
 
-     const isGitHubPages = window.location.hostname.includes('github.io');
+    const isGitHubPages = window.location.hostname.includes('github.io');
     console.log('GitHub Pages?:', isGitHubPages);
     console.log('Текущий режим из CONFIG:', CONFIG.USE_REAL_API);
-    
+
     // Если на GitHub Pages и включен серверный режим
     if (isGitHubPages && CONFIG.USE_REAL_API) {
         console.log('GitHub Pages: ДЕМО-режим с тестовыми данными');
-        
+
         // Показываем уведомление
         setTimeout(() => {
             showNotification('🌐 GitHub Pages: используется демо-режим с тестовыми данными', 'info');
         }, 1000);
-        
+
         // На GitHub Pages принудительно ставим локальный, если выбрали серверный?
         // НЕТ! Оставляем как есть - будет демо-режим
     }
-    
+
     // Если НЕ GitHub Pages и включен серверный режим
     if (!isGitHubPages && CONFIG.USE_REAL_API) {
         // Проверяем статус реального сервера

@@ -1156,17 +1156,22 @@
 
         // Переключение режима API
         function toggleApiMode() {
+            // Получаем текущий режим из localStorage
             const currentMode = localStorage.getItem('usermanager_use_real_api');
             const newMode = currentMode === 'false' ? 'true' : 'false';
 
             localStorage.setItem('usermanager_use_real_api', newMode);
+
+            // Обновляем глобальную переменную CONFIG, если она существует
+            if (typeof CONFIG !== 'undefined') {
+                CONFIG.USE_REAL_API = (newMode === 'true');
+            }
 
             const isServerMode = newMode === 'true';
             const message = isServerMode
                 ? '🌐 Включен СЕРВЕРНЫЙ режим (Go API)'
                 : '💾 Включен ЛОКАЛЬНЫЙ режим';
 
-            // Показываем уведомление
             showNotification(message, isServerMode ? 'info' : 'warning');
 
             // Обновляем UI
@@ -1180,7 +1185,10 @@
 
         // Обновление UI режима API
         function updateApiModeUI() {
-            const isServerMode = localStorage.getItem('usermanager_use_real_api') !== 'false';
+            // Получаем текущий режим из localStorage
+            const currentMode = localStorage.getItem('usermanager_use_real_api');
+            const isServerMode = currentMode !== 'false'; // Если не 'false', то true
+
             const icon = document.getElementById('apiModeIcon');
             const text = document.getElementById('apiModeText');
             const button = document.querySelector('.api-mode-btn');
@@ -1191,9 +1199,14 @@
                 button.title = isServerMode
                     ? 'Переключиться на локальный режим'
                     : 'Переключиться на серверный режим';
+                button.style.background = isServerMode
+                    ? 'rgba(59, 130, 246, 0.2)'
+                    : 'rgba(139, 92, 246, 0.2)';
+                button.style.borderColor = isServerMode
+                    ? 'rgba(59, 130, 246, 0.4)'
+                    : 'rgba(139, 92, 246, 0.4)';
             }
         }
-
         // Показать уведомление
         function showNotification(message, type = 'success') {
             // Удаляем старые уведомления

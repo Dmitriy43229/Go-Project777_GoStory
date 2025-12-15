@@ -69,8 +69,6 @@ const mockApi = {
         };
     },
 
-
-
     // Создать пользователя
     async createUser(userData) {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -282,7 +280,6 @@ async function mockApiRequest(url, options = {}) {
 
 // ================== ОСНОВНЫЕ ФУНКЦИИ ==================
 async function loadUsers() {
-
     console.log('loadUsers: GitHub=', window.location.hostname.includes('github.io'), 'API=', CONFIG.USE_REAL_API);
 
     const isGitHubPages = window.location.hostname.includes('github.io');
@@ -330,7 +327,6 @@ async function createUser(userData) {
         }
         return;
     }
-    // ... ваш оригинальный код
 
     return await apiRequest('/api/users', {
         method: 'POST',
@@ -342,17 +338,14 @@ async function updateUser(id, userData) {
     const isGitHubPages = window.location.hostname.includes('github.io');
 
     if (isGitHubPages && CONFIG.USE_REAL_API) {
-        console.log('Создание тестового пользователя');
-        const result = await mockApi.createUser(userData);
+        console.log('Обновление тестового пользователя');
+        const result = await mockApi.updateUser(id, userData);
         if (result.success) {
             showNotification(result.message, 'success');
             loadUsers(); // перезагрузить список
         }
         return;
     }
-
-    // ... ваш оригинальный код
-
 
     return await apiRequest(`/api/users/${id}`, {
         method: 'PUT',
@@ -361,12 +354,11 @@ async function updateUser(id, userData) {
 }
 
 async function deleteUser(id) {
-
     const isGitHubPages = window.location.hostname.includes('github.io');
 
     if (isGitHubPages && CONFIG.USE_REAL_API) {
-        console.log('Создание тестового пользователя');
-        const result = await mockApi.createUser(userData);
+        console.log('Удаление тестового пользователя');
+        const result = await mockApi.deleteUser(id);
         if (result.success) {
             showNotification(result.message, 'success');
             loadUsers(); // перезагрузить список
@@ -712,11 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
     window.loadDemoData = loadDemoData;
 
     // Инициализация режима API
-    if (typeof initApiMode === 'function') {
-        initApiMode();
-    } else {
-        updateApiModeUI();
-    }
+    initApiMode();
 });
 
 // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ==================
@@ -728,20 +716,25 @@ window.searchUsers = searchUsers;
 window.loadUsers = loadUsers;
 window.loadDemoData = loadDemoData;
 
-// ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ ==================
+// ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ API ==================
 function toggleApiMode() {
-    // Переключаем режим
-    CONFIG.USE_REAL_API = !CONFIG.USE_REAL_API;
+    // Получаем текущий режим из localStorage
+    const currentMode = localStorage.getItem('usermanager_use_real_api');
+    const newMode = currentMode === 'false' ? 'true' : 'false';
 
-    // Сохраняем
-    localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API.toString());
-    console.log('Переключение режима. Новое значение:', CONFIG.USE_REAL_API);
+    // Сохраняем новый режим
+    localStorage.setItem('usermanager_use_real_api', newMode);
+
+    // Обновляем глобальную переменную CONFIG
+    CONFIG.USE_REAL_API = (newMode === 'true');
+
+    console.log('Переключение режима API:', newMode === 'true' ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
 
     // Проверяем GitHub Pages
     const isGitHubPages = window.location.hostname.includes('github.io');
 
-    // Уведомление (ЗАМЕНИТЬ ЭТУ ЧАСТЬ)
-    if (CONFIG.USE_REAL_API) {
+    // Уведомление
+    if (newMode === 'true') {
         if (isGitHubPages) {
             showNotification('🌐 Включен ДЕМО-РЕЖИМ с тестовыми данными', 'info');
         } else {
@@ -754,16 +747,11 @@ function toggleApiMode() {
     // Обновляем UI
     updateApiModeUI();
 
-    showNotification(
-        CONFIG.USE_REAL_API
-            ? '🌐 Включен СЕРВЕРНЫЙ режим (Go API)'
-            : '💾 Включен ЛОКАЛЬНЫЙ режим',
-        CONFIG.USE_REAL_API ? 'info' : 'warning'
-    );
-
     // Перезагружаем данные
     setTimeout(() => {
-        loadUsers();
+        if (typeof loadUsers === 'function') {
+            loadUsers();
+        }
     }, 300);
 }
 
@@ -868,43 +856,35 @@ async function checkApiStatus() {
 function initApiMode() {
     console.log('=== ИНИЦИАЛИЗАЦИЯ РЕЖИМА API ===');
 
-    const isGitHubPages = window.location.hostname.includes('github.io');
-    console.log('GitHub Pages?:', isGitHubPages);
-    console.log('Текущий режим из CONFIG:', CONFIG.USE_REAL_API);
+    // Проверяем сохраненный режим из localStorage
+    const savedMode = localStorage.getItem('usermanager_use_real_api');
 
-    // Если на GitHub Pages и включен серверный режим
-    if (isGitHubPages && CONFIG.USE_REAL_API) {
-        console.log('GitHub Pages: ДЕМО-режим с тестовыми данными');
+    // Если режим сохранен, используем его
+    if (savedMode !== null) {
+        CONFIG.USE_REAL_API = (savedMode === 'true');
+    } else {
+        // Если не сохранен, устанавливаем по умолчанию
+        // На GitHub Pages по умолчанию локальный режим
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        CONFIG.USE_REAL_API = !isGitHubPages; // На GitHub Pages = false, локально = true
 
-        // Показываем уведомление
-        setTimeout(() => {
-            showNotification('🌐 GitHub Pages: используется демо-режим с тестовыми данными', 'info');
-        }, 1000);
-
-        // На GitHub Pages принудительно ставим локальный, если выбрали серверный?
-        // НЕТ! Оставляем как есть - будет демо-режим
+        // Сохраняем настройку по умолчанию
+        localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API.toString());
     }
 
+    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+    console.log('GitHub Pages?', window.location.hostname.includes('github.io'));
+
     // Если НЕ GitHub Pages и включен серверный режим
-    if (!isGitHubPages && CONFIG.USE_REAL_API) {
+    if (!window.location.hostname.includes('github.io') && CONFIG.USE_REAL_API) {
         // Проверяем статус реального сервера
         setTimeout(checkApiStatus, 500);
         setInterval(checkApiStatus, 30000);
     }
 
-
-
     // Обновляем UI
     updateApiModeUI();
-    console.log('Текущий режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
 }
-
-// Вызов в DOMContentLoaded (в конце файла)
-document.addEventListener('DOMContentLoaded', function () {
-    // ... существующий код ...
-
-    initApiMode();
-});
 
 // ================== ГЛОБАЛЬНЫЕ ФУНКЦИИ РЕЖИМА API ==================
 window.toggleApiMode = toggleApiMode;

@@ -4,7 +4,7 @@
 // ============================================
 
 const CONFIG = {
-    USE_REAL_API: false, // true - использовать Go API, false - локальные данные
+    USE_REAL_API: true, // true - использовать Go API, false - локальные данные
     API_URL: 'https://ваш-go-api.на-хостинге.com/api',
     STORAGE_KEY: 'usermanager_local_data'
 };

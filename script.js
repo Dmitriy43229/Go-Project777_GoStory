@@ -550,8 +550,18 @@ window.loadDemoData = loadDemoData;
 
 // ================== ФУНКЦИИ УПРАВЛЕНИЯ РЕЖИМОМ ==================
 function toggleApiMode() {
+    // Проверяем, не на GitHub ли мы
+    if (window.location.hostname.includes('github.io')) {
+        showNotification('❌ На GitHub Pages доступен только локальный режим', 'error');
+        return; // Не даем переключиться
+    }
+
+    // Переключаем режим
     CONFIG.USE_REAL_API = !CONFIG.USE_REAL_API;
-    localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API);
+
+    // Сохраняем как строку
+    localStorage.setItem('usermanager_use_real_api', CONFIG.USE_REAL_API.toString());
+    console.log('Сохранен режим:', CONFIG.USE_REAL_API ? 'true' : 'false');
 
     updateApiModeUI();
 
@@ -667,18 +677,39 @@ async function checkApiStatus() {
 
 // ================== ИНИЦИАЛИЗАЦИЯ РЕЖИМА ==================
 function initApiMode() {
-    // Проверяем GitHub Pages
-    if (window.location.hostname.includes('github.io')) {
-        console.log('GitHub Pages: принудительно локальный режим');
+    // Всегда сначала читаем сохраненное значение
+    const savedValue = localStorage.getItem('usermanager_use_real_api');
+    console.log('Сохраненное значение режима:', savedValue);
+
+    // Если мы на GitHub Pages - всегда локальный режим
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    if (isGitHubPages) {
+        // GitHub Pages - принудительно локальный режим
         CONFIG.USE_REAL_API = false;
         localStorage.setItem('usermanager_use_real_api', 'false');
+
+        console.log('GitHub Pages: принудительно локальный режим');
 
         // Показываем уведомление
         setTimeout(() => {
             showNotification('🌐 GitHub Pages: работает в локальном режиме', 'info');
         }, 1500);
+    } else {
+        // НЕ GitHub Pages - используем сохраненное значение
+        if (savedValue === null) {
+            // Нет сохраненного значения - по умолчанию локальный
+            CONFIG.USE_REAL_API = false;
+            localStorage.setItem('usermanager_use_real_api', 'false');
+            console.log('Установлен режим по умолчанию: ЛОКАЛЬНЫЙ');
+        } else {
+            // Есть сохраненное значение - преобразуем строку в boolean
+            CONFIG.USE_REAL_API = savedValue === 'true';
+            console.log('Загружен сохраненный режим:', CONFIG.USE_REAL_API ? 'СЕРВЕРНЫЙ' : 'ЛОКАЛЬНЫЙ');
+        }
     }
 
+    // Обновляем UI
     updateApiModeUI();
 
     // Проверяем статус сервера (только в серверном режиме)

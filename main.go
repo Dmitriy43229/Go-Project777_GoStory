@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 )
 
 // User структура для пользователя
@@ -40,26 +40,42 @@ func init() {
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
 }
 
-// CORS middleware 37463274
+// CORS middleware
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Разрешаем запросы с любых доменов
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		next(w, r)
 	}
 }
 
+// validateUser проверяет обязательные поля
+func validateUser(user User) error {
+	if strings.TrimSpace(user.Name) == "" {
+		return fmt.Errorf("name is required")
+	}
+	if strings.TrimSpace(user.Email) == "" {
+		return fmt.Errorf("email is required")
+	}
+	if !strings.Contains(user.Email, "@") {
+		return fmt.Errorf("invalid email format")
+	}
+	return nil
+}
+
 // Add добавляет пользователя
-func (db *InMemoryDB) Add(user User) User {
+func (db *InMemoryDB) Add(user User) (User, error) {
+	if err := validateUser(user); err != nil {
+		return User{}, err
+	}
+
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -67,7 +83,7 @@ func (db *InMemoryDB) Add(user User) User {
 	user.CreatedAt = time.Now()
 	db.users[user.ID] = user
 	db.nextID++
-	return user
+	return user, nil
 }
 
 // GetAll возвращает всех пользователей
@@ -92,16 +108,22 @@ func (db *InMemoryDB) GetByID(id int) (User, bool) {
 }
 
 // Update обновляет пользователя
-func (db *InMemoryDB) Update(user User) bool {
+func (db *InMemoryDB) Update(id int, user User) error {
+	if err := validateUser(user); err != nil {
+		return err
+	}
+
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	if existingUser, exists := db.users[user.ID]; exists {
-		user.CreatedAt = existingUser.CreatedAt
-		db.users[user.ID] = user
-		return true
+	if _, exists := db.users[id]; !exists {
+		return fmt.Errorf("user not found")
 	}
-	return false
+
+	user.ID = id
+	user.CreatedAt = db.users[id].CreatedAt // Сохраняем оригинальное время создания
+	db.users[id] = user
+	return nil
 }
 
 // Delete удаляет пользователя
@@ -116,10 +138,26 @@ func (db *InMemoryDB) Delete(id int) bool {
 	return false
 }
 
-// Обработчики HTTP
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+// sendJSON отправляет JSON-ответ
+func sendJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+// sendError отправляет JSON-ошибку
+func sendError(w http.ResponseWriter, status int, message string) {
+	sendJSON(w, status, map[string]string{"error": message})
+}
+
+// Обработчики HTTP
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]string{
 		"message": "UserManager Pro API",
 		"version": "1.0.0",
 		"docs":    "/api/info",
@@ -127,136 +165,131 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		users := db.GetAll()
-		json.NewEncoder(w).Encode(users)
+		sendJSON(w, http.StatusOK, users)
 
-	case "POST":
+	case http.MethodPost:
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			http.Error(w, `{"error": "Invalid JSON"}`, http.StatusBadRequest)
+			sendError(w, http.StatusBadRequest, "Invalid JSON")
 			return
 		}
 
-		if user.Name == "" || user.Email == "" {
-			http.Error(w, `{"error": "Name and email are required"}`, http.StatusBadRequest)
+		newUser, err := db.Add(user)
+		if err != nil {
+			sendError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-
-		newUser := db.Add(user)
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(newUser)
+		sendJSON(w, http.StatusCreated, newUser)
 
 	default:
-		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
 func apiUserHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Извлекаем ID из URL
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 4 {
-		http.Error(w, `{"error": "Invalid URL"}`, http.StatusBadRequest)
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 3 {
+		sendError(w, http.StatusBadRequest, "Invalid URL")
 		return
 	}
-	
-	idStr := pathParts[3]
+
+	idStr := pathParts[2]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid user ID"}`, http.StatusBadRequest)
+		sendError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		user, exists := db.GetByID(id)
 		if !exists {
-			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+			sendError(w, http.StatusNotFound, "User not found")
 			return
 		}
-		json.NewEncoder(w).Encode(user)
+		sendJSON(w, http.StatusOK, user)
 
-	case "PUT":
+	case http.MethodPut:
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			http.Error(w, `{"error": "Invalid JSON"}`, http.StatusBadRequest)
+			sendError(w, http.StatusBadRequest, "Invalid JSON")
 			return
 		}
 
-		if user.Name == "" || user.Email == "" {
-			http.Error(w, `{"error": "Name and email are required"}`, http.StatusBadRequest)
+		if err := db.Update(id, user); err != nil {
+			status := http.StatusInternalServerError
+			if err.Error() == "user not found" {
+				status = http.StatusNotFound
+			} else {
+				status = http.StatusBadRequest
+			}
+			sendError(w, status, err.Error())
 			return
 		}
+		sendJSON(w, http.StatusOK, user)
 
-		user.ID = id
-		if updated := db.Update(user); !updated {
-			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
-			return
-		}
-		json.NewEncoder(w).Encode(user)
-
-	case "DELETE":
+	case http.MethodDelete:
 		if deleted := db.Delete(id); !deleted {
-			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+			sendError(w, http.StatusNotFound, "User not found")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 
 	default:
-		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
 func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
 	stats := map[string]interface{}{
 		"total_users": len(db.users),
-		"server_time": time.Now(),
+		"server_time": time.Now().UTC(),
 		"status":      "online",
 		"version":     "1.0.0",
 		"go_version":  "1.23.1",
 	}
-	
-	json.NewEncoder(w).Encode(stats)
+	sendJSON(w, http.StatusOK, stats)
 }
 
 func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
 	info := map[string]interface{}{
 		"name":        "UserManager Pro API",
 		"version":     "1.0.0",
 		"description": "Go Backend API for UserManager Pro",
 		"author":      "Dmitriy Kobelev",
 		"endpoints": map[string]string{
-			"GET /api/users": "Get all users",
-			"POST /api/users": "Create user",
-			"GET /api/users/{id}": "Get user by ID",
-			"PUT /api/users/{id}": "Update user",
-			"DELETE /api/users/{id}": "Delete user",
-			"GET /api/stats": "Server statistics",
-			"GET /api/info": "This info",
+			"GET /api/users":           "Get all users",
+			"POST /api/users":          "Create user",
+			"GET /api/users/{id}":      "Get user by ID",
+			"PUT /api/users/{id}":      "Update user",
+			"DELETE /api/users/{id}":   "Delete user",
+			"GET /api/stats":           "Server statistics",
+			"GET /api/info":            "This info",
 		},
 		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
 	}
-	
-	json.NewEncoder(w).Encode(info)
+	sendJSON(w, http.StatusOK, info)
 }
 
 func main() {
-	// Маршруты API с CORS
+	// Регистрация маршрутов с CORS
 	http.HandleFunc("/api/users", enableCORS(apiUsersHandler))
 	http.HandleFunc("/api/users/", enableCORS(apiUserHandler))
 	http.HandleFunc("/api/stats", enableCORS(apiStatsHandler))
 	http.HandleFunc("/api/info", enableCORS(apiInfoHandler))
-	
-	// Главная страница
 	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"

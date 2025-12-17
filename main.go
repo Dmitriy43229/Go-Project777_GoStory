@@ -32,7 +32,16 @@ var db *InMemoryDB
 var serverMode = "server" // "server" или "local"
 var modeMutex sync.RWMutex
 
+// HTML страницы для разных режимов
+var (
+	serverModeHTML = ""
+	localModeHTML  = ""
+)
+
 func init() {
+	// Инициализация HTML кэша
+	updateHTMLCache()
+	
 	db = &InMemoryDB{
 		users:  make(map[int]User),
 		nextID: 4,
@@ -44,12 +53,123 @@ func init() {
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
 }
 
+// Функция обновления HTML кэша
+func updateHTMLCache() {
+	serverModeHTML = ""
+	
+	localModeHTML = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Страница не найдена</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            padding: 3rem;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 4rem;
+            color: #dc2626;
+            margin-bottom: 1rem;
+        }
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #4b5563;
+        }
+        p {
+            font-size: 1.2rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .status {
+            font-size: 1rem;
+            color: #9ca3af;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .admin-note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            color: #92400e;
+        }
+        .refresh-btn {
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>404</h1>
+        <h2>Страница временно недоступна</h2>
+        <p>
+            <strong>UserManager Pro находится в локальном режиме.</strong><br>
+            В данный момент администратор работает с системой локально.
+        </p>
+        <p>
+            Пожалуйста, попробуйте зайти позже, когда система вернется в серверный режим.
+        </p>
+        <div class="admin-note">
+            <strong>Примечание для администратора:</strong><br>
+            Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
+        </div>
+        <button class="refresh-btn" onclick="location.reload()">
+            🔄 Обновить страницу
+        </button>
+        <div class="status">
+            UserManager Pro • Локальный режим активен • Время: ` + time.Now().Format("15:04:05") + `
+        </div>
+    </div>
+    <script>
+        // Автоматическая проверка каждые 3 секунды
+        setInterval(() => {
+            fetch('/api/mode?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.mode === 'server') {
+                        location.reload();
+                    }
+                });
+        }, 3000);
+    </script>
+</body>
+</html>`
+}
+
 // CORS middleware
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -67,8 +187,9 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		currentMode := serverMode
 		modeMutex.RUnlock()
 		
-		// Пропускаем проверку для endpoint получения режима и статистики
-		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || r.URL.Path == "/api/stats" {
+		// Всегда разрешаем доступ к этим endpoint-ам
+		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || 
+		   r.URL.Path == "/api/stats" || r.URL.Path == "/" {
 			next(w, r)
 			return
 		}
@@ -86,70 +207,16 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				// Проверяем также в query параметрах
 				tokenFromQuery := r.URL.Query().Get("admin_token")
 				if !allowedTokens[tokenFromQuery] {
-					// ВОТ ЗДЕСЬ ВАЖНОЕ ИЗМЕНЕНИЕ - возвращаем 404 вместо 403
+					// ВОЗВРАЩАЕМ БЕЛУЮ СТРАНИЦУ 404
 					w.WriteHeader(http.StatusNotFound)
 					w.Header().Set("Content-Type", "text/html")
 					
-					// HTML страница с белым фоном и сообщением
-					html := `<!DOCTYPE html>
-					<html lang="ru">
-					<head>
-						<meta charset="UTF-8">
-						<meta name="viewport" content="width=device-width, initial-scale=1.0">
-						<title>404 - Страница не найдена</title>
-						<style>
-							body {
-								font-family: Arial, sans-serif;
-								background-color: white;
-								color: #333;
-								display: flex;
-								justify-content: center;
-								align-items: center;
-								height: 100vh;
-								margin: 0;
-								text-align: center;
-							}
-							.container {
-								padding: 2rem;
-							}
-							h1 {
-								font-size: 4rem;
-								color: #dc2626;
-								margin-bottom: 1rem;
-							}
-							h2 {
-								font-size: 2rem;
-								margin-bottom: 1rem;
-								color: #4b5563;
-							}
-							p {
-								font-size: 1.2rem;
-								color: #6b7280;
-								margin-bottom: 2rem;
-							}
-							.status {
-								font-size: 1rem;
-								color: #9ca3af;
-								margin-top: 2rem;
-								padding-top: 1rem;
-								border-top: 1px solid #e5e7eb;
-							}
-						</style>
-					</head>
-					<body>
-						<div class="container">
-							<h1>404</h1>
-							<h2>Страница временно недоступна</h2>
-							<p>В данный момент администратор работает в локальном режиме.<br>
-							Пожалуйста, попробуйте позже.</p>
-							<div class="status">
-								UserManager Pro • Локальный режим активен • Время: ` + time.Now().Format("15:04:05") + `
-							</div>
-						</div>
-					</body>
-					</html>`
+					// Обновляем время в HTML
+					updatedHTML := strings.Replace(localModeHTML, 
+						"Время: " + time.Now().Format("15:04:05"), 
+						"Время: " + time.Now().Format("15:04:05"), 1)
 					
-					fmt.Fprint(w, html)
+					fmt.Fprint(w, updatedHTML)
 					return
 				}
 			}
@@ -274,54 +341,36 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
+	// Сначала проверяем режим
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
+	// В локальном режиме проверяем админский токен
+	if currentMode == "local" {
+		adminToken := r.Header.Get("X-Admin-Token")
+		if adminToken != "admin_local_token_123" {
+			// Проверяем в query параметрах
+			tokenFromQuery := r.URL.Query().Get("admin_token")
+			if tokenFromQuery != "admin_local_token_123" {
+				// Возвращаем 404 для обычных пользователей
+				w.WriteHeader(http.StatusNotFound)
+				w.Header().Set("Content-Type", "text/html")
+				updatedHTML := strings.Replace(localModeHTML, 
+					"Время: " + time.Now().Format("15:04:05"), 
+					"Время: " + time.Now().Format("15:04:05"), 1)
+				fmt.Fprint(w, updatedHTML)
+				return
+			}
+		}
+	}
+	
 	switch r.Method {
 	case http.MethodGet:
-		modeMutex.RLock()
-		currentMode := serverMode
-		modeMutex.RUnlock()
-		
-		// Для локального режима возвращаем пустой массив для всех
-		if currentMode == "local" {
-			// Проверяем админский токен
-			adminToken := r.Header.Get("X-Admin-Token")
-			allowedTokens := map[string]bool{"admin_local_token_123": true}
-			
-			if !allowedTokens[adminToken] {
-				tokenFromQuery := r.URL.Query().Get("admin_token")
-				if !allowedTokens[tokenFromQuery] {
-					// Для обычных пользователей возвращаем 404
-					w.WriteHeader(http.StatusNotFound)
-					return
-				}
-			}
-			// Для админа возвращаем данные
-			users := db.GetAll()
-			sendJSON(w, http.StatusOK, users)
-			return
-		}
-		
 		users := db.GetAll()
 		sendJSON(w, http.StatusOK, users)
 
 	case http.MethodPost:
-		modeMutex.RLock()
-		currentMode := serverMode
-		modeMutex.RUnlock()
-		
-		if currentMode == "local" {
-			// Проверяем админский токен
-			adminToken := r.Header.Get("X-Admin-Token")
-			allowedTokens := map[string]bool{"admin_local_token_123": true}
-			
-			if !allowedTokens[adminToken] {
-				tokenFromQuery := r.URL.Query().Get("admin_token")
-				if !allowedTokens[tokenFromQuery] {
-					sendError(w, http.StatusNotFound, "Локальный режим активен")
-					return
-				}
-			}
-		}
-		
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			sendError(w, http.StatusBadRequest, "Invalid JSON")
@@ -358,15 +407,13 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем режим для всех операций кроме GET
-	if currentMode == "local" && r.Method != http.MethodGet {
-		// Проверяем админский токен
+	// В локальном режиме проверяем админский токен
+	if currentMode == "local" {
 		adminToken := r.Header.Get("X-Admin-Token")
-		allowedTokens := map[string]bool{"admin_local_token_123": true}
-		
-		if !allowedTokens[adminToken] {
+		if adminToken != "admin_local_token_123" {
+			// Проверяем в query параметрах
 			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if !allowedTokens[tokenFromQuery] {
+			if tokenFromQuery != "admin_local_token_123" {
 				sendError(w, http.StatusNotFound, "Локальный режим активен")
 				return
 			}
@@ -375,20 +422,6 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		if currentMode == "local" {
-			// Проверяем админский токен
-			adminToken := r.Header.Get("X-Admin-Token")
-			allowedTokens := map[string]bool{"admin_local_token_123": true}
-			
-			if !allowedTokens[adminToken] {
-				tokenFromQuery := r.URL.Query().Get("admin_token")
-				if !allowedTokens[tokenFromQuery] {
-					sendError(w, http.StatusNotFound, "Локальный режим активен")
-					return
-				}
-			}
-		}
-		
 		user, exists := db.GetByID(id)
 		if !exists {
 			sendError(w, http.StatusNotFound, "User not found")
@@ -450,13 +483,12 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 	if currentMode == "local" {
 		// Проверяем админский токен
 		adminToken := r.Header.Get("X-Admin-Token")
-		allowedTokens := map[string]bool{"admin_local_token_123": true}
-		
-		if !allowedTokens[adminToken] {
+		if adminToken != "admin_local_token_123" {
 			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if !allowedTokens[tokenFromQuery] {
+			if tokenFromQuery != "admin_local_token_123" {
 				stats["total_users"] = 0
 				stats["message"] = "Локальный режим активен. Данные скрыты."
+				stats["status"] = "local"
 			}
 		}
 	}
@@ -497,11 +529,9 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Для обычных пользователей в локальном режиме скрываем информацию
 	if currentMode == "local" {
 		adminToken := r.Header.Get("X-Admin-Token")
-		allowedTokens := map[string]bool{"admin_local_token_123": true}
-		
-		if !allowedTokens[adminToken] {
+		if adminToken != "admin_local_token_123" {
 			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if !allowedTokens[tokenFromQuery] {
+			if tokenFromQuery != "admin_local_token_123" {
 				info["message"] = "Локальный режим активен"
 				info["endpoints"] = map[string]string{
 					"GET /api/mode": "Get current mode",
@@ -522,48 +552,50 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Проверяем админский пароль
-	adminPassword := r.Header.Get("X-Admin-Password")
-	if adminPassword != "admin123" {
-		// Проверяем также в теле запроса
-		var body map[string]string
-		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
-			if body["password"] != "admin123" {
-				sendError(w, http.StatusUnauthorized, "Invalid admin password")
-				return
-			}
-		} else {
-			sendError(w, http.StatusUnauthorized, "Invalid admin password")
-			return
-		}
-	}
-	
-	// Получаем новый режим из запроса
-	var request map[string]string
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 	
-	newMode := request["mode"]
+	if body["password"] != "admin123" {
+		sendError(w, http.StatusUnauthorized, "Invalid admin password")
+		return
+	}
+	
+	newMode := body["mode"]
 	if newMode != "server" && newMode != "local" {
 		sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
 		return
 	}
 	
 	modeMutex.Lock()
+	oldMode := serverMode
 	serverMode = newMode
 	modeMutex.Unlock()
 	
-	fmt.Printf("🔧 Режим изменен на: %s\n", newMode)
+	// Обновляем HTML кэш
+	updateHTMLCache()
 	
 	// Логируем изменение
-	fmt.Printf("⏰ Время изменения: %s\n", time.Now().Format("2006-01-02 15:04:05"))
-	fmt.Printf("👥 Все пользователи теперь будут видеть режим: %s\n", newMode)
+	fmt.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!\n")
+	fmt.Printf("   Старый режим: %s\n", oldMode)
+	fmt.Printf("   Новый режим: %s\n", newMode)
+	fmt.Printf("   Время: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("   IP админ: %s\n", r.RemoteAddr)
+	
+	if newMode == "local" {
+		fmt.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!\n")
+		fmt.Printf("   ✅ Только администратор может работать с системой\n")
+	} else {
+		fmt.Printf("   ✅ Теперь все пользователи видят общие данные\n")
+	}
 	
 	sendJSON(w, http.StatusOK, map[string]string{
-		"message": fmt.Sprintf("Режим изменен на %s", newMode),
+		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
 		"mode":    newMode,
 		"time":    time.Now().Format("2006-01-02 15:04:05"),
+		"warning": newMode == "local" ? "Обычные пользователи увидят 404 страницу" : "Все пользователи видят данные",
 	})
 }
 
@@ -596,13 +628,15 @@ func main() {
 	fmt.Printf("🚀 Go API сервер запущен на порту %s\n", port)
 	fmt.Printf("📊 База данных инициализирована с %d пользователями\n", len(db.users))
 	fmt.Printf("🌐 Начальный режим: %s\n", serverMode)
-	fmt.Println("🔧 Управление режимами:")
+	fmt.Println("\n🔧 Управление режимами:")
 	fmt.Println("   POST /api/admin/mode - Изменить режим (требуется пароль admin123)")
 	fmt.Println("   GET  /api/mode       - Получить текущий режим")
 	fmt.Println("\n🔒 Локальный режим:")
 	fmt.Println("   - Обычные пользователи получают 404 ошибку")
 	fmt.Println("   - Белый экран с сообщением для не-админов")
 	fmt.Println("   - Админский токен: admin_local_token_123")
+	fmt.Println("\n⚠️  ВАЖНО: При включении локального режима все обычные пользователи")
+	fmt.Println("          сразу увидят белую страницу 404!")
 	fmt.Println("\n🌐 API Endpoints:")
 	fmt.Println("   GET  /api/users      - Все пользователи")
 	fmt.Println("   POST /api/users      - Создать пользователя")

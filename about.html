@@ -545,11 +545,10 @@
                 <span>Режим: Серверный</span>
             </a>
 
-            <!-- Кнопка выхода (только для администратора) -->
-            <a href="#" class="nav-item logout-btn" id="logoutBtn" onclick="logoutAdmin(); return false;"
-                style="display: none;">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Выйти</span>
+            <!-- Новая кнопка обновления кеша -->
+            <a href="#" class="nav-item" onclick="clearCache(); return false;">
+                <i class="fas fa-sync-alt"></i>
+                <span>Обновить кеш</span>
             </a>
 
             <!-- Кнопка входа для администратора -->
@@ -774,7 +773,7 @@
         function showAdminLoginModal() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-            
+
             if (checkAdminAccess()) {
                 // Админ уже вошел - переключаемся на главную с режимом
                 window.location.href = 'index.html';
@@ -818,15 +817,15 @@
                 showAdminLoginModal();
                 return;
             }
-            
+
             try {
                 const currentMode = localStorage.getItem('usermanager_use_real_api');
                 const newMode = currentMode === 'true' ? 'false' : 'true';
                 const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
-                
+
                 // Обновляем локально
                 localStorage.setItem('usermanager_use_real_api', newMode);
-                
+
                 // Пытаемся обновить на сервере
                 try {
                     const response = await fetch('http://localhost:8068/api/admin/mode', {
@@ -840,21 +839,21 @@
                             password: 'admin123'
                         })
                     });
-                    
+
                     if (!response.ok) {
                         console.log('Не удалось изменить режим на сервере, используем локальный режим');
                     }
                 } catch (serverError) {
                     console.log('Сервер недоступен, используем локальный переключатель режима');
                 }
-                
+
                 // Показываем уведомление
                 alert(`✅ Режим изменен на: ${modeName}\n${newMode === 'false' ? 'Теперь только вы видите данные.' : 'Теперь все видят данные.'}\nСтраница будет перезагружена.`);
-                
+
                 // Обновляем кнопки и перезагружаем
                 updateModeButtons();
                 setTimeout(() => location.reload(), 1000);
-                
+
             } catch (error) {
                 console.error('Ошибка переключения режима:', error);
                 alert('❌ Ошибка при переключении режима');
@@ -868,10 +867,10 @@
                 localStorage.removeItem('usermanager_admin_session');
                 localStorage.removeItem('usermanager_admin_expiry');
                 localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
-                
+
                 // Обновляем кнопки
                 updateModeButtons();
-                
+
                 alert('✅ Вы вышли из режима администратора.');
                 setTimeout(() => location.reload(), 500);
             }
@@ -882,7 +881,7 @@
             const adminBtn = document.getElementById('adminModeToggle');
             const logoutBtn = document.getElementById('logoutBtn');
             const isAdminActive = checkAdminAccess();
-            
+
             if (adminBtn && logoutBtn) {
                 if (isAdminActive) {
                     adminBtn.style.display = 'flex';

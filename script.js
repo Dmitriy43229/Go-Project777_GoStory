@@ -6,7 +6,7 @@
 // Принудительное обновление кеша при загрузке
 (function() {
     // Проверяем версию в localStorage
-    const CURRENT_VERSION = '2.0.3';
+    const CURRENT_VERSION = '2.0.4';
     const savedVersion = localStorage.getItem('usermanager_version');
     
     if (savedVersion !== CURRENT_VERSION) {
@@ -45,7 +45,7 @@ const CONFIG = {
     USE_REAL_API: false,
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data',
-    VERSION: '2.0.3',
+    VERSION: '2.0.4',
     LAST_UPDATE: '<?php echo date("Y-m-d H:i:s"); ?>'
 };
 
@@ -56,8 +56,132 @@ let isAdmin = false;
 let adminSessionId = null;
 let currentServerMode = "server"; // Храним текущий режим сервера
 
+// Переменные для управления блокировкой
+let isBlocked = false;
+let lastModeCheck = 0;
+const MODE_CHECK_INTERVAL = 2000; // Проверять каждые 2 секунды
+
+// Функция получения режима с сервера
+async function getServerMode() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/mode?_=${Date.now()}`);
+        if (response.ok) {
+            const data = await response.json();
+            return data.mode;
+        }
+    } catch (error) {
+        console.log('Не удалось получить режим сервера:', error);
+    }
+    return "server";
+}
+
+// Функция проверки блокировки
+async function checkForBlock() {
+    const now = Date.now();
+    if (now - lastModeCheck < MODE_CHECK_INTERVAL && !isBlocked) {
+        return false;
+    }
+    
+    lastModeCheck = now;
+    const serverMode = await getServerMode();
+    currentServerMode = serverMode;
+    
+    const isAdminActive = checkAdminAccess();
+    
+    // Если сервер в локальном режиме и мы не админ
+    if (serverMode === "local" && !isAdminActive) {
+        if (!isBlocked) {
+            isBlocked = true;
+            showBlockPage();
+        }
+        return true;
+    }
+    
+    // Если был заблокирован, но теперь режим изменился
+    if (isBlocked && serverMode === "server") {
+        isBlocked = false;
+        location.reload(); // Автоматическая перезагрузка при возврате в серверный режим
+    }
+    
+    return false;
+}
+
+// Функция показа страницы блокировки
+function showBlockPage() {
+    document.body.innerHTML = '';
+    document.body.style.cssText = `
+        font-family: Arial, sans-serif;
+        background-color: white;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        text-align: center;
+    `;
+    
+    const html = `
+        <div style="padding: 3rem; max-width: 600px;">
+            <h1 style="font-size: 4rem; color: #dc2626; margin-bottom: 1rem;">404</h1>
+            <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #4b5563;">
+                Страница временно недоступна
+            </h2>
+            <p style="font-size: 1.2rem; color: #6b7280; margin-bottom: 2rem; line-height: 1.6;">
+                <strong>UserManager Pro находится в локальном режиме.</strong><br>
+                В данный момент администратор работает с системой локально.
+            </p>
+            <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 2rem;">
+                Пожалуйста, попробуйте зайти позже, когда система вернется в серверный режим.
+            </p>
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; 
+                        padding: 1rem; margin-top: 2rem; color: #92400e;">
+                <strong>Примечание для администратора:</strong><br>
+                Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
+            </div>
+            <button onclick="location.reload()" style="
+                margin-top: 2rem;
+                padding: 0.75rem 1.5rem;
+                background: #3b82f6;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: background 0.3s;
+            ">
+                🔄 Обновить страницу
+            </button>
+            <div style="font-size: 1rem; color: #9ca3af; margin-top: 2rem; 
+                       padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                UserManager Pro • Локальный режим активен • Время: ${new Date().toLocaleTimeString()}
+            </div>
+        </div>
+        <script>
+            // Автоматическая проверка каждые 3 секунды
+            setInterval(() => {
+                fetch('http://localhost:8068/api/mode?_=' + Date.now())
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.mode === 'server') {
+                            location.reload();
+                        }
+                    });
+            }, 3000);
+        </script>
+    `;
+    
+    document.body.innerHTML = html;
+}
+
 // Проверка и инициализация режима при загрузке
 async function initializeSystem() {
+    // Сначала проверяем блокировку
+    const blocked = await checkForBlock();
+    if (blocked) {
+        return;
+    }
+    
     // Проверяем GitHub Pages - всегда серверный режим для гостей
     const isGitHubPages = window.location.hostname.includes('github.io');
     const savedAdmin = localStorage.getItem('usermanager_admin_session');
@@ -75,37 +199,30 @@ async function initializeSystem() {
             // Очищаем просроченную сессию
             localStorage.removeItem('usermanager_admin_session');
             localStorage.removeItem('usermanager_admin_expiry');
+            localStorage.setItem('usermanager_use_real_api', 'true'); // Принудительно серверный режим
             console.log('⚠️ Администратор: сессия истекла');
         }
     }
     
     // Получаем текущий режим с сервера
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/mode`);
-        if (response.ok) {
-            const data = await response.json();
-            currentServerMode = data.mode;
-            console.log(`🌐 Серверный режим: ${currentServerMode}`);
-            
-            // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПОД РЕЖИМ СЕРВЕРА
-            if (currentServerMode === 'local' && !isAdminActive) {
-                // Если сервер в локальном режиме, а мы не админ - переходим в серверный режим
-                localStorage.setItem('usermanager_use_real_api', 'true');
-                CONFIG.USE_REAL_API = true;
-            } else if (currentServerMode === 'server' && isAdminActive) {
-                // Если сервер в серверном режиме, а мы админ - спрашиваем
-                const savedMode = localStorage.getItem('usermanager_use_real_api');
-                if (savedMode === null) {
-                    // По умолчанию для админа - локальный режим
-                    localStorage.setItem('usermanager_use_real_api', 'false');
-                    CONFIG.USE_REAL_API = false;
-                } else {
-                    CONFIG.USE_REAL_API = savedMode === 'true';
-                }
-            }
+    const serverMode = await getServerMode();
+    currentServerMode = serverMode;
+    
+    // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПОД РЕЖИМ СЕРВЕРА
+    if (currentServerMode === 'local' && !isAdminActive) {
+        // Если сервер в локальном режиме, а мы не админ - показываем блокировку
+        showBlockPage();
+        return;
+    } else if (currentServerMode === 'server' && isAdminActive) {
+        // Если сервер в серверном режиме, а мы админ - спрашиваем
+        const savedMode = localStorage.getItem('usermanager_use_real_api');
+        if (savedMode === null) {
+            // По умолчанию для админа - локальный режим
+            localStorage.setItem('usermanager_use_real_api', 'false');
+            CONFIG.USE_REAL_API = false;
+        } else {
+            CONFIG.USE_REAL_API = savedMode === 'true';
         }
-    } catch (error) {
-        console.log('Не удалось получить режим с сервера:', error);
     }
     
     // Если нет активной админской сессии - форсируем серверный режим
@@ -217,17 +334,16 @@ async function toggleServerMode() {
     }
     
     try {
-        const currentMode = localStorage.getItem('usermanager_use_real_api');
-        const newMode = currentMode === 'true' ? 'false' : 'true';
-        const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
+        const currentMode = await getServerMode();
+        const newMode = currentMode === "server" ? "local" : "server";
         
         // Меняем режим на сервере
-        if (newMode === 'false') {
+        if (newMode === "local") {
             // Включаем локальный режим на сервере
             try {
                 await changeServerMode('local');
                 
-                alert(`✅ Локальный режим включен\nТеперь только вы можете видеть данные.\nДругие пользователи увидят белую страницу с ошибкой 404.`);
+                alert(`✅ Локальный режим включен!\n\nВсе обычные пользователи теперь видят белую страницу 404.\nТолько вы (администратор) можете работать с системой.\n\nИзменение вступило в силу немедленно для всех.`);
             } catch (serverError) {
                 console.log('Сервер недоступен, но локальный режим включен на клиенте');
                 localStorage.setItem('usermanager_use_real_api', 'false');
@@ -241,7 +357,7 @@ async function toggleServerMode() {
             try {
                 await changeServerMode('server');
                 
-                alert(`✅ Серверный режим включен\nТеперь все пользователи видят общие данные.`);
+                alert(`✅ Серверный режим включен!\n\nТеперь все пользователи видят общие данные.\n\nИзменение вступило в силу немедленно для всех.`);
             } catch (serverError) {
                 console.log('Сервер недоступен, но серверный режим включен на клиенте');
                 localStorage.setItem('usermanager_use_real_api', 'true');
@@ -253,11 +369,36 @@ async function toggleServerMode() {
         }
         
         // Обновляем кнопку и перезагружаем
+        updateModeButton();
         setTimeout(() => location.reload(), 1000);
         
     } catch (error) {
         console.error('Ошибка переключения режима:', error);
         alert(`❌ Ошибка: ${error.message}`);
+    }
+}
+
+// Функция очистки кеша
+function clearCache() {
+    if (confirm('Очистить кеш браузера и перезагрузить страницу?')) {
+        // Очищаем все данные
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Очищаем кеш браузера
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        
+        alert('✅ Кеш очищен. Страница будет перезагружена.');
+        setTimeout(() => {
+            // Принудительная перезагрузка с очисткой кеша
+            window.location.href = window.location.href + '?nocache=' + Date.now();
+        }, 500);
     }
 }
 
@@ -284,74 +425,6 @@ function updateModeButton() {
     } else {
         adminBtn.style.display = 'none';
     }
-}
-
-// Функция выхода из админ-режима
-function logoutAdmin() {
-    if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
-        // Очищаем сессию
-        localStorage.removeItem('usermanager_admin_session');
-        localStorage.removeItem('usermanager_admin_expiry');
-        localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
-        
-        // Обновляем кнопки
-        updateModeButton();
-        
-        alert('✅ Вы вышли из режима администратора.');
-        setTimeout(() => location.reload(), 500);
-    }
-}
-
-// Функция для проверки 404 ошибки
-async function checkFor404() {
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/users`);
-        if (response.status === 404) {
-            // Показываем белую страницу с ошибкой 404
-            show404Page();
-            return true;
-        }
-        return false;
-    } catch (error) {
-        return false;
-    }
-}
-
-// Функция для показа 404 страницы
-function show404Page() {
-    // Скрываем все элементы страницы
-    document.body.innerHTML = '';
-    document.body.style.backgroundColor = 'white';
-    document.body.style.color = '#333';
-    document.body.style.fontFamily = 'Arial, sans-serif';
-    document.body.style.display = 'flex';
-    document.body.style.justifyContent = 'center';
-    document.body.style.alignItems = 'center';
-    document.body.style.height = '100vh';
-    document.body.style.margin = '0';
-    document.body.style.textAlign = 'center';
-    
-    const html = `
-        <div style="padding: 2rem;">
-            <h1 style="font-size: 4rem; color: #dc2626; margin-bottom: 1rem;">404</h1>
-            <h2 style="font-size: 2rem; margin-bottom: 1rem; color: #4b5563;">Страница временно недоступна</h2>
-            <p style="font-size: 1.2rem; color: #6b7280; margin-bottom: 2rem;">
-                В данный момент администратор работает в локальном режиме.<br>
-                Пожалуйста, попробуйте позже.
-            </p>
-            <div style="font-size: 1rem; color: #9ca3af; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-                UserManager Pro • Локальный режим активен • Время: ${new Date().toLocaleTimeString()}
-            </div>
-        </div>
-    `;
-    
-    document.body.innerHTML = html;
-    
-    // Блокируем любые дальнейшие действия
-    document.body.onclick = function(e) {
-        e.preventDefault();
-        return false;
-    };
 }
 
 // Окно входа для администратора
@@ -702,9 +775,15 @@ function saveLocalData() {
 
 // Функция для выполнения запросов с проверкой 404
 async function safeFetch(url, options = {}) {
+    // Сначала проверяем блокировку
+    const blocked = await checkForBlock();
+    if (blocked) {
+        throw new Error('Blocked by server mode');
+    }
+    
     try {
         // Добавляем админский токен если мы админ и локальный режим
-        if (checkAdminAccess() && !CONFIG.USE_REAL_API) {
+        if (checkAdminAccess() && currentServerMode === "local") {
             if (!options.headers) options.headers = {};
             options.headers['X-Admin-Token'] = ADMIN_TOKEN;
         }
@@ -713,14 +792,14 @@ async function safeFetch(url, options = {}) {
         
         // Проверяем 404 ошибку
         if (response.status === 404) {
-            show404Page();
+            showBlockPage();
             throw new Error('404 - Страница недоступна');
         }
         
         return response;
     } catch (error) {
         // Если это не 404 ошибка, просто пробрасываем дальше
-        if (error.message.includes('404')) {
+        if (error.message.includes('404') || error.message.includes('Blocked')) {
             throw error;
         }
         throw error;
@@ -729,6 +808,12 @@ async function safeFetch(url, options = {}) {
 
 // Получение всех пользователей
 async function getAllUsers() {
+    // Проверяем блокировку
+    const blocked = await checkForBlock();
+    if (blocked) {
+        return [];
+    }
+    
     if (CONFIG.USE_REAL_API) {
         try {
             const response = await safeFetch(`${CONFIG.API_URL}/users`);
@@ -741,7 +826,7 @@ async function getAllUsers() {
         } catch (error) {
             console.warn('Не удалось получить данные с сервера:', error);
             // Если это 404 ошибка, уже показали страницу
-            if (error.message.includes('404')) {
+            if (error.message.includes('404') || error.message.includes('Blocked')) {
                 return [];
             }
             // Используем локальные данные в случае ошибки
@@ -756,7 +841,7 @@ async function getAllUsers() {
             return localUsers;
         } else {
             // Показываем 404 страницу для не-админов
-            show404Page();
+            showBlockPage();
             return [];
         }
     }
@@ -776,7 +861,7 @@ async function getStats() {
         console.warn('Не удалось получить статистику с сервера:', error);
         
         // Если это 404 ошибка, уже показали страницу
-        if (error.message.includes('404')) {
+        if (error.message.includes('404') || error.message.includes('Blocked')) {
             return {
                 total_users: 0,
                 server_time: new Date().toISOString(),
@@ -895,10 +980,10 @@ function updateStatsDisplay(stats) {
 // Загрузка данных при старте
 async function loadInitialData() {
     try {
-        // Сначала проверяем 404 ошибку
-        const is404 = await checkFor404();
-        if (is404) {
-            return; // Если 404, уже показали страницу
+        // Сначала проверяем блокировку
+        const blocked = await checkForBlock();
+        if (blocked) {
+            return; // Если заблокирован, не загружаем данные
         }
         
         // Инициализируем локальные данные
@@ -935,6 +1020,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обновляем кнопку режима
     updateModeButton();
     
+    // Периодическая проверка блокировки (каждые 2 секунды)
+    setInterval(checkForBlock, 2000);
+    
     // Периодическое обновление данных (каждые 30 секунд)
     setInterval(loadInitialData, 30000);
 });
@@ -945,8 +1033,9 @@ window.showAdminLoginModal = showAdminLoginModal;
 window.toggleServerMode = toggleServerMode;
 window.updateModeButton = updateModeButton;
 window.changeServerMode = changeServerMode;
-window.logoutAdmin = logoutAdmin;
+window.clearCache = clearCache;
 window.createAdminSession = createAdminSession;
 window.getAllUsers = getAllUsers;
 window.getStats = getStats;
-window.show404Page = show404Page;
+window.showBlockPage = showBlockPage;
+window.checkForBlock = checkForBlock;

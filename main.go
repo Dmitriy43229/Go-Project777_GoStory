@@ -60,36 +60,99 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Блокирующий middleware для локального режима
-func blockLocalModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
+// Проверка режима работы с 404 ошибкой для обычных пользователей
+func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		modeMutex.RLock()
 		currentMode := serverMode
 		modeMutex.RUnlock()
 		
-		// Если режим локальный - блокируем ВСЕ запросы кроме /mode и /admin/mode
-		if currentMode == "local" && 
-		   !strings.Contains(r.URL.Path, "/mode") && 
-		   !strings.Contains(r.URL.Path, "/admin/mode") {
+		// Пропускаем проверку для endpoint получения режима и статистики
+		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || r.URL.Path == "/api/stats" {
+			next(w, r)
+			return
+		}
+		
+		// Если режим локальный, проверяем админский токен
+		if currentMode == "local" {
+			adminToken := r.Header.Get("X-Admin-Token")
 			
-			// Проверяем, может это админский запрос (с паролем)
-			adminPassword := r.Header.Get("X-Admin-Password")
-			if adminPassword == "admin123" {
-				// Админ проходит
-				next(w, r)
-				return
+			// Список разрешенных админских токенов
+			allowedTokens := map[string]bool{
+				"admin_local_token_123": true, // Токен для локального режима
 			}
 			
-			// Для всех остальных - блокировка
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":   "Локальный режим активен",
-				"message": "Сайт временно недоступен. Администратор работает в локальном режиме.",
-				"mode":    "local",
-				"status":  "blocked",
-			})
-			return
+			if !allowedTokens[adminToken] {
+				// Проверяем также в query параметрах
+				tokenFromQuery := r.URL.Query().Get("admin_token")
+				if !allowedTokens[tokenFromQuery] {
+					// ВОТ ЗДЕСЬ ВАЖНОЕ ИЗМЕНЕНИЕ - возвращаем 404 вместо 403
+					w.WriteHeader(http.StatusNotFound)
+					w.Header().Set("Content-Type", "text/html")
+					
+					// HTML страница с белым фоном и сообщением
+					html := `<!DOCTYPE html>
+					<html lang="ru">
+					<head>
+						<meta charset="UTF-8">
+						<meta name="viewport" content="width=device-width, initial-scale=1.0">
+						<title>404 - Страница не найдена</title>
+						<style>
+							body {
+								font-family: Arial, sans-serif;
+								background-color: white;
+								color: #333;
+								display: flex;
+								justify-content: center;
+								align-items: center;
+								height: 100vh;
+								margin: 0;
+								text-align: center;
+							}
+							.container {
+								padding: 2rem;
+							}
+							h1 {
+								font-size: 4rem;
+								color: #dc2626;
+								margin-bottom: 1rem;
+							}
+							h2 {
+								font-size: 2rem;
+								margin-bottom: 1rem;
+								color: #4b5563;
+							}
+							p {
+								font-size: 1.2rem;
+								color: #6b7280;
+								margin-bottom: 2rem;
+							}
+							.status {
+								font-size: 1rem;
+								color: #9ca3af;
+								margin-top: 2rem;
+								padding-top: 1rem;
+								border-top: 1px solid #e5e7eb;
+							}
+						</style>
+					</head>
+					<body>
+						<div class="container">
+							<h1>404</h1>
+							<h2>Страница временно недоступна</h2>
+							<p>В данный момент администратор работает в локальном режиме.<br>
+							Пожалуйста, попробуйте позже.</p>
+							<div class="status">
+								UserManager Pro • Локальный режим активен • Время: ` + time.Now().Format("15:04:05") + `
+							</div>
+						</div>
+					</body>
+					</html>`
+					
+					fmt.Fprint(w, html)
+					return
+				}
+			}
 		}
 		
 		next(w, r)
@@ -204,9 +267,9 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	
 	sendJSON(w, http.StatusOK, map[string]string{
 		"message": "UserManager Pro API",
-		"version": "1.1.0",
+		"version": "1.0.0",
 		"mode":    currentMode,
-		"status":  "online",
+		"docs":    "/api/info",
 	})
 }
 
@@ -217,9 +280,23 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 		currentMode := serverMode
 		modeMutex.RUnlock()
 		
+		// Для локального режима возвращаем пустой массив для всех
 		if currentMode == "local" {
-			// В локальном режиме возвращаем только для админа
-			sendJSON(w, http.StatusOK, []User{})
+			// Проверяем админский токен
+			adminToken := r.Header.Get("X-Admin-Token")
+			allowedTokens := map[string]bool{"admin_local_token_123": true}
+			
+			if !allowedTokens[adminToken] {
+				tokenFromQuery := r.URL.Query().Get("admin_token")
+				if !allowedTokens[tokenFromQuery] {
+					// Для обычных пользователей возвращаем 404
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			}
+			// Для админа возвращаем данные
+			users := db.GetAll()
+			sendJSON(w, http.StatusOK, users)
 			return
 		}
 		
@@ -232,8 +309,17 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 		modeMutex.RUnlock()
 		
 		if currentMode == "local" {
-			sendError(w, http.StatusForbidden, "Локальный режим активен. Операция запрещена")
-			return
+			// Проверяем админский токен
+			adminToken := r.Header.Get("X-Admin-Token")
+			allowedTokens := map[string]bool{"admin_local_token_123": true}
+			
+			if !allowedTokens[adminToken] {
+				tokenFromQuery := r.URL.Query().Get("admin_token")
+				if !allowedTokens[tokenFromQuery] {
+					sendError(w, http.StatusNotFound, "Локальный режим активен")
+					return
+				}
+			}
 		}
 		
 		var user User
@@ -259,11 +345,6 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 	currentMode := serverMode
 	modeMutex.RUnlock()
 	
-	if currentMode == "local" && r.Method != http.MethodGet {
-		sendError(w, http.StatusForbidden, "Локальный режим активен. Операция запрещена")
-		return
-	}
-	
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(pathParts) != 3 {
 		sendError(w, http.StatusBadRequest, "Invalid URL")
@@ -277,11 +358,35 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверяем режим для всех операций кроме GET
+	if currentMode == "local" && r.Method != http.MethodGet {
+		// Проверяем админский токен
+		adminToken := r.Header.Get("X-Admin-Token")
+		allowedTokens := map[string]bool{"admin_local_token_123": true}
+		
+		if !allowedTokens[adminToken] {
+			tokenFromQuery := r.URL.Query().Get("admin_token")
+			if !allowedTokens[tokenFromQuery] {
+				sendError(w, http.StatusNotFound, "Локальный режим активен")
+				return
+			}
+		}
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		if currentMode == "local" {
-			sendJSON(w, http.StatusOK, User{})
-			return
+			// Проверяем админский токен
+			adminToken := r.Header.Get("X-Admin-Token")
+			allowedTokens := map[string]bool{"admin_local_token_123": true}
+			
+			if !allowedTokens[adminToken] {
+				tokenFromQuery := r.URL.Query().Get("admin_token")
+				if !allowedTokens[tokenFromQuery] {
+					sendError(w, http.StatusNotFound, "Локальный режим активен")
+					return
+				}
+			}
 		}
 		
 		user, exists := db.GetByID(id)
@@ -335,17 +440,25 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 	stats := map[string]interface{}{
 		"total_users": len(db.users),
 		"server_time": time.Now().UTC(),
-		"version":     "1.1.0",
+		"status":      "online",
+		"version":     "1.0.0",
+		"go_version":  "1.23.1",
 		"mode":        currentMode,
 	}
 	
-	// В локальном режиме показываем заблокированный статус
+	// В локальном режиме показываем 0 пользователей для обычных пользователей
 	if currentMode == "local" {
-		stats["status"] = "local_blocked"
-		stats["message"] = "Локальный режим активен"
-		stats["total_users"] = 0
-	} else {
-		stats["status"] = "online"
+		// Проверяем админский токен
+		adminToken := r.Header.Get("X-Admin-Token")
+		allowedTokens := map[string]bool{"admin_local_token_123": true}
+		
+		if !allowedTokens[adminToken] {
+			tokenFromQuery := r.URL.Query().Get("admin_token")
+			if !allowedTokens[tokenFromQuery] {
+				stats["total_users"] = 0
+				stats["message"] = "Локальный режим активен. Данные скрыты."
+			}
+		}
 	}
 	
 	sendJSON(w, http.StatusOK, stats)
@@ -363,7 +476,7 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	info := map[string]interface{}{
 		"name":        "UserManager Pro API",
-		"version":     "1.1.0",
+		"version":     "1.0.0",
 		"description": "Go Backend API for UserManager Pro",
 		"author":      "Dmitriy Kobelev",
 		"mode":        currentMode,
@@ -380,10 +493,28 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
 	}
+	
+	// Для обычных пользователей в локальном режиме скрываем информацию
+	if currentMode == "local" {
+		adminToken := r.Header.Get("X-Admin-Token")
+		allowedTokens := map[string]bool{"admin_local_token_123": true}
+		
+		if !allowedTokens[adminToken] {
+			tokenFromQuery := r.URL.Query().Get("admin_token")
+			if !allowedTokens[tokenFromQuery] {
+				info["message"] = "Локальный режим активен"
+				info["endpoints"] = map[string]string{
+					"GET /api/mode": "Get current mode",
+				}
+			}
+		}
+	}
+	
 	sendJSON(w, http.StatusOK, info)
 }
 
-// Обработчики для управления режимом
+// Новые обработчики для управления режимом
+
 func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -393,11 +524,20 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	// Проверяем админский пароль
 	adminPassword := r.Header.Get("X-Admin-Password")
 	if adminPassword != "admin123" {
-		sendError(w, http.StatusUnauthorized, "Invalid admin password")
-		return
+		// Проверяем также в теле запроса
+		var body map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			if body["password"] != "admin123" {
+				sendError(w, http.StatusUnauthorized, "Invalid admin password")
+				return
+			}
+		} else {
+			sendError(w, http.StatusUnauthorized, "Invalid admin password")
+			return
+		}
 	}
 	
-	// Получаем новый режим из тела запроса
+	// Получаем новый режим из запроса
 	var request map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid JSON")
@@ -411,17 +551,19 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	modeMutex.Lock()
-	oldMode := serverMode
 	serverMode = newMode
 	modeMutex.Unlock()
 	
-	fmt.Printf("🔧 Режим изменен: %s → %s\n", oldMode, newMode)
+	fmt.Printf("🔧 Режим изменен на: %s\n", newMode)
+	
+	// Логируем изменение
+	fmt.Printf("⏰ Время изменения: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("👥 Все пользователи теперь будут видеть режим: %s\n", newMode)
 	
 	sendJSON(w, http.StatusOK, map[string]string{
-		"message":   fmt.Sprintf("Режим изменен с %s на %s", oldMode, newMode),
-		"old_mode":  oldMode,
-		"new_mode":  newMode,
-		"mode":      newMode,
+		"message": fmt.Sprintf("Режим изменен на %s", newMode),
+		"mode":    newMode,
+		"time":    time.Now().Format("2006-01-02 15:04:05"),
 	})
 }
 
@@ -441,14 +583,14 @@ func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// Регистрация маршрутов с блокировкой
-	http.HandleFunc("/api/users", enableCORS(blockLocalModeMiddleware(apiUsersHandler)))
-	http.HandleFunc("/api/users/", enableCORS(blockLocalModeMiddleware(apiUserHandler)))
-	http.HandleFunc("/api/stats", enableCORS(blockLocalModeMiddleware(apiStatsHandler)))
-	http.HandleFunc("/api/info", enableCORS(blockLocalModeMiddleware(apiInfoHandler)))
+	// Регистрация маршрутов с CORS
+	http.HandleFunc("/api/users", enableCORS(checkModeMiddleware(apiUsersHandler)))
+	http.HandleFunc("/api/users/", enableCORS(checkModeMiddleware(apiUserHandler)))
+	http.HandleFunc("/api/stats", enableCORS(apiStatsHandler))
+	http.HandleFunc("/api/info", enableCORS(checkModeMiddleware(apiInfoHandler)))
 	http.HandleFunc("/api/admin/mode", enableCORS(apiAdminModeHandler))
 	http.HandleFunc("/api/mode", enableCORS(apiGetModeHandler))
-	http.HandleFunc("/", enableCORS(blockLocalModeMiddleware(homeHandler)))
+	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
 	fmt.Printf("🚀 Go API сервер запущен на порту %s\n", port)
@@ -457,10 +599,20 @@ func main() {
 	fmt.Println("🔧 Управление режимами:")
 	fmt.Println("   POST /api/admin/mode - Изменить режим (требуется пароль admin123)")
 	fmt.Println("   GET  /api/mode       - Получить текущий режим")
-	fmt.Println("\n🚫 В локальном режиме:")
-	fmt.Println("   - Все API запросы блокируются для обычных пользователей")
-	fmt.Println("   - Только администратор может получить доступ")
-	fmt.Println("   - Фронтенд покажет страницу блокировки")
+	fmt.Println("\n🔒 Локальный режим:")
+	fmt.Println("   - Обычные пользователи получают 404 ошибку")
+	fmt.Println("   - Белый экран с сообщением для не-админов")
+	fmt.Println("   - Админский токен: admin_local_token_123")
+	fmt.Println("\n🌐 API Endpoints:")
+	fmt.Println("   GET  /api/users      - Все пользователи")
+	fmt.Println("   POST /api/users      - Создать пользователя")
+	fmt.Println("   GET  /api/users/{id} - Получить пользователя")
+	fmt.Println("   PUT  /api/users/{id} - Обновить пользователя")
+	fmt.Println("   DELETE /api/users/{id} - Удалить пользователя")
+	fmt.Println("   GET  /api/stats      - Статистика сервера")
+	fmt.Println("   GET  /api/info       - Информация об API")
+	fmt.Println("\n🔗 Frontend доступен по адресу:")
+	fmt.Println("   https://dmitriy43229.github.io/Go-Project777_GoStory/")
 
 	log.Fatal(http.ListenAndServe(port, nil))
 }

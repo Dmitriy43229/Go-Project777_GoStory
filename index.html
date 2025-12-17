@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-     <!-- Anti-cache мета-теги -->
+
+    <!-- Anti-cache мета-теги -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -20,7 +20,6 @@
     <script src="script.js?v=<?php echo time(); ?>" defer></script>
 
     <style>
-
         /* Темно-синий градиентный фон с космосом */
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -512,6 +511,30 @@
             background: linear-gradient(45deg, #7c3aed, #6d28d9);
         }
 
+        /* Кнопка выхода */
+        .logout-btn {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+            background: linear-gradient(45deg, #dc2626, #b91c1c);
+        }
+
         /* Футер */
         .footer {
             margin-top: 4rem;
@@ -554,106 +577,6 @@
             color: white;
         }
     </style>
-
-    <!-- Скрипт инициализации режима работы -->
-    <script>
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function () {
-            // Проверяем сохраненный режим
-            const savedMode = localStorage.getItem('usermanager_use_real_api');
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-
-            // Проверяем активность админской сессии
-            let isAdminActive = false;
-            if (savedAdmin && expiry) {
-                if (Date.now() < parseInt(expiry)) {
-                    isAdminActive = true;
-                } else {
-                    // Очищаем просроченную сессию
-                    localStorage.removeItem('usermanager_admin_session');
-                    localStorage.removeItem('usermanager_admin_expiry');
-                    localStorage.setItem('usermanager_use_real_api', 'true');
-                }
-            }
-
-            // Если нет админской сессии, форсируем серверный режим
-            if (!isAdminActive) {
-                localStorage.setItem('usermanager_use_real_api', 'true');
-                if (typeof CONFIG !== 'undefined') {
-                    CONFIG.USE_REAL_API = true;
-                }
-            }
-
-            // Показываем/скрываем кнопку переключения режима
-            updateModeButton();
-        });
-
-        function updateModeButton() {
-            const adminBtn = document.getElementById('adminModeToggle');
-            if (adminBtn) {
-                const savedAdmin = localStorage.getItem('usermanager_admin_session');
-                const expiry = localStorage.getItem('usermanager_admin_expiry');
-                const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-
-                if (isAdminActive) {
-                    adminBtn.style.display = 'flex';
-                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-                    adminBtn.innerHTML = `
-                        <i class="fas fa-cogs"></i>
-                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
-                    `;
-                } else {
-                    adminBtn.style.display = 'none';
-                }
-            }
-        }
-
-        // Функция переключения режима (только для админа)
-        function toggleServerMode() {
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-
-            if (!savedAdmin || !expiry || Date.now() >= parseInt(expiry)) {
-                showAdminLoginModal();
-                return;
-            }
-
-            const currentMode = localStorage.getItem('usermanager_use_real_api');
-            const newMode = currentMode === 'true' ? 'false' : 'true';
-
-            localStorage.setItem('usermanager_use_real_api', newMode);
-            if (typeof CONFIG !== 'undefined') {
-                CONFIG.USE_REAL_API = newMode === 'true';
-            }
-
-            // Показываем уведомление
-            alert(`Режим изменен на: ${newMode === 'true' ? 'Серверный (все видят)' : 'Локальный (только вы)'}\nСтраница будет перезагружена.`);
-
-            // Обновляем кнопку и перезагружаем
-            updateModeButton();
-            setTimeout(() => location.reload(), 1000);
-        }
-
-        // Показывает модальное окно входа администратора
-        function showAdminLoginModal() {
-            const password = prompt('Введите пароль администратора:');
-            if (password === "admin123") {
-                // Создаем сессию
-                const sessionId = 'admin_' + Date.now();
-                const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-
-                localStorage.setItem('usermanager_admin_session', sessionId);
-                localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
-                localStorage.setItem('usermanager_use_real_api', 'false'); // По умолчанию локальный режим для админа
-
-                alert('Успешный вход! Включен локальный режим.');
-                location.reload();
-            } else if (password !== null) {
-                alert('Неверный пароль');
-            }
-        }
-    </script>
 </head>
 
 <body>
@@ -685,6 +608,13 @@
                 style="display: none;">
                 <i class="fas fa-cogs"></i>
                 <span>Режим: Серверный</span>
+            </a>
+
+            <!-- Кнопка выхода для администратора -->
+            <a href="#" class="nav-item logout-btn" id="logoutBtn" onclick="logoutAdmin(); return false;"
+                style="display: none;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Выйти</span>
             </a>
 
             <!-- Кнопка входа для администратора -->
@@ -850,6 +780,166 @@
             }
         }
 
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function () {
+            // Проверяем статус администратора
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+
+            // Проверяем активность админской сессии
+            let isAdminActive = false;
+            if (savedAdmin && expiry) {
+                if (Date.now() < parseInt(expiry)) {
+                    isAdminActive = true;
+                } else {
+                    // Очищаем просроченную сессию
+                    localStorage.removeItem('usermanager_admin_session');
+                    localStorage.removeItem('usermanager_admin_expiry');
+                    localStorage.setItem('usermanager_use_real_api', 'true'); // Принудительно серверный режим
+                }
+            }
+
+            // Если нет админской сессии, форсируем серверный режим
+            if (!isAdminActive) {
+                localStorage.setItem('usermanager_use_real_api', 'true');
+            }
+
+            // Обновляем кнопки
+            updateModeButtons();
+
+            // Загружаем звезды и данные
+            createStars();
+            loadData();
+            createCharts();
+
+            // Периодическое обновление данных
+            setInterval(loadData, 30000);
+        });
+
+        // Функция для обновления кнопок режима
+        function updateModeButtons() {
+            const adminBtn = document.getElementById('adminModeToggle');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+            const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
+
+            if (adminBtn && logoutBtn) {
+                if (isAdminActive) {
+                    adminBtn.style.display = 'flex';
+                    logoutBtn.style.display = 'flex';
+                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+                    adminBtn.innerHTML = `
+                        <i class="fas fa-cogs"></i>
+                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+                    `;
+                } else {
+                    adminBtn.style.display = 'none';
+                    logoutBtn.style.display = 'none';
+                }
+            }
+        }
+
+        // Функция переключения режима
+        async function toggleServerMode() {
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+
+            if (!savedAdmin || !expiry || Date.now() >= parseInt(expiry)) {
+                showAdminLoginModal();
+                return;
+            }
+
+            try {
+                const currentMode = localStorage.getItem('usermanager_use_real_api');
+                const newMode = currentMode === 'true' ? 'false' : 'true';
+                const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
+
+                // Пытаемся обновить на сервере
+                try {
+                    const response = await fetch('http://localhost:8068/api/admin/mode', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Admin-Password': 'admin123'
+                        },
+                        body: JSON.stringify({
+                            mode: newMode === 'true' ? 'server' : 'local',
+                            password: 'admin123'
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('✅ Режим успешно изменен на сервере:', data);
+
+                        // Обновляем локальные настройки
+                        localStorage.setItem('usermanager_use_real_api', newMode);
+
+                        // Показываем уведомление
+                        if (newMode === 'false') {
+                            alert(`✅ Локальный режим включен\nТеперь только вы видите данные.\nВсе остальные пользователи увидят белую страницу с ошибкой 404.\nИзменение вступит в силу немедленно для всех.`);
+                        } else {
+                            alert(`✅ Серверный режим включен\nТеперь все пользователи видят общие данные.\nИзменение вступит в силу немедленно для всех.`);
+                        }
+
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Ошибка сервера');
+                    }
+                } catch (serverError) {
+                    console.log('Сервер недоступен, но режим изменен локально');
+                    localStorage.setItem('usermanager_use_real_api', newMode);
+
+                    alert(`⚠️ Сервер недоступен\nРежим изменен локально, но другие пользователи не увидят изменения.\n${newMode === 'false' ? 'Включен локальный режим.' : 'Включен серверный режим.'}`);
+                }
+
+                // Обновляем кнопки и перезагружаем
+                updateModeButtons();
+                setTimeout(() => location.reload(), 1000);
+
+            } catch (error) {
+                console.error('Ошибка переключения режима:', error);
+                alert(`❌ Ошибка при переключении режима: ${error.message}`);
+            }
+        }
+
+        // Функция выхода из админ-режима
+        function logoutAdmin() {
+            if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
+                // Очищаем сессию
+                localStorage.removeItem('usermanager_admin_session');
+                localStorage.removeItem('usermanager_admin_expiry');
+                localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
+
+                // Обновляем кнопки
+                updateModeButtons();
+
+                alert('✅ Вы вышли из режима администратора.');
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+
+        // Показывает модальное окно входа администратора
+        function showAdminLoginModal() {
+            const password = prompt('Введите пароль администратора:');
+            if (password === "admin123") {
+                // Создаем сессию
+                const sessionId = 'admin_' + Date.now();
+                const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+
+                localStorage.setItem('usermanager_admin_session', sessionId);
+                localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+                localStorage.setItem('usermanager_use_real_api', 'false'); // По умолчанию локальный режим для админа
+
+                alert('✅ Успешный вход! Включен локальный режим.');
+                updateModeButtons();
+                setTimeout(() => location.reload(), 500);
+            } else if (password !== null) {
+                alert('❌ Неверный пароль');
+            }
+        }
+
         // Загрузка данных
         async function loadData() {
             try {
@@ -922,6 +1012,24 @@
         function loadLocalUsers() {
             const usersGrid = document.getElementById('usersGrid');
             if (!usersGrid) return;
+
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+            const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
+            const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+
+            // Если локальный режим и не админ - показываем сообщение о блокировке
+            if (isLocalMode && !isAdminActive) {
+                usersGrid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+                        <h3 style="color: #64748b; margin-bottom: 1rem;">Локальный режим активен</h3>
+                        <p>В данный момент администратор работает в локальном режиме.</p>
+                        <p>Данные временно недоступны для просмотра.</p>
+                    </div>
+                `;
+                return;
+            }
 
             const localUsers = [
                 { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72 * 3600000).toISOString() },
@@ -1066,63 +1174,12 @@
             createCharts();
 
             // Обновляем кнопку режима
-            updateModeButton();
+            updateModeButtons();
 
             // Периодическое обновление данных
             setInterval(loadData, 30000);
         });
     </script>
-
-    <script>
-    // Регистрация Service Worker для контроля кеширования
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    
-                    // Проверяем обновления каждые 5 минут
-                    setInterval(() => {
-                        registration.update();
-                    }, 5 * 60 * 1000);
-                    
-                    // Принудительное обновление при клике
-                    document.addEventListener('click', function(e) {
-                        if (e.target.id === 'forceRefresh') {
-                            registration.update().then(() => {
-                                alert('Кеш обновлен. Страница перезагрузится.');
-                                window.location.reload(true);
-                            });
-                        }
-                    });
-                })
-                .catch(function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        });
-    }
-    
-    // Кнопка принудительного обновления (только для админа)
-    function addForceRefreshButton() {
-        const adminBtn = document.getElementById('adminModeToggle');
-        if (adminBtn && isAdmin) {
-            const refreshBtn = document.createElement('a');
-            refreshBtn.href = '#';
-            refreshBtn.className = 'nav-item';
-            refreshBtn.id = 'forceRefresh';
-            refreshBtn.innerHTML = `
-                <i class="fas fa-sync-alt"></i>
-                <span>Обновить кеш</span>
-            `;
-            refreshBtn.style.background = 'linear-gradient(45deg, #10b981, #059669)';
-            adminBtn.parentNode.insertBefore(refreshBtn, adminBtn.nextSibling);
-        }
-    }
-    
-    // Добавляем кнопку после загрузки
-    document.addEventListener('DOMContentLoaded', addForceRefreshButton);
-</script>
-
 </body>
 
 </html>

@@ -484,6 +484,30 @@
             box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
             background: linear-gradient(45deg, #7c3aed, #6d28d9);
         }
+
+        /* Кнопка выхода */
+        .logout-btn {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+            background: linear-gradient(45deg, #dc2626, #b91c1c);
+        }
     </style>
 </head>
 
@@ -508,8 +532,22 @@
                 <span>Презентация</span>
             </a>
 
+            <!-- Кнопка переключения режима (только для администратора) -->
+            <a href="#" class="nav-item admin-mode-btn" id="adminModeToggle" onclick="toggleServerMode(); return false;"
+                style="display: none;">
+                <i class="fas fa-cogs"></i>
+                <span>Режим: Серверный</span>
+            </a>
+
+            <!-- Кнопка выхода (только для администратора) -->
+            <a href="#" class="nav-item logout-btn" id="logoutBtn" onclick="logoutAdmin(); return false;"
+                style="display: none;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Выйти</span>
+            </a>
+
             <!-- Кнопка входа для администратора -->
-            <a href="#" class="nav-item admin-mode-btn" onclick="presentationLogin(); return false;">
+            <a href="#" class="nav-item" onclick="showAdminLoginModal(); return false;">
                 <i class="fas fa-user-shield"></i>
                 <span>Вход администратора</span>
             </a>
@@ -803,15 +841,18 @@
             }
         }
 
-        function presentationLogin() {
+        // Проверка админского доступа
+        function checkAdminAccess() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
+            return savedAdmin && expiry && Date.now() < parseInt(expiry);
+        }
 
-            if (savedAdmin && expiry && Date.now() < parseInt(expiry)) {
-                // Уже администратор
+        // Функция для показа модального окна входа
+        function showAdminLoginModal() {
+            if (checkAdminAccess()) {
                 window.location.href = 'index.html';
             } else {
-                // Показываем prompt для ввода пароля
                 const password = prompt('Введите пароль администратора:');
                 if (password === "admin123") {
                     // Создаем сессию
@@ -823,10 +864,98 @@
                     // По умолчанию локальный режим для админа
                     localStorage.setItem('usermanager_use_real_api', 'false');
 
-                    alert('Успешный вход! Перенаправление на главную...');
+                    alert('✅ Успешный вход! Включен локальный режим.');
+                    updateModeButtons();
                     window.location.href = 'index.html';
                 } else if (password !== null) {
-                    alert('Неверный пароль');
+                    alert('❌ Неверный пароль');
+                }
+            }
+        }
+
+        // Функция переключения режима
+        async function toggleServerMode() {
+            if (!checkAdminAccess()) {
+                showAdminLoginModal();
+                return;
+            }
+            
+            try {
+                const currentMode = localStorage.getItem('usermanager_use_real_api');
+                const newMode = currentMode === 'true' ? 'false' : 'true';
+                const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
+                
+                // Обновляем локально
+                localStorage.setItem('usermanager_use_real_api', newMode);
+                
+                // Пытаемся обновить на сервере
+                try {
+                    const response = await fetch('http://localhost:8068/api/admin/mode', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Admin-Password': 'admin123'
+                        },
+                        body: JSON.stringify({
+                            mode: newMode === 'true' ? 'server' : 'local',
+                            password: 'admin123'
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.log('Не удалось изменить режим на сервере, используем локальный режим');
+                    }
+                } catch (serverError) {
+                    console.log('Сервер недоступен, используем локальный переключатель режима');
+                }
+                
+                // Показываем уведомление
+                alert(`✅ Режим изменен на: ${modeName}\n${newMode === 'false' ? 'Теперь только вы видите данные.' : 'Теперь все видят данные.'}\nСтраница будет перезагружена.`);
+                
+                // Обновляем кнопки и перезагружаем
+                updateModeButtons();
+                setTimeout(() => location.reload(), 1000);
+                
+            } catch (error) {
+                console.error('Ошибка переключения режима:', error);
+                alert('❌ Ошибка при переключении режима');
+            }
+        }
+
+        // Функция выхода из админ-режима
+        function logoutAdmin() {
+            if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
+                // Очищаем сессию
+                localStorage.removeItem('usermanager_admin_session');
+                localStorage.removeItem('usermanager_admin_expiry');
+                localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
+                
+                // Обновляем кнопки
+                updateModeButtons();
+                
+                alert('✅ Вы вышли из режима администратора.');
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+
+        // Функция для обновления кнопок режима
+        function updateModeButtons() {
+            const adminBtn = document.getElementById('adminModeToggle');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const isAdminActive = checkAdminAccess();
+            
+            if (adminBtn && logoutBtn) {
+                if (isAdminActive) {
+                    adminBtn.style.display = 'flex';
+                    logoutBtn.style.display = 'flex';
+                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+                    adminBtn.innerHTML = `
+                        <i class="fas fa-cogs"></i>
+                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+                    `;
+                } else {
+                    adminBtn.style.display = 'none';
+                    logoutBtn.style.display = 'none';
                 }
             }
         }
@@ -834,24 +963,7 @@
         // Проверяем статус администратора и обновляем кнопку
         document.addEventListener('DOMContentLoaded', function () {
             createStars();
-
-            // Проверяем статус администратора
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-            const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-
-            // Обновляем текст кнопки если админ уже вошел
-            const adminBtn = document.querySelector('.admin-mode-btn');
-            if (adminBtn && isAdminActive) {
-                adminBtn.innerHTML = `
-                    <i class="fas fa-user-shield"></i>
-                    <span>Вы вошли как администратор</span>
-                `;
-                adminBtn.onclick = function (e) {
-                    e.preventDefault();
-                    window.location.href = 'index.html';
-                };
-            }
+            updateModeButtons();
 
             // Анимация появления слайдов
             const slides = document.querySelectorAll('.slide');
@@ -861,5 +973,4 @@
         });
     </script>
 </body>
-
 </html>

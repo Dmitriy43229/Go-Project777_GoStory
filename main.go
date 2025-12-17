@@ -591,12 +591,20 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("   ✅ Теперь все пользователи видят общие данные\n")
 	}
 	
-	sendJSON(w, http.StatusOK, map[string]string{
+	response := map[string]string{
 		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
 		"mode":    newMode,
 		"time":    time.Now().Format("2006-01-02 15:04:05"),
-		"warning": newMode == "local" ? "Обычные пользователи увидят 404 страницу" : "Все пользователи видят данные",
-	})
+		"warning": "",
+	}
+	
+	if newMode == "local" {
+		response["warning"] = "Обычные пользователи увидят 404 страницу"
+	} else {
+		response["warning"] = "Все пользователи видят данные"
+	}
+	
+	sendJSON(w, http.StatusOK, response)
 }
 
 func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {

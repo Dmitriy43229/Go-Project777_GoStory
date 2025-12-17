@@ -4,21 +4,21 @@
 // ============================================
 
 // Принудительное обновление кеша при загрузке
-(function() {
+(function () {
     // Проверяем версию в localStorage
-    const CURRENT_VERSION = '2.0.4';
+    const CURRENT_VERSION = '2.0.5';
     const savedVersion = localStorage.getItem('usermanager_version');
-    
+
     if (savedVersion !== CURRENT_VERSION) {
         console.log('🔄 Обновление версии с', savedVersion, 'на', CURRENT_VERSION);
-        
+
         // Очищаем localStorage для обновления
         localStorage.removeItem('usermanager_local_data');
         localStorage.removeItem('usermanager_use_real_api');
-        
+
         // Сохраняем новую версию
         localStorage.setItem('usermanager_version', CURRENT_VERSION);
-        
+
         // Принудительно перезагружаем страницу один раз
         if (!sessionStorage.getItem('already_reloaded')) {
             sessionStorage.setItem('already_reloaded', 'true');
@@ -28,10 +28,10 @@
             }, 100);
         }
     }
-    
+
     // Добавляем параметр для игнорирования кеша при загрузке API
     const originalFetch = window.fetch;
-    window.fetch = function(url, options = {}) {
+    window.fetch = function (url, options = {}) {
         // Добавляем timestamp для GET запросов к API
         if (url && typeof url === 'string' && url.includes('/api/')) {
             const separator = url.includes('?') ? '&' : '?';
@@ -45,11 +45,11 @@ const CONFIG = {
     USE_REAL_API: false,
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data',
-    VERSION: '2.0.4',
-    LAST_UPDATE: '<?php echo date("Y-m-d H:i:s"); ?>'
+    VERSION: '2.0.5',
+    LAST_UPDATE: new Date().toISOString()
 };
 
-// ================== СИСТЕМА до АДМИНИСТРАТОРА ==================
+// ================== СИСТЕМА ДО АДМИНИСТРАТОРА ==================
 const ADMIN_PASSWORD = "admin123"; // Только вы знаете этот пароль
 const ADMIN_TOKEN = "admin_local_token_123"; // Токен для локального режима
 let isAdmin = false;
@@ -58,8 +58,8 @@ let currentServerMode = "server"; // Храним текущий режим се
 
 // Переменные для управления блокировкой
 let isBlocked = false;
-let lastModeCheck = 0;
-const MODE_CHECK_INTERVAL = 2000; // Проверять каждые 2 секунды
+let blockCheckerInterval = null;
+const BLOCK_CHECK_INTERVAL = 2000; // Проверять каждые 2 секунды
 
 // Функция получения режима с сервера
 async function getServerMode() {
@@ -76,38 +76,39 @@ async function getServerMode() {
 }
 
 // Функция проверки блокировки
-async function checkForBlock() {
-    const now = Date.now();
-    if (now - lastModeCheck < MODE_CHECK_INTERVAL && !isBlocked) {
-        return false;
-    }
-    
-    lastModeCheck = now;
-    const serverMode = await getServerMode();
-    currentServerMode = serverMode;
-    
-    const isAdminActive = checkAdminAccess();
-    
-    // Если сервер в локальном режиме и мы не админ
-    if (serverMode === "local" && !isAdminActive) {
-        if (!isBlocked) {
-            isBlocked = true;
-            showBlockPage();
+async function checkBlockStatus() {
+    try {
+        // Используем timestamp для предотвращения кеширования
+        const response = await fetch(`${CONFIG.API_URL}/status?_=${Date.now()}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Если режим локальный и мы не админ - блокируем
+            if (data.mode === 'local' && !data.is_admin) {
+                showBlockPage();
+                return true;
+            }
+            
+            // Если был заблокирован, но теперь режим изменился
+            if (isBlocked && (data.mode === 'server' || data.is_admin)) {
+                isBlocked = false;
+                location.reload(true); // Автоматическая перезагрузка при возврате в серверный режим
+            }
+            
+            return false;
         }
-        return true;
+    } catch (error) {
+        console.log('Ошибка проверки статуса:', error);
     }
-    
-    // Если был заблокирован, но теперь режим изменился
-    if (isBlocked && serverMode === "server") {
-        isBlocked = false;
-        location.reload(); // Автоматическая перезагрузка при возврате в серверный режим
-    }
-    
     return false;
 }
 
 // Функция показа страницы блокировки
 function showBlockPage() {
+    // Если уже показана блокировка, не делаем ничего
+    if (document.body.classList.contains('blocked')) return;
+    
+    document.body.classList.add('blocked');
     document.body.innerHTML = '';
     document.body.style.cssText = `
         font-family: Arial, sans-serif;
@@ -120,7 +121,8 @@ function showBlockPage() {
         margin: 0;
         text-align: center;
     `;
-    
+
+    const currentTime = new Date().toLocaleTimeString();
     const html = `
         <div style="padding: 3rem; max-width: 600px;">
             <h1 style="font-size: 4rem; color: #dc2626; margin-bottom: 1rem;">404</h1>
@@ -139,7 +141,7 @@ function showBlockPage() {
                 <strong>Примечание для администратора:</strong><br>
                 Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
             </div>
-            <button onclick="location.reload()" style="
+            <button onclick="location.reload(true)" style="
                 margin-top: 2rem;
                 padding: 0.75rem 1.5rem;
                 background: #3b82f6;
@@ -154,135 +156,86 @@ function showBlockPage() {
             </button>
             <div style="font-size: 1rem; color: #9ca3af; margin-top: 2rem; 
                        padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-                UserManager Pro • Локальный режим активен • Время: ${new Date().toLocaleTimeString()}
+                UserManager Pro • Локальный режим активен • Время: ${currentTime}
             </div>
         </div>
         <script>
-            // Автоматическая проверка каждые 3 секунды
+            // Автоматическая проверка каждые 2 секунды
             setInterval(() => {
-                fetch('http://localhost:8068/api/mode?_=' + Date.now())
+                fetch('${CONFIG.API_URL}/status?_=' + Date.now())
                     .then(response => response.json())
                     .then(data => {
-                        if (data.mode === 'server') {
-                            location.reload();
+                        if (data.mode === 'server' || data.is_admin) {
+                            location.reload(true);
                         }
                     });
-            }, 3000);
+            }, 2000);
         </script>
     `;
-    
+
     document.body.innerHTML = html;
+    isBlocked = true;
 }
 
-// Проверка и инициализация режима при загрузке
+// Функция инициализации с немедленной проверкой
 async function initializeSystem() {
-    // Сначала проверяем блокировку
-    const blocked = await checkForBlock();
+    // Немедленная проверка блокировки
+    const blocked = await checkBlockStatus();
     if (blocked) {
         return;
     }
     
-    // Проверяем GitHub Pages - всегда серверный режим для гостей
-    const isGitHubPages = window.location.hostname.includes('github.io');
-    const savedAdmin = localStorage.getItem('usermanager_admin_session');
-    const expiry = localStorage.getItem('usermanager_admin_expiry');
+    // Проверяем админский доступ
+    checkAdminAccess();
     
-    // Проверяем активность админской сессии
-    let isAdminActive = false;
-    if (savedAdmin && expiry) {
-        if (Date.now() < parseInt(expiry)) {
-            isAdminActive = true;
-            isAdmin = true;
-            adminSessionId = savedAdmin;
-            console.log('✅ Администратор: активная сессия');
-        } else {
-            // Очищаем просроченную сессию
-            localStorage.removeItem('usermanager_admin_session');
-            localStorage.removeItem('usermanager_admin_expiry');
-            localStorage.setItem('usermanager_use_real_api', 'true'); // Принудительно серверный режим
-            console.log('⚠️ Администратор: сессия истекла');
-        }
-    }
-    
-    // Получаем текущий режим с сервера
-    const serverMode = await getServerMode();
-    currentServerMode = serverMode;
-    
-    // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПОД РЕЖИМ СЕРВЕРА
-    if (currentServerMode === 'local' && !isAdminActive) {
-        // Если сервер в локальном режиме, а мы не админ - показываем блокировку
-        showBlockPage();
-        return;
-    } else if (currentServerMode === 'server' && isAdminActive) {
-        // Если сервер в серверном режиме, а мы админ - спрашиваем
-        const savedMode = localStorage.getItem('usermanager_use_real_api');
-        if (savedMode === null) {
-            // По умолчанию для админа - локальный режим
-            localStorage.setItem('usermanager_use_real_api', 'false');
-            CONFIG.USE_REAL_API = false;
-        } else {
-            CONFIG.USE_REAL_API = savedMode === 'true';
-        }
-    }
-    
-    // Если нет активной админской сессии - форсируем серверный режим
-    if (!isAdminActive) {
-        localStorage.setItem('usermanager_use_real_api', 'true');
-        CONFIG.USE_REAL_API = true;
-        isAdmin = false;
-        adminSessionId = null;
-        console.log('🌐 Установлен серверный режим для гостя');
-    } else {
-        // Админ - загружаем его настройки
-        const savedMode = localStorage.getItem('usermanager_use_real_api');
-        if (savedMode !== null) {
-            CONFIG.USE_REAL_API = savedMode === 'true';
-        }
-        console.log(`👑 Администратор: ${CONFIG.USE_REAL_API ? 'Серверный' : 'Локальный'} режим`);
-    }
-}
-
-// Вызываем инициализацию сразу
-initializeSystem();
-
-// Функция для изменения режима на сервере
-async function changeServerMode(newMode) {
+    // Получаем текущий режим сервера
     try {
-        const response = await fetch(`${CONFIG.API_URL}/admin/mode`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Admin-Password': ADMIN_PASSWORD
-            },
-            body: JSON.stringify({
-                mode: newMode,
-                password: ADMIN_PASSWORD
-            })
-        });
+        const serverMode = await getServerMode();
+        currentServerMode = serverMode;
         
-        if (response.ok) {
-            const data = await response.json();
-            currentServerMode = newMode;
-            console.log(`✅ Режим сервера изменен на: ${newMode}`);
-            
-            // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПРИ УСПЕШНОМ ИЗМЕНЕНИИ
-            if (newMode === 'local') {
-                localStorage.setItem('usermanager_use_real_api', 'false');
-                CONFIG.USE_REAL_API = false;
+        // Устанавливаем локальные настройки в соответствии с режимом сервера
+        if (serverMode === 'local') {
+            if (!isAdmin) {
+                // Если не админ в локальном режиме - показываем блокировку
+                showBlockPage();
+                return;
             } else {
-                localStorage.setItem('usermanager_use_real_api', 'true');
-                CONFIG.USE_REAL_API = true;
+                // Админ в локальном режиме
+                CONFIG.USE_REAL_API = false;
+                localStorage.setItem('usermanager_use_real_api', 'false');
             }
-            
-            return data;
         } else {
-            const error = await response.json();
-            throw new Error(error.error || 'Ошибка изменения режима');
+            // Серверный режим
+            CONFIG.USE_REAL_API = true;
+            localStorage.setItem('usermanager_use_real_api', 'true');
         }
     } catch (error) {
-        console.error('Ошибка изменения режима сервера:', error);
-        throw error;
+        console.log('Ошибка получения режима сервера:', error);
+        CONFIG.USE_REAL_API = true;
+        localStorage.setItem('usermanager_use_real_api', 'true');
     }
+    
+    // Запускаем периодическую проверку
+    startBlockChecker();
+    
+    // Добавляем кнопку очистки кеша
+    addCacheClearButton();
+    
+    // Обновляем кнопку режима
+    updateModeButton();
+}
+
+// Запуск проверки блокировки
+function startBlockChecker() {
+    // Очищаем предыдущий интервал если есть
+    if (blockCheckerInterval) {
+        clearInterval(blockCheckerInterval);
+    }
+    
+    // Проверяем каждые 2 секунды
+    blockCheckerInterval = setInterval(async () => {
+        await checkBlockStatus();
+    }, BLOCK_CHECK_INTERVAL);
 }
 
 // Проверка администратора
@@ -326,64 +279,98 @@ function createAdminSession() {
     console.log('✅ Администратор: новая сессия создана', sessionId);
 }
 
-// Функция переключения режима работы (только для администратора)
+// Функция для изменения режима на сервере
+async function changeServerMode(newMode) {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/admin/mode`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': ADMIN_PASSWORD
+            },
+            body: JSON.stringify({
+                mode: newMode,
+                password: ADMIN_PASSWORD
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            currentServerMode = newMode;
+            console.log(`✅ Режим сервера изменен на: ${newMode}`);
+
+            // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПРИ УСПЕШНОМ ИЗМЕНЕНИИ
+            if (newMode === 'local') {
+                localStorage.setItem('usermanager_use_real_api', 'false');
+                CONFIG.USE_REAL_API = false;
+            } else {
+                localStorage.setItem('usermanager_use_real_api', 'true');
+                CONFIG.USE_REAL_API = true;
+            }
+
+            return data;
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка изменения режима');
+        }
+    } catch (error) {
+        console.error('Ошибка изменения режима сервера:', error);
+        throw error;
+    }
+}
+
+// Функция переключения режима с обновлением для всех
 async function toggleServerMode() {
     if (!checkAdminAccess()) {
         showAdminLoginModal();
         return;
     }
-    
+
     try {
         const currentMode = await getServerMode();
         const newMode = currentMode === "server" ? "local" : "server";
-        
+        const modeName = newMode === "server" ? "Серверный" : "Локальный";
+
         // Меняем режим на сервере
-        if (newMode === "local") {
-            // Включаем локальный режим на сервере
-            try {
-                await changeServerMode('local');
-                
-                alert(`✅ Локальный режим включен!\n\nВсе обычные пользователи теперь видят белую страницу 404.\nТолько вы (администратор) можете работать с системой.\n\nИзменение вступило в силу немедленно для всех.`);
-            } catch (serverError) {
-                console.log('Сервер недоступен, но локальный режим включен на клиенте');
-                localStorage.setItem('usermanager_use_real_api', 'false');
-                CONFIG.USE_REAL_API = false;
-                currentServerMode = 'local';
-                
-                alert(`⚠️ Сервер недоступен, но локальный режим включен локально\nОднако другие пользователи не увидят изменения.`);
-            }
+        await changeServerMode(newMode);
+        
+        // Обновляем локальные настройки
+        localStorage.setItem('usermanager_use_real_api', newMode === 'server' ? 'true' : 'false');
+        CONFIG.USE_REAL_API = newMode === 'server';
+        currentServerMode = newMode;
+        
+        // Показываем сообщение
+        if (newMode === 'local') {
+            alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.`);
         } else {
-            // Включаем серверный режим на сервере
-            try {
-                await changeServerMode('server');
-                
-                alert(`✅ Серверный режим включен!\n\nТеперь все пользователи видят общие данные.\n\nИзменение вступило в силу немедленно для всех.`);
-            } catch (serverError) {
-                console.log('Сервер недоступен, но серверный режим включен на клиенте');
-                localStorage.setItem('usermanager_use_real_api', 'true');
-                CONFIG.USE_REAL_API = true;
-                currentServerMode = 'server';
-                
-                alert(`⚠️ Сервер недоступен, но серверный режим включен локально\nОднако другие пользователи не увидят изменения.`);
-            }
+            alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.`);
         }
         
         // Обновляем кнопку и перезагружаем
         updateModeButton();
-        setTimeout(() => location.reload(), 1000);
-        
+        setTimeout(() => location.reload(true), 1000);
+
     } catch (error) {
         console.error('Ошибка переключения режима:', error);
         alert(`❌ Ошибка: ${error.message}`);
     }
 }
 
-// Функция очистки кеша
+// Функция для кнопки обновления кеша
 function clearCache() {
-    if (confirm('Очистить кеш браузера и перезагрузить страницу?')) {
+    if (confirm('Очистить весь кеш браузера и перезагрузить страницу?')) {
         // Очищаем все данные
         localStorage.clear();
         sessionStorage.clear();
+        
+        // Очищаем кеш Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
         
         // Очищаем кеш браузера
         if ('caches' in window) {
@@ -394,10 +381,11 @@ function clearCache() {
             });
         }
         
-        alert('✅ Кеш очищен. Страница будет перезагружена.');
+        alert('✅ Весь кеш очищен. Страница будет перезагружена.');
+        
+        // Принудительная перезагрузка с очисткой кеша
         setTimeout(() => {
-            // Принудительная перезагрузка с очисткой кеша
-            window.location.href = window.location.href + '?nocache=' + Date.now();
+            window.location.href = window.location.pathname + '?nocache=' + Date.now();
         }, 500);
     }
 }
@@ -406,11 +394,9 @@ function clearCache() {
 function updateModeButton() {
     const adminBtn = document.getElementById('adminModeToggle');
     if (!adminBtn) return;
-    
-    const savedAdmin = localStorage.getItem('usermanager_admin_session');
-    const expiry = localStorage.getItem('usermanager_admin_expiry');
-    const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-    
+
+    const isAdminActive = checkAdminAccess();
+
     if (isAdminActive) {
         adminBtn.style.display = 'flex';
         const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
@@ -418,12 +404,46 @@ function updateModeButton() {
             <i class="fas fa-cogs"></i>
             <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
         `;
-        adminBtn.onclick = function(e) {
+        adminBtn.onclick = function (e) {
             e.preventDefault();
             toggleServerMode();
         };
     } else {
         adminBtn.style.display = 'none';
+    }
+}
+
+// Добавляем кнопку обновления кеша в навигацию
+function addCacheClearButton() {
+    // Ищем навигационное меню
+    const navMenu = document.querySelector('.nav-menu');
+    if (navMenu) {
+        // Проверяем, не добавлена ли уже кнопка
+        if (!document.getElementById('cacheClearBtn')) {
+            const cacheBtn = document.createElement('a');
+            cacheBtn.id = 'cacheClearBtn';
+            cacheBtn.href = '#';
+            cacheBtn.className = 'nav-item';
+            cacheBtn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Очистить кеш</span>';
+            cacheBtn.onclick = function(e) {
+                e.preventDefault();
+                clearCache();
+            };
+            
+            // Находим кнопку "Вход администратора" и вставляем перед ней
+            const adminBtn = document.querySelector('.nav-item[onclick*="showAdminLoginModal"]');
+            if (adminBtn) {
+                navMenu.insertBefore(cacheBtn, adminBtn);
+            } else {
+                // Ищем последнюю кнопку в навигации
+                const lastNavItem = navMenu.lastElementChild;
+                if (lastNavItem) {
+                    navMenu.insertBefore(cacheBtn, lastNavItem);
+                } else {
+                    navMenu.appendChild(cacheBtn);
+                }
+            }
+        }
     }
 }
 
@@ -681,6 +701,13 @@ function showAdminLoginModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.getElementById('universalPasswordInput').focus();
+    
+    // Добавляем обработчик клавиши Enter
+    document.getElementById('universalPasswordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            universalAdminLogin();
+        }
+    });
 }
 
 function universalCloseModal() {
@@ -694,33 +721,34 @@ function universalGuestContinue() {
     // Устанавливаем серверный режим для гостя
     localStorage.setItem('usermanager_use_real_api', 'true');
     CONFIG.USE_REAL_API = true;
+    isAdmin = false;
     universalCloseModal();
-    
+
     // Обновляем страницу
     alert('Включен серверный режим. Все пользователи видят общие данные.');
-    setTimeout(() => location.reload(), 500);
+    setTimeout(() => location.reload(true), 500);
 }
 
 function universalAdminLogin() {
     const passwordInput = document.getElementById('universalPasswordInput');
     const errorDiv = document.getElementById('universalError');
-    
+
     if (!passwordInput) return;
-    
+
     if (passwordInput.value === ADMIN_PASSWORD) {
         // Создаем сессию администратора
         createAdminSession();
-        
+
         // По умолчанию устанавливаем локальный режим для админа
         localStorage.setItem('usermanager_use_real_api', 'false');
         CONFIG.USE_REAL_API = false;
-        
+
         errorDiv.style.display = 'none';
         universalCloseModal();
-        
+
         // Обновляем страницу
         alert('✅ Успешный вход как администратор!\nТеперь вы можете переключать режимы работы системы.\nПри включении локального режима другие увидят 404 ошибку.');
-        setTimeout(() => location.reload(), 500);
+        setTimeout(() => location.reload(true), 500);
     } else {
         errorDiv.style.display = 'block';
         passwordInput.value = '';
@@ -776,26 +804,37 @@ function saveLocalData() {
 // Функция для выполнения запросов с проверкой 404
 async function safeFetch(url, options = {}) {
     // Сначала проверяем блокировку
-    const blocked = await checkForBlock();
-    if (blocked) {
+    if (isBlocked) {
         throw new Error('Blocked by server mode');
     }
-    
+
     try {
-        // Добавляем админский токен если мы админ и локальный режим
-        if (checkAdminAccess() && currentServerMode === "local") {
+        // Добавляем админские заголовки если мы админ
+        if (checkAdminAccess()) {
             if (!options.headers) options.headers = {};
-            options.headers['X-Admin-Token'] = ADMIN_TOKEN;
+
+            // Если это запрос в локальном режиме, добавляем токен
+            if (currentServerMode === "local" || !CONFIG.USE_REAL_API) {
+                options.headers['X-Admin-Token'] = ADMIN_TOKEN;
+            }
+
+            // Добавляем пароль для админских операций
+            if (url.includes('/api/admin/')) {
+                options.headers['X-Admin-Password'] = ADMIN_PASSWORD;
+            }
         }
-        
+
         const response = await fetch(url, options);
-        
+
         // Проверяем 404 ошибку
         if (response.status === 404) {
-            showBlockPage();
+            // Если это админ, не показываем 404 страницу
+            if (!checkAdminAccess()) {
+                showBlockPage();
+            }
             throw new Error('404 - Страница недоступна');
         }
-        
+
         return response;
     } catch (error) {
         // Если это не 404 ошибка, просто пробрасываем дальше
@@ -809,11 +848,10 @@ async function safeFetch(url, options = {}) {
 // Получение всех пользователей
 async function getAllUsers() {
     // Проверяем блокировку
-    const blocked = await checkForBlock();
-    if (blocked) {
+    if (isBlocked) {
         return [];
     }
-    
+
     if (CONFIG.USE_REAL_API) {
         try {
             const response = await safeFetch(`${CONFIG.API_URL}/users`);
@@ -859,7 +897,7 @@ async function getStats() {
         }
     } catch (error) {
         console.warn('Не удалось получить статистику с сервера:', error);
-        
+
         // Если это 404 ошибка, уже показали страницу
         if (error.message.includes('404') || error.message.includes('Blocked')) {
             return {
@@ -871,11 +909,11 @@ async function getStats() {
                 message: 'Локальный режим активен'
             };
         }
-        
+
         // Проверяем локальный режим
         const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
         const isAdminActive = checkAdminAccess();
-        
+
         return {
             total_users: isLocalMode && !isAdminActive ? 0 : localUsers.length,
             server_time: new Date().toISOString(),
@@ -890,12 +928,12 @@ async function getStats() {
 function displayUsers(users, containerId = 'usersGrid') {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
     const isAdminActive = checkAdminAccess();
-    
+
     if (users.length === 0) {
         // Показываем сообщение если нет пользователей
         if (isLocalMode && !isAdminActive) {
@@ -921,14 +959,14 @@ function displayUsers(users, containerId = 'usersGrid') {
         }
         return;
     }
-    
+
     users.forEach(user => {
         const userCard = document.createElement('div');
         userCard.className = 'user-card';
-        
+
         const createdDate = new Date(user.created_at);
         const formattedDate = createdDate.toLocaleDateString('ru-RU');
-        
+
         userCard.innerHTML = `
             <div style="width: 50px; height: 50px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
                 ${user.name.charAt(0)}
@@ -939,7 +977,7 @@ function displayUsers(users, containerId = 'usersGrid') {
                 <div style="color: #94a3b8; font-size: 0.8rem;">Зарегистрирован: ${formattedDate}</div>
             </div>
         `;
-        
+
         container.appendChild(userCard);
     });
 }
@@ -952,11 +990,11 @@ function updateStatsDisplay(stats) {
     const statusEl = document.getElementById('statusValue');
     const modeTextEl = document.getElementById('currentModeText');
     const usersValueEl = document.getElementById('usersValue');
-    
+
     if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
     if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 0;
     if (usersValueEl) usersValueEl.textContent = stats.total_users || 0;
-    
+
     if (statusEl) {
         if (stats.status === 'blocked' || (stats.mode === 'local' && !checkAdminAccess())) {
             statusEl.textContent = 'Заблокирован';
@@ -981,61 +1019,53 @@ function updateStatsDisplay(stats) {
 async function loadInitialData() {
     try {
         // Сначала проверяем блокировку
-        const blocked = await checkForBlock();
-        if (blocked) {
+        if (isBlocked) {
             return; // Если заблокирован, не загружаем данные
         }
-        
+
         // Инициализируем локальные данные
         initLocalData();
-        
+
         // Получаем статистику
         const stats = await getStats();
         updateStatsDisplay(stats);
-        
+
         // Получаем и отображаем пользователей
         const users = await getAllUsers();
         displayUsers(users);
-        
+
     } catch (error) {
-        console.error('Ошибка при загрузке данных:', error);
-        // Используем локальные данные в случае ошибки
-        updateStatsDisplay({
-            total_users: 0,
-            status: 'error',
-            mode: 'error'
-        });
-        displayUsers([]);
+        console.error('Ошибка загрузки данных:', error);
     }
 }
 
-// Инициализация при загрузке страницы
+// Вызываем инициализацию сразу при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация системы
     initializeSystem();
     
-    // Загружаем данные
-    loadInitialData();
+    // Загружаем данные через небольшую задержку
+    setTimeout(() => {
+        if (!isBlocked) {
+            loadInitialData();
+        }
+    }, 500);
     
-    // Обновляем кнопку режима
-    updateModeButton();
-    
-    // Периодическая проверка блокировки (каждые 2 секунды)
-    setInterval(checkForBlock, 2000);
-    
-    // Периодическое обновление данных (каждые 30 секунд)
-    setInterval(loadInitialData, 30000);
+    // Добавляем CSS для анимаций
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
 });
-
-// Экспорт функций для использования в других файлах
-window.checkAdminAccess = checkAdminAccess;
-window.showAdminLoginModal = showAdminLoginModal;
-window.toggleServerMode = toggleServerMode;
-window.updateModeButton = updateModeButton;
-window.changeServerMode = changeServerMode;
-window.clearCache = clearCache;
-window.createAdminSession = createAdminSession;
-window.getAllUsers = getAllUsers;
-window.getStats = getStats;
-window.showBlockPage = showBlockPage;
-window.checkForBlock = checkForBlock;

@@ -3,7 +3,7 @@ class UpdateChecker {
     constructor() {
         this.lastCheck = localStorage.getItem('last_update_check') || 0;
         this.checkInterval = 5 * 60 * 1000; // 5 минут
-        this.version = '2.0.1';
+        this.version = '2.0.5';
     }
     
     async checkForUpdates() {
@@ -16,7 +16,7 @@ class UpdateChecker {
         
         try {
             // Проверяем версию на сервере
-            const response = await fetch('/version.json?t=' + Date.now());
+            const response = await fetch('/version.php?t=' + Date.now());
             if (response.ok) {
                 const serverVersion = await response.json();
                 
@@ -32,6 +32,11 @@ class UpdateChecker {
     }
     
     showUpdateNotification() {
+        // Проверяем, не показано ли уже уведомление
+        if (document.getElementById('update-notification')) {
+            return;
+        }
+        
         // Показываем уведомление об обновлении
         const notification = document.createElement('div');
         notification.id = 'update-notification';
@@ -69,6 +74,16 @@ class UpdateChecker {
         `;
         
         document.body.appendChild(notification);
+        
+        // Добавляем стиль для анимации
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
         
         // Автоматически скрываем через 30 секунд
         setTimeout(() => {

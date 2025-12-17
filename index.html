@@ -25,7 +25,6 @@
             --transition-bg: background 0.5s ease, color 0.5s ease;
         }
 
-        /* Светлая тема */
         .light-theme {
             --bg-primary: #f8fafc;
             --bg-secondary: #f1f5f9;
@@ -38,7 +37,6 @@
             --card-hover-bg: rgba(255, 255, 255, 0.95);
         }
 
-        /* Градиентный фон */
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary), var(--bg-primary));
@@ -58,7 +56,6 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Звезды */
         .stars, .star {
             position: fixed;
             top: 0;
@@ -78,7 +75,6 @@
             50% { opacity: 1; transform: scale(1.1); }
         }
 
-        /* Планета */
         .planet {
             position: fixed;
             width: 300px;
@@ -100,7 +96,6 @@
             66% { transform: translateY(20px) rotate(240deg); }
         }
 
-        /* Основной контент */
         .container {
             position: relative;
             z-index: 1;
@@ -109,7 +104,6 @@
             padding: 0 20px;
         }
 
-        /* Карточки и элементы */
         .main-title-container, .stat-card, .feature-card, .users-section, .chart-card, .mode-card {
             background: var(--card-bg);
             border: 1px solid var(--border-light);
@@ -153,7 +147,6 @@
             box-shadow: 0 15px 35px var(--shadow-primary);
         }
 
-        /* Поиск */
         .search-input {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid var(--border-light);
@@ -163,7 +156,7 @@
             color: var(--text-secondary);
         }
 
-        /* СИСТЕМА ДОСТУПА - новые стили */
+        /* ===== НАВИГАЦИЯ С КНОПКАМИ ДОСТУПА ===== */
         .nav-menu {
             display: flex;
             justify-content: center;
@@ -199,6 +192,7 @@
             box-shadow: 0 5px 15px var(--shadow-primary);
         }
 
+        /* Кнопка входа */
         .login-btn {
             display: flex;
             align-items: center;
@@ -227,6 +221,7 @@
             font-weight: 600;
         }
 
+        /* Переключатель режимов */
         .api-mode-btn {
             display: none;
             align-items: center;
@@ -252,7 +247,28 @@
             color: #a78bfa;
         }
 
-        /* Статистика пользователей */
+        /* Переключатель темы */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* ===== СТАТИСТИКА ПОЛЬЗОВАТЕЛЕЙ И УПРАВЛЕНИЕ ГРАФИКОМ ===== */
         .stats-control-panel {
             display: flex;
             justify-content: space-between;
@@ -264,7 +280,6 @@
             border: 1px solid var(--border-light);
             flex-wrap: wrap;
             gap: 1rem;
-            animation: fadeIn 0.5s ease;
         }
 
         .live-stats {
@@ -310,7 +325,7 @@
             color: var(--text-secondary);
         }
 
-        /* Модальное окно входа */
+        /* ===== МОДАЛЬНОЕ ОКНО ВХОДА ===== */
         .login-modal {
             position: fixed;
             top: 0;
@@ -328,6 +343,11 @@
 
         .login-modal.active {
             display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .login-container {
@@ -467,28 +487,6 @@
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* Анимация спиннера */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         /* Уведомления */
         .notification {
             position: fixed;
@@ -519,7 +517,23 @@
             to { transform: translateX(100%); opacity: 0; }
         }
 
-        /* Адаптив */
+        /* Спиннер */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .planet { display: none; }
             .mode-card { flex-direction: column; text-align: center; }
@@ -557,7 +571,7 @@
     </style>
 </head>
 
-<body class="index-page">
+<body>
     <div class="stars" id="stars"></div>
     <div class="planet"></div>
 
@@ -568,7 +582,7 @@
             <a href="about.html" class="nav-item">📖 О проекте</a>
             <a href="presentation.html" class="nav-item">🎬 Презентация</a>
             
-            <!-- Кнопка входа/администратора -->
+            <!-- Кнопка входа -->
             <button class="login-btn" onclick="showLoginModal()" id="loginButton">
                 <span>🔐</span> <span>Войти</span>
             </button>
@@ -814,173 +828,16 @@
         </div>
     </div>
 
+    <!-- Подключаем ваш скрипт -->
     <script src="script.js"></script>
+    
+    <!-- Скрипт системы доступа и статистики -->
     <script>
-        // === ЗВЕЗДЫ ===
-        function createStars() {
-            const c = document.getElementById('stars');
-            if (!c) return;
-            c.innerHTML = '';
-            for (let i = 0; i < 150; i++) {
-                const s = document.createElement('div');
-                s.className = 'star';
-                const sz = Math.random() * 2 + 1;
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                const d = Math.random() * 3 + 2;
-                const dl = Math.random() * 5;
-                s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}%;top:${y}%;--duration:${d};--delay:${dl};`;
-                c.appendChild(s);
-            }
-        }
+        // ===== СИСТЕМА ДОСТУПА =====
+        const ADMIN_PASSWORD = 'admin123';
+        let autoRefreshInterval = null;
 
-        // === ТЕМА ===
-        function initThemeToggle() {
-            const t = document.getElementById('themeToggle');
-            const i = document.getElementById('themeIcon');
-            const txt = document.getElementById('themeText');
-            const light = localStorage.getItem('usermanager_theme') === 'light';
-            if (light) document.body.classList.add('light-theme');
-
-            const u = (l) => {
-                i.textContent = l ? '☀️' : '🌙';
-                txt.textContent = l ? 'Светлая' : 'Темная';
-                if (window.updateChartColors) setTimeout(window.updateChartColors, 100);
-            };
-            u(light);
-
-            t.addEventListener('click', () => {
-                const l = !document.body.classList.contains('light-theme');
-                document.body.classList.toggle('light-theme', l);
-                localStorage.setItem('usermanager_theme', l ? 'light' : 'dark');
-                u(l);
-            });
-        }
-
-        // === ГРАФИКИ ===
-        const charts = {};
-        function initCharts() {
-            if (typeof Chart === 'undefined') return setTimeout(initCharts, 100);
-
-            const opt = (ax) => ({
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: ax ? { 
-                    y: { 
-                        beginAtZero: true, 
-                        ticks: { color: '#bbdefb' }, 
-                        grid: { color: 'rgba(255,255,255,0.1)' } 
-                    },
-                    x: { 
-                        ticks: { color: '#bbdefb' }, 
-                        grid: { color: 'rgba(255,255,255,0.1)' } 
-                    } 
-                } : {}
-            });
-
-            // ГРАФИК АКТИВНОСТИ (уже существующий, мы его обновим)
-            charts.activity = new Chart('activityChart', {
-                type: 'line',
-                data: {
-                    labels: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
-                    datasets: [{
-                        label: 'Посещения',
-                        data: [65,59,80,81,56,55,40],
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96,165,250,0.1)',
-                        borderWidth: 3, 
-                        fill: true, 
-                        tension: 0.4,
-                        pointBackgroundColor: '#60a5fa'
-                    }]
-                },
-                options: opt(true)
-            });
-
-            charts.domain = new Chart('domainChart', {
-                type: 'pie',
-                data: {
-                    labels: ['gmail.com','mail.ru','yandex.ru','example.com'],
-                    datasets: [{ 
-                        data: [30,25,20,25], 
-                        backgroundColor: ['#60a5fa','#34d399','#fbbf24','#a78bfa'] 
-                    }]
-                },
-                options: { 
-                    plugins: { 
-                        legend: { 
-                            labels: { 
-                                color: function() {
-                                    return getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#bbdefb';
-                                }
-                            } 
-                        } 
-                    } 
-                }
-            });
-
-            const m = ['Янв','Фев','Мар','Апр','Май','Июн'];
-            charts.growth = new Chart('growthChart', {
-                type: 'bar',
-                data: {
-                    labels: m,
-                    datasets: [{
-                        label: 'Новые', 
-                        data: [42,38,45,50,47,52],
-                        backgroundColor: '#34d399', 
-                        borderRadius: 8
-                    }]
-                },
-                options: opt(true)
-            });
-
-            window.charts = charts;
-        }
-
-        // === ОБНОВЛЕНИЕ ГРАФИКОВ ===
-        function refreshCharts() {
-            if (!window.getUsersForCharts) return showNotification('❌ Нет данных', 'error');
-            const u = window.getUsersForCharts();
-            if (!u || !Array.isArray(u)) return;
-
-            showNotification('📊 Обновление...', 'info');
-            setTimeout(() => {
-                try {
-                    if (charts.activity) {
-                        charts.activity.data.datasets[0].data = Array.from({length:7}, () => Math.floor(Math.random()*30)+20);
-                        charts.activity.update();
-                    }
-                    if (charts.domain) {
-                        const d = {}; 
-                        u.forEach(x => {
-                            if (x.email) {
-                                const domain = x.email.split('@')[1];
-                                d[domain] = (d[domain] || 0) + 1;
-                            }
-                        });
-                        const tot = u.length;
-                        const labels = Object.keys(d).slice(0,4);
-                        const data = labels.map(k => Math.round((d[k]/tot)*100));
-                        charts.domain.data.labels = labels;
-                        charts.domain.data.datasets[0].data = data;
-                        charts.domain.update();
-                    }
-                    if (charts.growth) {
-                        charts.growth.data.datasets[0].data = Array.from({length:6}, () => Math.floor(Math.random()*20)+35);
-                        charts.growth.update();
-                    }
-                    const now = new Date();
-                    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                    document.getElementById('lastUpdate').textContent = timeStr;
-                    showNotification('✅ Графики обновлены', 'success');
-                } catch (e) {
-                    console.error(e);
-                    showNotification('❌ Ошибка обновления графиков', 'error');
-                }
-            }, 500);
-        }
-
-        // === ФУНКЦИИ ДЛЯ СИСТЕМЫ ДОСТУПА ===
+        // Показать модальное окно входа
         function showLoginModal() {
             const modal = document.getElementById('loginModal');
             if (modal) {
@@ -1002,6 +859,7 @@
             }
         }
 
+        // Закрыть модальное окно
         function closeLoginModal() {
             const modal = document.getElementById('loginModal');
             if (modal) {
@@ -1009,11 +867,12 @@
             }
         }
 
+        // Вход администратора
         function loginAdmin() {
             const password = document.getElementById('adminPassword').value;
             const errorEl = document.getElementById('loginError');
             
-            if (password === 'admin123') {
+            if (password === ADMIN_PASSWORD) {
                 // Сохраняем данные сессии
                 const expiry = Date.now() + (30 * 60 * 1000); // 30 минут
                 localStorage.setItem('usermanager_admin_data', JSON.stringify({
@@ -1034,6 +893,7 @@
             }
         }
 
+        // Переключение режима
         function toggleApiMode() {
             const adminData = localStorage.getItem('usermanager_admin_data');
             const isAdmin = adminData ? JSON.parse(adminData).logged && Date.now() < JSON.parse(adminData).expiry : false;
@@ -1058,13 +918,15 @@
             
             updateAccessUI();
             
-            // Обновляем данные если на главной
-            if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-                if (typeof loadUsers === 'function') loadUsers();
-                if (typeof updateChartData === 'function') updateChartData();
+            // Если локальный режим и не админ - перенаправляем
+            if (!newMode && !isAdmin) {
+                setTimeout(() => {
+                    window.location.href = 'maintenance.html';
+                }, 1500);
             }
         }
 
+        // Обновление UI системы доступа
         function updateAccessUI() {
             const adminData = localStorage.getItem('usermanager_admin_data');
             const isAdmin = adminData ? JSON.parse(adminData).logged && Date.now() < JSON.parse(adminData).expiry : false;
@@ -1122,9 +984,65 @@
             }
         }
 
-        // === ФУНКЦИИ ДЛЯ СТАТИСТИКИ И ГРАФИКА ===
-        let autoRefreshInterval = null;
+        // ===== СИСТЕМА СТАТИСТИКИ ПОЛЬЗОВАТЕЛЕЙ =====
+        function updateUserStats() {
+            let stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
+            
+            // Инициализируем статистику если её нет
+            if (!stats.totalVisitors) {
+                stats = {
+                    totalVisitors: 1,
+                    activeUsers: 1,
+                    totalVisits: 1,
+                    visitorHistory: [],
+                    userSessions: {}
+                };
+            }
+            
+            // Создаем уникальный ID для посетителя
+            let visitorId = localStorage.getItem('usermanager_visitor_id');
+            if (!visitorId) {
+                visitorId = 'visitor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('usermanager_visitor_id', visitorId);
+                stats.totalVisitors++;
+            }
+            
+            // Регистрируем сессию
+            const sessionId = 'session_' + Date.now();
+            stats.userSessions[sessionId] = {
+                visitorId: visitorId,
+                startTime: Date.now(),
+                lastActivity: Date.now(),
+                active: true
+            };
+            
+            stats.totalVisits++;
+            
+            // Очищаем неактивные сессии (более 5 минут)
+            const now = Date.now();
+            const inactiveTime = 5 * 60 * 1000;
+            for (const sid in stats.userSessions) {
+                if (now - stats.userSessions[sid].lastActivity > inactiveTime) {
+                    delete stats.userSessions[sid];
+                }
+            }
+            
+            stats.activeUsers = Object.keys(stats.userSessions).length;
+            
+            // Сохраняем статистику
+            localStorage.setItem('usermanager_user_stats', JSON.stringify(stats));
+            
+            // Обновляем отображение
+            const totalVisitorsEl = document.getElementById('totalVisitors');
+            const activeUsersEl = document.getElementById('activeUsers');
+            const totalVisitsEl = document.getElementById('totalVisits');
+            
+            if (totalVisitorsEl) totalVisitorsEl.textContent = stats.totalVisitors;
+            if (activeUsersEl) activeUsersEl.textContent = stats.activeUsers;
+            if (totalVisitsEl) totalVisitsEl.textContent = stats.totalVisits;
+        }
 
+        // ===== СИСТЕМА ГРАФИКОВ =====
         function updateChartData() {
             const refreshBtn = document.getElementById('refreshChartBtn');
             if (!refreshBtn) return;
@@ -1167,7 +1085,7 @@
             // Сохраняем обновленную историю
             localStorage.setItem('usermanager_chart_history', JSON.stringify(history));
             
-            // Обновляем график активности
+            // Обновляем график активности (если он существует)
             if (window.charts && window.charts.activity) {
                 const chart = window.charts.activity;
                 
@@ -1270,66 +1188,13 @@
             }
         }
 
-        function updateUserStats() {
-            let stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-            
-            // Инициализируем статистику если её нет
-            if (!stats.totalVisitors) {
-                stats = {
-                    totalVisitors: 1,
-                    activeUsers: 1,
-                    totalVisits: 1,
-                    visitorHistory: [],
-                    userSessions: {}
-                };
-            }
-            
-            // Создаем уникальный ID для посетителя
-            let visitorId = localStorage.getItem('usermanager_visitor_id');
-            if (!visitorId) {
-                visitorId = 'visitor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('usermanager_visitor_id', visitorId);
-                stats.totalVisitors++;
-            }
-            
-            // Регистрируем сессию
-            const sessionId = 'session_' + Date.now();
-            stats.userSessions[sessionId] = {
-                visitorId: visitorId,
-                startTime: Date.now(),
-                lastActivity: Date.now(),
-                active: true
-            };
-            
-            stats.totalVisits++;
-            
-            // Очищаем неактивные сессии (более 5 минут)
-            const now = Date.now();
-            const inactiveTime = 5 * 60 * 1000;
-            for (const sid in stats.userSessions) {
-                if (now - stats.userSessions[sid].lastActivity > inactiveTime) {
-                    delete stats.userSessions[sid];
-                }
-            }
-            
-            stats.activeUsers = Object.keys(stats.userSessions).length;
-            
-            // Сохраняем статистику
-            localStorage.setItem('usermanager_user_stats', JSON.stringify(stats));
-            
-            // Обновляем отображение
-            const totalVisitorsEl = document.getElementById('totalVisitors');
-            const activeUsersEl = document.getElementById('activeUsers');
-            const totalVisitsEl = document.getElementById('totalVisits');
-            
-            if (totalVisitorsEl) totalVisitorsEl.textContent = stats.totalVisitors;
-            if (activeUsersEl) activeUsersEl.textContent = stats.activeUsers;
-            if (totalVisitsEl) totalVisitsEl.textContent = stats.totalVisits;
-        }
-
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
         function showNotification(message, type = 'info') {
+            // Удаляем старые уведомления
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+            
             const notification = document.createElement('div');
-            notification.className = `notification show ${type}`;
+            notification.className = `notification ${type}`;
             notification.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <span style="font-size: 1.2rem;">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
@@ -1345,13 +1210,54 @@
             }, 3000);
         }
 
-        // === ИНИЦИАЛИЗАЦИЯ ===
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
         document.addEventListener('DOMContentLoaded', () => {
+            // Звезды и планета
+            function createStars() {
+                const c = document.getElementById('stars');
+                if (!c) return;
+                c.innerHTML = '';
+                for (let i = 0; i < 150; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'star';
+                    const sz = Math.random() * 2 + 1;
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    const d = Math.random() * 3 + 2;
+                    const dl = Math.random() * 5;
+                    s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}%;top:${y}%;--duration:${d};--delay:${dl};`;
+                    c.appendChild(s);
+                }
+            }
+            
             createStars();
             window.addEventListener('resize', createStars);
-            initThemeToggle();
-            setTimeout(initCharts, 300);
+            
+            // Тема
+            function initThemeToggle() {
+                const t = document.getElementById('themeToggle');
+                const i = document.getElementById('themeIcon');
+                const txt = document.getElementById('themeText');
+                const light = localStorage.getItem('usermanager_theme') === 'light';
+                if (light) document.body.classList.add('light-theme');
 
+                const u = (l) => {
+                    i.textContent = l ? '☀️' : '🌙';
+                    txt.textContent = l ? 'Светлая' : 'Темная';
+                };
+                u(light);
+
+                t.addEventListener('click', () => {
+                    const l = !document.body.classList.contains('light-theme');
+                    document.body.classList.toggle('light-theme', l);
+                    localStorage.setItem('usermanager_theme', l ? 'light' : 'dark');
+                    u(l);
+                });
+            }
+            
+            initThemeToggle();
+            
+            // Время обновления
             const now = new Date();
             document.getElementById('lastUpdate').textContent = 
                 `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;

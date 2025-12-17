@@ -72,6 +72,7 @@
             padding: 0 20px;
         }
 
+        /* НАВИГАЦИЯ */
         .nav-menu {
             display: flex;
             justify-content: center;
@@ -163,7 +164,7 @@
         }
 
         /* Переключатель темы */
-        .theme-toggle, .api-mode-btn {
+        .theme-toggle {
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -178,11 +179,12 @@
             font-size: 0.85rem;
         }
 
-        .theme-toggle:hover, .api-mode-btn:hover {
+        .theme-toggle:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
         }
 
+        /* ОСТАЛЬНОЙ КОНТЕНТ ВАШЕЙ СТРАНИЦЫ */
         .about-hero {
             text-align: center;
             padding: 3rem 2rem;
@@ -488,6 +490,7 @@
     <div class="stars" id="stars"></div>
 
     <div class="container">
+        <!-- НАВИГАЦИЯ С КНОПКАМИ ДОСТУПА -->
         <div class="nav-menu">
             <a href="index.html" class="nav-item">🏠 Главная</a>
             <a href="about.html" class="nav-item active">📖 О проекте</a>
@@ -503,17 +506,13 @@
                 <span id="apiModeIcon">🌐</span> <span id="apiModeText">Серверный</span>
             </button>
             
-            <!-- Кнопка входа админа -->
-            <button class="api-mode-btn" onclick="showLoginModal()">
-                <span>🔐</span> <span>Войти</span>
-            </button>
-            
             <!-- Переключатель темы -->
             <button class="theme-toggle" id="themeToggle">
                 <span id="themeIcon">🌙</span> <span id="themeText">Темная</span>
             </button>
         </div>
 
+        <!-- ВАШ КОНТЕНТ О ПРОЕКТЕ -->
         <section class="about-hero">
             <div style="font-size:3.5rem; margin-bottom:1rem;">📊</div>
             <h1>О проекте UserManager Pro</h1>
@@ -640,42 +639,7 @@
     </footer>
 
     <script>
-        function createStars() {
-            const c = document.getElementById('stars');
-            if (!c) return;
-            c.innerHTML = '';
-            for (let i = 0; i < 120; i++) {
-                const s = document.createElement('div');
-                s.className = 'star';
-                const sz = Math.random() * 2.5 + 0.8;
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                const d = Math.random() * 8 + 4;
-                s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}%;top:${y}%;animation-duration:${d}s;`;
-                c.appendChild(s);
-            }
-        }
-
-        function initThemeToggle() {
-            const t = document.getElementById('themeToggle');
-            const i = document.getElementById('themeIcon');
-            const x = document.getElementById('themeText');
-            const saved = localStorage.getItem('theme') === 'light';
-            if (saved) document.body.classList.add('light-theme');
-            i.textContent = saved ? '☀️' : '🌙';
-            x.textContent = saved ? 'Светлая' : 'Темная';
-
-            t.addEventListener('click', () => {
-                const l = !document.body.classList.contains('light-theme');
-                document.body.classList.toggle('light-theme', l);
-                localStorage.setItem('theme', l ? 'light' : 'dark');
-                i.textContent = l ? '☀️' : '🌙';
-                x.textContent = l ? 'Светлая' : 'Темная';
-                createStars();
-            });
-        }
-
-        // Система доступа
+        // Функции для системы доступа
         function showLoginModal() {
             alert('Для входа перейдите на главную страницу');
             window.location.href = 'index.html';
@@ -742,17 +706,42 @@
             }
         }
 
-        function showNotification(m, t = 'success') {
-            const n = document.createElement('div');
-            n.textContent = m;
-            n.style.cssText = `position:fixed;top:20px;right:20px;background:${t==='error'?'#f87171':t==='warning'?'#fbbf24':'#60a5fa'};color:white;padding:10px 16px;border-radius:6px;z-index:10000;animation:slideIn 0.3s;max-width:280px;`;
-            document.body.appendChild(n);
-            setTimeout(() => { n.style.animation = 'slideOut 0.3s'; setTimeout(() => n.remove(), 300); }, 2500);
+        // Звезды
+        function createStars() {
+            const c = document.getElementById('stars');
+            if (!c) return;
+            c.innerHTML = '';
+            for (let i = 0; i < 120; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const sz = Math.random() * 2.5 + 0.8;
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const d = Math.random() * 8 + 4;
+                s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}%;top:${y}%;animation-duration:${d}s;`;
+                c.appendChild(s);
+            }
         }
 
-        const s = document.createElement('style');
-        s.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}@keyframes slideOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(100%);opacity:0;}}`;
-        document.head.appendChild(s);
+        // Тема
+        function initThemeToggle() {
+            const t = document.getElementById('themeToggle');
+            const i = document.getElementById('themeIcon');
+            const x = document.getElementById('themeText');
+            const saved = localStorage.getItem('theme') === 'light';
+            if (saved) document.body.classList.add('light-theme');
+            i.textContent = saved ? '☀️' : '🌙';
+            x.textContent = saved ? 'Светлая' : 'Темная';
+
+            t.addEventListener('click', () => {
+                const l = !document.body.classList.contains('light-theme');
+                document.body.classList.toggle('light-theme', l);
+                localStorage.setItem('theme', l ? 'light' : 'dark');
+                i.textContent = l ? '☀️' : '🌙';
+                x.textContent = l ? 'Светлая' : 'Темная';
+                createStars();
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();

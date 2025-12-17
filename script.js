@@ -9,7 +9,7 @@ const CONFIG = {
     STORAGE_KEY: 'usermanager_local_data'
 };
 
-// ================== СИСТЕМА АДМИНИСТРАТОРА ==================
+// ================== СИСТЕМА до АДМИНИСТРАТОРА ==================
 const ADMIN_PASSWORD = "admin123"; // Только вы знаете этот пароль
 let isAdmin = false;
 let adminSessionId = null;

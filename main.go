@@ -32,16 +32,13 @@ var db *InMemoryDB
 var serverMode = "server" // "server" или "local"
 var modeMutex sync.RWMutex
 
-// HTML страницы для разных режимов
+// Структура для клиентских подключений (для мгновенного обновления)
 var (
-	serverModeHTML = ""
-	localModeHTML  = ""
+	clients      = make(map[chan string]bool)
+	clientsMutex sync.RWMutex
 )
 
 func init() {
-	// Инициализация HTML кэша
-	updateHTMLCache()
-	
 	db = &InMemoryDB{
 		users:  make(map[int]User),
 		nextID: 4,
@@ -53,115 +50,24 @@ func init() {
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
 }
 
-// Функция обновления HTML кэша
-func updateHTMLCache() {
-	serverModeHTML = ""
+// Функция отправки обновления всем клиентам
+func broadcastModeChange(newMode string) {
+	clientsMutex.RLock()
+	defer clientsMutex.RUnlock()
 	
-	localModeHTML = `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Страница не найдена</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: white;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-        .container {
-            padding: 3rem;
-            max-width: 600px;
-        }
-        h1 {
-            font-size: 4rem;
-            color: #dc2626;
-            margin-bottom: 1rem;
-        }
-        h2 {
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            color: #4b5563;
-        }
-        p {
-            font-size: 1.2rem;
-            color: #6b7280;
-            margin-bottom: 2rem;
-            line-height: 1.6;
-        }
-        .status {
-            font-size: 1rem;
-            color: #9ca3af;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e5e7eb;
-        }
-        .admin-note {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 2rem;
-            color: #92400e;
-        }
-        .refresh-btn {
-            margin-top: 2rem;
-            padding: 0.75rem 1.5rem;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.3s;
-        }
-        .refresh-btn:hover {
-            background: #2563eb;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>404</h1>
-        <h2>Страница временно недоступна</h2>
-        <p>
-            <strong>UserManager Pro находится в локальном режиме.</strong><br>
-            В данный момент администратор работает с системой локально.
-        </p>
-        <p>
-            Пожалуйста, попробуйте зайти позже, когда система вернется в серверный режим.
-        </p>
-        <div class="admin-note">
-            <strong>Примечание для администратора:</strong><br>
-            Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
-        </div>
-        <button class="refresh-btn" onclick="location.reload()">
-            🔄 Обновить страницу
-        </button>
-        <div class="status">
-            UserManager Pro • Локальный режим активен • Время: ` + time.Now().Format("15:04:05") + `
-        </div>
-    </div>
-    <script>
-        // Автоматическая проверка каждые 2 секунды
-        setInterval(() => {
-            fetch('/api/status?_=' + Date.now())
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.blocked) {
-                        location.reload();
-                    }
-                });
-        }, 2000);
-    </script>
-</body>
-</html>`
+	message := fmt.Sprintf(`{"event": "mode_changed", "mode": "%s", "timestamp": %d}`, 
+		newMode, time.Now().Unix())
+	
+	for clientChan := range clients {
+		select {
+		case clientChan <- message:
+			// Сообщение отправлено
+		default:
+			// Канал заблокирован, пропускаем
+		}
+	}
+	
+	fmt.Printf("📢 Отправлено обновление режима '%s' для %d клиентов\n", newMode, len(clients))
 }
 
 // CORS middleware
@@ -190,28 +96,15 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Всегда разрешаем доступ к этим endpoint-ам
 		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || 
 		   r.URL.Path == "/api/stats" || r.URL.Path == "/" ||
-		   r.URL.Path == "/api/status" || r.URL.Path == "/api/info" {
+		   r.URL.Path == "/api/status" || r.URL.Path == "/api/info" ||
+		   r.URL.Path == "/api/events" {
 			next(w, r)
 			return
 		}
 		
 		// Если режим локальный, проверяем админский доступ
 		if currentMode == "local" {
-			isAdmin := false
-			
-			// Проверяем админские заголовки
-			adminToken := r.Header.Get("X-Admin-Token")
-			adminPassword := r.Header.Get("X-Admin-Password")
-			
-			if adminToken == "admin_local_token_123" || adminPassword == "admin123" {
-				isAdmin = true
-			}
-			
-			// Проверяем query параметры
-			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if tokenFromQuery == "admin_local_token_123" {
-				isAdmin = true
-			}
+			isAdmin := checkAdminAccess(r)
 			
 			// Если это не админ - возвращаем 404
 			if !isAdmin {
@@ -312,15 +205,25 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
     </div>
     <script>
         // Автоматическая проверка каждые 2 секунды
+        const eventSource = new EventSource('/api/events');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.event === 'mode_changed' && data.mode === 'server') {
+                console.log('Режим изменился на серверный, перезагружаем...');
+                location.reload();
+            }
+        };
+        
+        // Также проверяем каждые 3 секунды обычным запросом
         setInterval(() => {
             fetch('/api/status?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
-                    if (!data.blocked) {
+                    if (data.mode === 'server') {
                         location.reload();
                     }
                 });
-        }, 2000);
+        }, 3000);
     </script>
 </body>
 </html>`, time.Now().Format("15:04:05"))
@@ -332,6 +235,25 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		
 		next(w, r)
 	}
+}
+
+// Проверка админского доступа
+func checkAdminAccess(r *http.Request) bool {
+	// Проверяем админские заголовки
+	adminToken := r.Header.Get("X-Admin-Token")
+	adminPassword := r.Header.Get("X-Admin-Password")
+	
+	if adminToken == "admin_local_token_123" || adminPassword == "admin123" {
+		return true
+	}
+	
+	// Проверяем query параметры
+	tokenFromQuery := r.URL.Query().Get("admin_token")
+	if tokenFromQuery == "admin_local_token_123" {
+		return true
+	}
+	
+	return false
 }
 
 // validateUser проверяет обязательные поля
@@ -456,20 +378,11 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 	
 	// В локальном режиме проверяем админский доступ
 	if currentMode == "local" {
-		adminToken := r.Header.Get("X-Admin-Token")
-		adminPassword := r.Header.Get("X-Admin-Password")
-		
-		// Разрешаем доступ админу
-		if adminToken == "admin_local_token_123" || adminPassword == "admin123" {
-			// Админ имеет доступ - продолжаем
-		} else {
-			// Проверяем в query параметрах
-			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if tokenFromQuery != "admin_local_token_123" {
-				// Возвращаем 404 для обычных пользователей
-				w.WriteHeader(http.StatusNotFound)
-				w.Header().Set("Content-Type", "text/html")
-				html := fmt.Sprintf(`<!DOCTYPE html>
+		if !checkAdminAccess(r) {
+			// Возвращаем 404 для обычных пользователей
+			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "text/html")
+			html := fmt.Sprintf(`<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -562,21 +475,29 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
     </div>
     <script>
         // Автоматическая проверка каждые 2 секунды
+        const eventSource = new EventSource('/api/events');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.event === 'mode_changed' && data.mode === 'server') {
+                console.log('Режим изменился на серверный, перезагружаем...');
+                location.reload();
+            }
+        };
+        
         setInterval(() => {
             fetch('/api/status?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
-                    if (!data.blocked) {
+                    if (data.mode === 'server') {
                         location.reload();
                     }
                 });
-        }, 2000);
+        }, 3000);
     </script>
 </body>
 </html>`, time.Now().Format("15:04:05"))
-				fmt.Fprint(w, html)
-				return
-			}
+			fmt.Fprint(w, html)
+			return
 		}
 	}
 	
@@ -624,16 +545,9 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	// В локальном режиме проверяем админский доступ
 	if currentMode == "local" {
-		adminToken := r.Header.Get("X-Admin-Token")
-		adminPassword := r.Header.Get("X-Admin-Password")
-		
-		if adminToken != "admin_local_token_123" && adminPassword != "admin123" {
-			// Проверяем в query параметрах
-			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if tokenFromQuery != "admin_local_token_123" {
-				sendError(w, http.StatusNotFound, "Локальный режим активен")
-				return
-			}
+		if !checkAdminAccess(r) {
+			sendError(w, http.StatusNotFound, "Локальный режим активен")
+			return
 		}
 	}
 
@@ -698,17 +612,10 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 	
 	// В локальном режиме показываем 0 пользователей для обычных пользователей
 	if currentMode == "local" {
-		// Проверяем админский доступ
-		adminToken := r.Header.Get("X-Admin-Token")
-		adminPassword := r.Header.Get("X-Admin-Password")
-		
-		if adminToken != "admin_local_token_123" && adminPassword != "admin123" {
-			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if tokenFromQuery != "admin_local_token_123" {
-				stats["total_users"] = 0
-				stats["message"] = "Локальный режим активен. Данные скрыты."
-				stats["status"] = "local"
-			}
+		if !checkAdminAccess(r) {
+			stats["total_users"] = 0
+			stats["message"] = "Локальный режим активен. Данные скрыты."
+			stats["status"] = "local"
 		}
 	}
 	
@@ -742,22 +649,18 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"POST /api/admin/mode":     "Change mode (admin only)",
 			"GET /api/mode":            "Get current mode",
 			"GET /api/status":          "Check status and mode",
+			"GET /api/events":          "Server-Sent Events для обновлений",
 		},
 		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
 	}
 	
 	// Для обычных пользователей в локальном режиме скрываем информацию
 	if currentMode == "local" {
-		adminToken := r.Header.Get("X-Admin-Token")
-		adminPassword := r.Header.Get("X-Admin-Password")
-		
-		if adminToken != "admin_local_token_123" && adminPassword != "admin123" {
-			tokenFromQuery := r.URL.Query().Get("admin_token")
-			if tokenFromQuery != "admin_local_token_123" {
-				info["message"] = "Локальный режим активен"
-				info["endpoints"] = map[string]string{
-					"GET /api/status": "Check system status",
-				}
+		if !checkAdminAccess(r) {
+			info["message"] = "Локальный режим активен"
+			info["endpoints"] = map[string]string{
+				"GET /api/status": "Check system status",
+				"GET /api/events": "Get real-time updates",
 			}
 		}
 	}
@@ -777,15 +680,7 @@ func apiStatusHandler(w http.ResponseWriter, r *http.Request) {
 	modeMutex.RUnlock()
 	
 	// Проверяем админский доступ
-	isAdmin := false
-	adminToken := r.Header.Get("X-Admin-Token")
-	adminPassword := r.Header.Get("X-Admin-Password")
-	tokenFromQuery := r.URL.Query().Get("admin_token")
-	
-	if adminToken == "admin_local_token_123" || adminPassword == "admin123" || 
-	   tokenFromQuery == "admin_local_token_123" {
-		isAdmin = true
-	}
+	isAdmin := checkAdminAccess(r)
 	
 	response := map[string]interface{}{
 		"mode":      currentMode,
@@ -801,6 +696,71 @@ func apiStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	sendJSON(w, http.StatusOK, response)
+}
+
+// Server-Sent Events для мгновенных обновлений
+func apiEventsHandler(w http.ResponseWriter, r *http.Request) {
+	// Устанавливаем заголовки для SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	
+	// Создаем канал для этого клиента
+	messageChan := make(chan string, 10)
+	
+	// Регистрируем клиента
+	clientsMutex.Lock()
+	clients[messageChan] = true
+	clientsMutex.Unlock()
+	
+	fmt.Printf("📡 Новый клиент подключен. Всего клиентов: %d\n", len(clients))
+	
+	// Отправляем текущий режим сразу при подключении
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
+	initialMessage := fmt.Sprintf(`{"event": "connected", "mode": "%s", "timestamp": %d}`, 
+		currentMode, time.Now().Unix())
+	fmt.Fprintf(w, "data: %s\n\n", initialMessage)
+	
+	// Принудительно отправляем данные
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	
+	// Отслеживаем отключение клиента
+	notify := w.(http.CloseNotifier).CloseNotify()
+	
+	// Бесконечный цикл для отправки сообщений
+	for {
+		select {
+		case <-notify:
+			// Клиент отключился
+			clientsMutex.Lock()
+			delete(clients, messageChan)
+			clientsMutex.Unlock()
+			close(messageChan)
+			fmt.Printf("📡 Клиент отключился. Осталось клиентов: %d\n", len(clients))
+			return
+			
+		case msg := <-messageChan:
+			// Отправляем сообщение клиенту
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+			
+		case <-time.After(30 * time.Second):
+			// Отправляем ping каждые 30 секунд чтобы соединение не разрывалось
+			pingMsg := fmt.Sprintf(`{"event": "ping", "timestamp": %d}`, time.Now().Unix())
+			fmt.Fprintf(w, "data: %s\n\n", pingMsg)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+		}
+	}
 }
 
 // Новые обработчики для управления режимом
@@ -834,8 +794,8 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	serverMode = newMode
 	modeMutex.Unlock()
 	
-	// Обновляем HTML кэш
-	updateHTMLCache()
+	// Отправляем обновление ВСЕМ подключенным клиентам
+	broadcastModeChange(newMode)
 	
 	// Логируем изменение
 	fmt.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!\n")
@@ -843,6 +803,7 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("   Новый режим: %s\n", newMode)
 	fmt.Printf("   Время: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	fmt.Printf("   IP админ: %s\n", r.RemoteAddr)
+	fmt.Printf("   Уведомлено клиентов: %d\n", len(clients))
 	
 	if newMode == "local" {
 		fmt.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!\n")
@@ -855,6 +816,7 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
 		"mode":    newMode,
 		"time":    time.Now().Format("2006-01-02 15:04:05"),
+		"clients": fmt.Sprintf("%d", len(clients)),
 		"warning": "",
 	}
 	
@@ -891,6 +853,7 @@ func main() {
 	http.HandleFunc("/api/admin/mode", enableCORS(apiAdminModeHandler))
 	http.HandleFunc("/api/mode", enableCORS(apiGetModeHandler))
 	http.HandleFunc("/api/status", enableCORS(apiStatusHandler))
+	http.HandleFunc("/api/events", enableCORS(apiEventsHandler))
 	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
@@ -901,12 +864,17 @@ func main() {
 	fmt.Println("   POST /api/admin/mode - Изменить режим (требуется пароль admin123)")
 	fmt.Println("   GET  /api/mode       - Получить текущий режим")
 	fmt.Println("   GET  /api/status     - Проверить статус и доступ")
+	fmt.Println("   GET  /api/events     - Server-Sent Events для мгновенных обновлений")
 	fmt.Println("\n🔒 Локальный режим:")
 	fmt.Println("   - Обычные пользователи немедленно получают 404 ошибку")
 	fmt.Println("   - Белый экран с сообщением для не-админов")
-	fmt.Println("   - Автоматическая проверка каждые 2 секунды")
+	fmt.Println("   - Мгновенное обновление через SSE для всех клиентов")
 	fmt.Println("   - Админский токен: admin_local_token_123")
 	fmt.Println("   - Админский пароль: admin123 (в заголовках)")
+	fmt.Println("\n⚡ Мгновенное обновление:")
+	fmt.Println("   - Все клиенты получают уведомление при смене режима")
+	fmt.Println("   - Автоматическая перезагрузка страниц")
+	fmt.Println("   - Режим меняется у всех пользователей одновременно")
 	fmt.Println("\n⚠️  ВАЖНО: При включении локального режима все обычные пользователи")
 	fmt.Println("          сразу увидят белую страницу 404!")
 	fmt.Println("\n🌐 API Endpoints:")
@@ -918,6 +886,7 @@ func main() {
 	fmt.Println("   GET  /api/stats      - Статистика сервера")
 	fmt.Println("   GET  /api/info       - Информация об API")
 	fmt.Println("   GET  /api/status     - Проверить статус системы")
+	fmt.Println("   GET  /api/events     - Получить мгновенные обновления")
 	fmt.Println("\n🔗 Frontend доступен по адресу:")
 	fmt.Println("   https://dmitriy43229.github.io/Go-Project777_GoStory/")
 

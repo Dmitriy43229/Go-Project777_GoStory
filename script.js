@@ -6,7 +6,7 @@
 // Принудительное обновление кеша при загрузке
 (function () {
     // Проверяем версию в localStorage
-    const CURRENT_VERSION = '2.0.7';
+    const CURRENT_VERSION = '2.0.8';
     const savedVersion = localStorage.getItem('usermanager_version');
 
     if (savedVersion !== CURRENT_VERSION) {
@@ -45,7 +45,7 @@ const CONFIG = {
     USE_REAL_API: true, // По умолчанию серверный режим
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data',
-    VERSION: '2.0.7',
+    VERSION: '2.0.8',
     LAST_UPDATE: new Date().toISOString()
 };
 
@@ -58,6 +58,7 @@ let currentServerMode = "server"; // Храним текущий режим се
 
 // Переменные для управления блокировкой
 let isBlocked = false;
+let eventSource = null;
 let blockCheckerInterval = null;
 const BLOCK_CHECK_INTERVAL = 3000; // Проверять каждые 3 секунды
 
@@ -88,7 +89,68 @@ async function getServerStatus() {
     return { mode: 'server', is_admin: false };
 }
 
-// Функция проверки блокировки - ПРОСТАЯ И ПРАВИЛЬНАЯ
+// Подключение к Server-Sent Events для мгновенных обновлений
+function connectToEvents() {
+    if (eventSource) {
+        eventSource.close();
+    }
+    
+    try {
+        eventSource = new EventSource(`${CONFIG.API_URL}/events`);
+        
+        eventSource.onopen = function() {
+            console.log('🔗 Подключен к серверу событий');
+        };
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('📨 Получено событие:', data);
+                
+                if (data.event === 'mode_changed') {
+                    console.log(`🔄 Режим изменился на: ${data.mode}`);
+                    currentServerMode = data.mode;
+                    
+                    // Если режим изменился на серверный и мы были заблокированы
+                    if (data.mode === 'server' && isBlocked) {
+                        console.log('✅ Разблокировка: включен серверный режим');
+                        location.reload(true);
+                    }
+                    
+                    // Обновляем интерфейс
+                    updateInterface();
+                    
+                    // Обновляем данные
+                    if (!isBlocked) {
+                        loadInitialData();
+                    }
+                } else if (data.event === 'connected') {
+                    console.log('✅ Подключение установлено, текущий режим:', data.mode);
+                    currentServerMode = data.mode;
+                    updateInterface();
+                } else if (data.event === 'ping') {
+                    console.log('🏓 Ping от сервера');
+                }
+            } catch (error) {
+                console.log('Ошибка обработки события:', error);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.log('❌ Ошибка соединения с сервером событий:', error);
+            // Пытаемся переподключиться через 5 секунд
+            setTimeout(() => {
+                console.log('🔄 Переподключение к серверу событий...');
+                connectToEvents();
+            }, 5000);
+        };
+        
+    } catch (error) {
+        console.log('Ошибка создания EventSource:', error);
+    }
+}
+
+// Функция проверки блокировки
 async function checkBlockStatus() {
     try {
         const status = await getServerStatus();
@@ -115,10 +177,10 @@ async function checkBlockStatus() {
             
             // Проверяем, админ ли мы
             const adminAccess = checkAdminAccess();
-            console.log('👤 Админский доступ:', adminAccess, 'Статус сервера:', status.is_admin);
+            console.log('👤 Админский доступ:', adminAccess);
             
             // Если мы админ - разрешаем доступ
-            if (adminAccess || status.is_admin) {
+            if (adminAccess) {
                 console.log('👑 Администратор - доступ разрешен');
                 if (isBlocked) {
                     isBlocked = false;
@@ -199,19 +261,25 @@ function showBlockPage() {
             </div>
         </div>
         <script>
-            // Автоматическая проверка каждые 3 секунды
+            // Подключаемся к серверу событий для мгновенных обновлений
+            const eventSource = new EventSource('${CONFIG.API_URL}/events');
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.event === 'mode_changed' && data.mode === 'server') {
+                    console.log('✅ Режим изменился на серверный, перезагружаем...');
+                    location.reload(true);
+                }
+            };
+            
+            // Также проверяем каждые 3 секунды обычным запросом
             setInterval(() => {
                 fetch('${CONFIG.API_URL}/status?_=' + Date.now())
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Проверка статуса:', data);
-                        if (data.mode === 'server' || data.is_admin) {
-                            console.log('✅ Разблокировка доступна, перезагружаем...');
+                        if (data.mode === 'server') {
+                            console.log('✅ Серверный режим обнаружен, перезагружаем...');
                             location.reload(true);
                         }
-                    })
-                    .catch(error => {
-                        console.log('Ошибка проверки:', error);
                     });
             }, 3000);
         </script>
@@ -227,6 +295,9 @@ async function initializeSystem() {
     // Сначала проверяем админский доступ
     const adminAccess = checkAdminAccess();
     console.log('👤 Проверка админского доступа:', adminAccess);
+    
+    // Подключаемся к серверу событий
+    connectToEvents();
     
     // Проверяем блокировку
     const blocked = await checkBlockStatus();
@@ -284,7 +355,7 @@ async function initializeSystem() {
 
 // Обновление интерфейса
 function updateInterface() {
-    console.log('🎨 Обновление интерфейса, isAdmin:', isAdmin);
+    console.log('🎨 Обновление интерфейса, isAdmin:', isAdmin, 'Режим:', currentServerMode);
     
     // Добавляем кнопку очистки кеша
     addCacheClearButton();
@@ -508,6 +579,7 @@ async function changeServerMode(newMode) {
             const data = await response.json();
             currentServerMode = newMode;
             console.log(`✅ Режим сервера изменен на: ${newMode}`);
+            console.log(`📢 Уведомлено клиентов: ${data.clients || 0}`);
 
             // ОБНОВЛЯЕМ ЛОКАЛЬНЫЕ НАСТРОЙКИ ПРИ УСПЕШНОМ ИЗМЕНЕНИИ
             if (newMode === 'local') {
@@ -544,7 +616,7 @@ async function toggleServerMode() {
         console.log(`🔄 Переключение режима с ${currentMode} на ${newMode}`);
 
         // Меняем режим на сервере
-        await changeServerMode(newMode);
+        const result = await changeServerMode(newMode);
         
         // Обновляем локальные настройки
         localStorage.setItem('usermanager_use_real_api', newMode === 'server' ? 'true' : 'false');
@@ -553,19 +625,15 @@ async function toggleServerMode() {
         
         // Показываем сообщение
         if (newMode === 'local') {
-            alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.`);
+            alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.\n\n📢 Уведомлено клиентов: ${result.clients || 0}`);
         } else {
-            alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.`);
+            alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.\n\n📢 Уведомлено клиентов: ${result.clients || 0}`);
         }
         
         // Обновляем интерфейс
         updateInterface();
         
-        // Перезагружаем страницу через 1 секунду
-        setTimeout(() => {
-            console.log('🔄 Перезагрузка после смены режима');
-            location.reload(true);
-        }, 1000);
+        // НЕ перезагружаем страницу - режим уже обновился через SSE
 
     } catch (error) {
         console.error('Ошибка переключения режима:', error);

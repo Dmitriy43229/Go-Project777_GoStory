@@ -604,6 +604,12 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
         
+        .connection-status.reconnecting {
+            background: rgba(251, 191, 36, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
         .connection-dot {
             width: 8px;
             height: 8px;
@@ -619,10 +625,59 @@
             background: #ef4444;
         }
         
+        .connection-status.reconnecting .connection-dot {
+            background: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            z-index: 1000;
+            max-width: 400px;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .notification.success {
+            background: rgba(34, 197, 94, 0.9);
+        }
+        
+        .notification.warning {
+            background: rgba(251, 191, 36, 0.9);
+        }
+        
+        .notification.info {
+            background: rgba(59, 130, 246, 0.9);
+        }
+        
+        .notification.error {
+            background: rgba(239, 68, 68, 0.9);
         }
     </style>
 </head>
@@ -635,9 +690,9 @@
     <div class="planet"></div>
     
     <!-- Индикатор подключения -->
-    <div class="connection-status connected" id="connectionStatus">
+    <div class="connection-status" id="connectionStatus">
         <span class="connection-dot"></span>
-        <span>Подключено</span>
+        <span>Подключение...</span>
     </div>
 
     <!-- Контейнер -->
@@ -714,8 +769,8 @@
                             <span class="mode-value" id="usersValue">...</span>
                         </div>
                         <div class="mode-item">
-                            <span class="mode-label">API</span>
-                            <span class="mode-value" id="apiValue">...</span>
+                            <span class="mode-label">Подключено</span>
+                            <span class="mode-value" id="clientsValue">...</span>
                         </div>
                     </div>
                 </div>
@@ -810,123 +865,238 @@
     </div>
 
     <script>
-        // Создание звездного неба
-        function createStars() {
-            const starsContainer = document.getElementById('stars');
-            if (!starsContainer) return;
-
-            starsContainer.innerHTML = '';
-            const starCount = 150;
-
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-
-                // Случайные параметры звезды
-                const size = Math.random() * 3 + 1;
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                const duration = Math.random() * 5 + 3;
-                const delay = Math.random() * 5;
-
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${x}%`;
-                star.style.top = `${y}%`;
-                star.style.setProperty('--duration', `${duration}s`);
-                star.style.setProperty('--delay', `-${delay}s`);
-
-                starsContainer.appendChild(star);
-            }
+        // WebSocket соединение
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
+        let lastModeCheck = 0;
+        let isReloading = false;
+        
+        // Показываем уведомление
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
         }
-
-        // Управление индикатором подключения
-        function updateConnectionStatus(connected) {
+        
+        // Обновляем статус подключения
+        function updateConnectionStatus(status) {
             const statusEl = document.getElementById('connectionStatus');
             if (!statusEl) return;
             
-            if (connected) {
-                statusEl.className = 'connection-status connected';
-                statusEl.innerHTML = '<span class="connection-dot"></span><span>Подключено</span>';
-            } else {
-                statusEl.className = 'connection-status disconnected';
-                statusEl.innerHTML = '<span class="connection-dot"></span><span>Нет подключения</span>';
+            statusEl.className = `connection-status ${status}`;
+            
+            switch(status) {
+                case 'connected':
+                    statusEl.innerHTML = '<span class="connection-dot"></span><span>Подключено</span>';
+                    reconnectAttempts = 0;
+                    break;
+                case 'disconnected':
+                    statusEl.innerHTML = '<span class="connection-dot"></span><span>Отключено</span>';
+                    break;
+                case 'reconnecting':
+                    statusEl.innerHTML = '<span class="connection-dot"></span><span>Переподключение...</span>';
+                    break;
             }
         }
-
-        // Проверка подключения к серверу
-        async function checkConnection() {
+        
+        // Подключаем WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:8068/ws`;
+            
             try {
-                const response = await fetch('http://localhost:8068/api/status?_=' + Date.now());
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    console.log('✅ WebSocket подключен');
+                    updateConnectionStatus('connected');
+                    showNotification('Подключение к серверу установлено', 'success');
+                    
+                    // Отправляем ping для подтверждения
+                    setInterval(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'ping' }));
+                        }
+                    }, 25000);
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('📨 WebSocket сообщение:', data);
+                        
+                        switch(data.type) {
+                            case 'connected':
+                                console.log('✅ Подключение подтверждено, режим:', data.data.mode);
+                                updateCurrentMode(data.data.mode);
+                                updateClientsCount(data.data.clients);
+                                break;
+                                
+                            case 'mode_changed':
+                                console.log('🔄 Режим изменился:', data.data.old_mode, '→', data.data.new_mode);
+                                showNotification(`Режим изменен: ${data.data.old_mode} → ${data.data.new_mode}`, 'info', 5000);
+                                updateCurrentMode(data.data.new_mode);
+                                
+                                // Принудительная перезагрузка если нужно
+                                if (data.data.force_reload) {
+                                    setTimeout(() => {
+                                        if (!isReloading) {
+                                            isReloading = true;
+                                            console.log('🔄 Принудительная перезагрузка из-за изменения режима');
+                                            window.location.reload(true);
+                                        }
+                                    }, 1000);
+                                }
+                                break;
+                                
+                            case 'force_reload':
+                                console.log('⚡ Получена команда на принудительную перезагрузку');
+                                if (!isReloading) {
+                                    isReloading = true;
+                                    setTimeout(() => {
+                                        window.location.reload(true);
+                                    }, 1500);
+                                }
+                                break;
+                                
+                            case 'ping':
+                                // Отвечаем на ping
+                                if (ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({ type: 'pong' }));
+                                }
+                                break;
+                        }
+                    } catch (error) {
+                        console.error('Ошибка обработки WebSocket сообщения:', error);
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    console.log('❌ WebSocket отключен:', event.code, event.reason);
+                    updateConnectionStatus('disconnected');
+                    
+                    // Пытаемся переподключиться
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = Math.min(1000 * reconnectAttempts, 10000);
+                        
+                        console.log(`🔄 Попытка переподключения ${reconnectAttempts}/${maxReconnectAttempts} через ${delay}мс`);
+                        updateConnectionStatus('reconnecting');
+                        
+                        setTimeout(() => {
+                            connectWebSocket();
+                        }, delay);
+                    } else {
+                        showNotification('Не удалось подключиться к серверу', 'error', 5000);
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('❌ WebSocket ошибка:', error);
+                    updateConnectionStatus('disconnected');
+                };
+                
+            } catch (error) {
+                console.error('❌ Ошибка создания WebSocket:', error);
+                updateConnectionStatus('disconnected');
+            }
+        }
+        
+        // Проверяем изменение режима через API
+        async function checkForModeChange() {
+            try {
+                const response = await fetch(`/api/check-mode?last_check=${lastModeCheck}&_=${Date.now()}`);
                 if (response.ok) {
-                    updateConnectionStatus(true);
-                    return true;
+                    const data = await response.json();
+                    
+                    if (data.needs_reload) {
+                        console.log('🔄 Обнаружено изменение режима, перезагрузка...');
+                        if (!isReloading) {
+                            isReloading = true;
+                            window.location.reload(true);
+                        }
+                    }
+                    
+                    lastModeCheck = data.last_change;
+                    updateCurrentMode(data.mode);
                 }
             } catch (error) {
-                updateConnectionStatus(false);
-                return false;
+                console.log('Не удалось проверить изменение режима:', error);
             }
-            return false;
         }
-
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function () {
-            // Проверяем статус администратора
+        
+        // Обновляем текущий режим
+        function updateCurrentMode(mode) {
+            const modeText = document.getElementById('currentModeText');
+            const statusValue = document.getElementById('statusValue');
+            
+            if (modeText) {
+                modeText.textContent = `Режим: ${mode === 'local' ? 'Локальный' : 'Серверный'}`;
+                modeText.style.color = mode === 'local' ? '#f59e0b' : '#4ade80';
+            }
+            
+            if (statusValue) {
+                statusValue.textContent = mode === 'server' ? 'Онлайн' : 'Локально';
+                statusValue.style.color = mode === 'server' ? '#4ade80' : '#f59e0b';
+            }
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('current_server_mode', mode);
+            localStorage.setItem('last_mode_check', Date.now().toString());
+        }
+        
+        // Обновляем количество подключенных клиентов
+        function updateClientsCount(count) {
+            const clientsValue = document.getElementById('clientsValue');
+            if (clientsValue) {
+                clientsValue.textContent = count;
+            }
+        }
+        
+        // Проверяем статус администратора
+        function checkAdminAccess() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-
-            // Проверяем активность админской сессии
-            let isAdminActive = false;
+            
             if (savedAdmin && expiry) {
                 if (Date.now() < parseInt(expiry)) {
-                    isAdminActive = true;
+                    return true;
                 } else {
                     // Очищаем просроченную сессию
                     localStorage.removeItem('usermanager_admin_session');
                     localStorage.removeItem('usermanager_admin_expiry');
-                    localStorage.setItem('usermanager_use_real_api', 'true'); // Принудительно серверный режим
                 }
             }
-
-            // Если нет админской сессии, форсируем серверный режим
-            if (!isAdminActive) {
-                localStorage.setItem('usermanager_use_real_api', 'true');
-            }
-
-            // Обновляем кнопки
-            updateModeButtons();
-
-            // Загружаем звезды и данные
-            createStars();
-            loadData();
-            createCharts();
-            
-            // Проверяем подключение
-            checkConnection();
-
-            // Периодическое обновление данных
-            setInterval(loadData, 30000);
-            
-            // Периодическая проверка подключения
-            setInterval(checkConnection, 10000);
-        });
-
-        // Функция для обновления кнопок режима
-        function updateModeButtons() {
+            return false;
+        }
+        
+        // Обновляем кнопки админа
+        function updateAdminButtons() {
             const adminBtn = document.getElementById('adminModeToggle');
             const logoutBtn = document.getElementById('logoutBtn');
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-            const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-
+            const isAdminActive = checkAdminAccess();
+            
             if (adminBtn && logoutBtn) {
                 if (isAdminActive) {
                     adminBtn.style.display = 'flex';
                     logoutBtn.style.display = 'flex';
-                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+                    
+                    // Получаем текущий режим
+                    const currentMode = localStorage.getItem('current_server_mode') || 'server';
                     adminBtn.innerHTML = `
                         <i class="fas fa-cogs"></i>
-                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+                        <span>Режим: ${currentMode === 'local' ? 'Локальный' : 'Серверный'}</span>
                     `;
                 } else {
                     adminBtn.style.display = 'none';
@@ -934,234 +1104,208 @@
                 }
             }
         }
-
-        // Функция переключения режима
+        
+        // Переключение режима сервера
         async function toggleServerMode() {
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-
-            if (!savedAdmin || !expiry || Date.now() >= parseInt(expiry)) {
+            if (!checkAdminAccess()) {
                 showAdminLoginModal();
                 return;
             }
-
+            
             try {
-                const currentMode = localStorage.getItem('usermanager_use_real_api');
-                const newMode = currentMode === 'true' ? 'false' : 'true';
-                const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
-
-                // Пытаемся обновить на сервере
-                try {
-                    const response = await fetch('http://localhost:8068/api/admin/mode', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Admin-Password': 'admin123'
-                        },
-                        body: JSON.stringify({
-                            mode: newMode === 'true' ? 'server' : 'local',
-                            password: 'admin123'
-                        })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log('✅ Режим успешно изменен на сервере:', data);
-
-                        // Обновляем локальные настройки
-                        localStorage.setItem('usermanager_use_real_api', newMode);
-
-                        // Показываем уведомление
-                        if (newMode === 'false') {
-                            alert(`✅ Локальный режим включен\nТеперь только вы видите данные.\nВсе остальные пользователи увидят белую страницу с ошибкой 404.\nИзменение вступит в силу немедленно для всех.`);
-                        } else {
-                            alert(`✅ Серверный режим включен\nТеперь все пользователи видят общие данные.\nИзменение вступит в силу немедленно для всех.`);
-                        }
-
+                const currentMode = localStorage.getItem('current_server_mode') || 'server';
+                const newMode = currentMode === 'server' ? 'local' : 'server';
+                const modeName = newMode === 'server' ? 'Серверный' : 'Локальный';
+                
+                console.log(`🔄 Переключение режима с ${currentMode} на ${newMode}`);
+                
+                const response = await fetch('/api/admin/mode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': 'admin123'
+                    },
+                    body: JSON.stringify({
+                        mode: newMode,
+                        password: 'admin123'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (newMode === 'local') {
+                        showNotification(`✅ Локальный режим включен! Все обычные пользователи увидят 404 страницу. Уведомлено клиентов: ${data.clients}`, 'warning', 8000);
                     } else {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Ошибка сервера');
+                        showNotification(`✅ Серверный режим включен! Все пользователи теперь видят общие данные. Уведомлено клиентов: ${data.clients}`, 'success', 5000);
                     }
-                } catch (serverError) {
-                    console.log('Сервер недоступен, но режим изменен локально');
-                    localStorage.setItem('usermanager_use_real_api', newMode);
-
-                    alert(`⚠️ Сервер недоступен\nРежим изменен локально, но другие пользователи не увидят изменения.\n${newMode === 'false' ? 'Включен локальный режим.' : 'Включен серверный режим.'}`);
+                    
+                    // Обновляем кнопки
+                    updateAdminButtons();
+                    
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка сервера');
                 }
-
-                // Обновляем кнопки и перезагружаем
-                updateModeButtons();
-                setTimeout(() => location.reload(), 1000);
-
+                
             } catch (error) {
                 console.error('Ошибка переключения режима:', error);
-                alert(`❌ Ошибка при переключении режима: ${error.message}`);
+                showNotification(`❌ Ошибка: ${error.message}`, 'error', 5000);
             }
         }
-
-        // Функция выхода из админ-режима
-        function logoutAdmin() {
-            if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
-                // Очищаем сессию
-                localStorage.removeItem('usermanager_admin_session');
-                localStorage.removeItem('usermanager_admin_expiry');
-                localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
-
-                // Обновляем кнопки
-                updateModeButtons();
-
-                alert('✅ Вы вышли из режима администратора.');
-                setTimeout(() => location.reload(), 500);
-            }
-        }
-
-        // Показывает модальное окно входа администратора
+        
+        // Вход администратора
         function showAdminLoginModal() {
             const password = prompt('Введите пароль администратора:');
             if (password === "admin123") {
                 // Создаем сессию
                 const sessionId = 'admin_' + Date.now();
                 const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-
+                
                 localStorage.setItem('usermanager_admin_session', sessionId);
                 localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
-                localStorage.setItem('usermanager_use_real_api', 'false'); // По умолчанию локальный режим для админа
-
-                alert('✅ Успешный вход! Включен локальный режим.');
-                updateModeButtons();
-                setTimeout(() => location.reload(), 500);
+                localStorage.setItem('usermanager_use_real_api', 'false');
+                
+                showNotification('✅ Успешный вход! Включен локальный режим.', 'success', 3000);
+                updateAdminButtons();
+                
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 1000);
+                
             } else if (password !== null) {
-                alert('❌ Неверный пароль');
+                showNotification('❌ Неверный пароль', 'error', 3000);
             }
         }
-
-        // Загрузка данных
-        async function loadData() {
-            try {
-                const savedMode = localStorage.getItem('usermanager_use_real_api');
-                const useRealAPI = savedMode === 'true' || savedMode === null;
-
-                // Обновляем текст режима
-                const modeText = document.getElementById('currentModeText');
-                const statusValue = document.getElementById('statusValue');
-                const apiValue = document.getElementById('apiValue');
-
-                if (modeText) {
-                    modeText.textContent = useRealAPI ? 'Режим: Серверный' : 'Режим: Локальный';
-                }
-                if (statusValue) {
-                    statusValue.textContent = useRealAPI ? 'Онлайн' : 'Локально';
-                    statusValue.style.color = useRealAPI ? '#4ade80' : '#f59e0b';
-                }
-                if (apiValue) {
-                    apiValue.textContent = useRealAPI ? 'Активен' : 'Отключен';
-                    apiValue.style.color = useRealAPI ? '#4ade80' : '#ef4444';
-                }
-
-                if (useRealAPI) {
-                    // Пробуем загрузить с сервера
-                    try {
-                        const response = await fetch('http://localhost:8068/api/stats');
-                        if (response.ok) {
-                            const data = await response.json();
-                            updateStats(data);
-                            loadUsersFromServer();
-                            return;
+        
+        // Выход из админ-режима
+        function logoutAdmin() {
+            if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
+                // Очищаем сессию
+                localStorage.removeItem('usermanager_admin_session');
+                localStorage.removeItem('usermanager_admin_expiry');
+                localStorage.setItem('usermanager_use_real_api', 'true');
+                
+                updateAdminButtons();
+                showNotification('✅ Вы вышли из режима администратора.', 'success', 3000);
+                
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 1000);
+            }
+        }
+        
+        // Очистка кеша
+        function clearCache() {
+            if (confirm('Очистить весь кеш браузера и перезагрузить страницу?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                        for (let name of names) {
+                            caches.delete(name);
                         }
-                    } catch (error) {
-                        console.log('Сервер недоступен, используем локальные данные');
-                        updateConnectionStatus(false);
-                    }
+                    });
                 }
-
-                // Используем локальные данные
-                loadLocalData();
-
-            } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
-                loadLocalData();
+                
+                showNotification('✅ Весь кеш очищен. Страница будет перезагружена.', 'success', 3000);
+                
+                setTimeout(() => {
+                    window.location.href = window.location.pathname + '?nocache=' + Date.now();
+                }, 1000);
             }
         }
-
-        function loadLocalData() {
-            // Локальные данные
-            const localStats = {
-                total_users: 3,
-                status: 'Локальный'
-            };
-
-            updateStats(localStats);
-            loadLocalUsers();
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Инициализация приложения...');
+            
+            // Подключаем WebSocket
+            connectWebSocket();
+            
+            // Обновляем кнопки админа
+            updateAdminButtons();
+            
+            // Проверяем изменение режима каждые 5 секунд
+            setInterval(checkForModeChange, 5000);
+            
+            // Загружаем начальные данные
+            loadInitialData();
+            
+            // Создаем графики
+            createCharts();
+        });
+        
+        // Загрузка данных
+        async function loadInitialData() {
+            try {
+                const response = await fetch('/api/stats?_=' + Date.now());
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStats(data);
+                    loadUsers();
+                }
+            } catch (error) {
+                console.log('Не удалось загрузить данные:', error);
+            }
         }
-
+        
         function updateStats(stats) {
-            // Обновляем статистику
             const totalUsersEl = document.getElementById('totalUsers');
             const activeUsersEl = document.getElementById('activeUsers');
             const usersValueEl = document.getElementById('usersValue');
-
-            if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 3;
-            if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 3;
-            if (usersValueEl) usersValueEl.textContent = stats.total_users || 3;
+            const clientsValueEl = document.getElementById('clientsValue');
+            
+            if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
+            if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 0;
+            if (usersValueEl) usersValueEl.textContent = stats.total_users || 0;
+            if (clientsValueEl) clientsValueEl.textContent = stats.clients || 0;
         }
-
-        function loadLocalUsers() {
-            const usersGrid = document.getElementById('usersGrid');
-            if (!usersGrid) return;
-
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-            const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-            const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-
-            // Если локальный режим и не админ - показываем сообщение о блокировке
-            if (isLocalMode && !isAdminActive) {
-                usersGrid.innerHTML = `
-                    <div style="text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1;">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
-                        <h3 style="color: #64748b; margin-bottom: 1rem;">Локальный режим активен</h3>
-                        <p>В данный момент администратор работает в локальном режиме.</p>
-                        <p>Данные временно недоступны для просмотра.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const localUsers = [
-                { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72 * 3600000).toISOString() },
-                { id: 2, name: 'Мария Петрова', email: 'maria@example.com', created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
-                { id: 3, name: 'Иван Сидоров', email: 'ivan@company.ru', created_at: new Date(Date.now() - 24 * 3600000).toISOString() }
-            ];
-
-            displayUsers(localUsers);
-        }
-
-        async function loadUsersFromServer() {
+        
+        async function loadUsers() {
             try {
-                const response = await fetch('http://localhost:8068/api/users');
+                const response = await fetch('/api/users?_=' + Date.now());
                 if (response.ok) {
                     const users = await response.json();
                     displayUsers(users);
                 }
             } catch (error) {
-                console.log('Не удалось загрузить пользователей с сервера');
-                loadLocalUsers();
+                console.log('Не удалось загрузить пользователей:', error);
+                // Показываем локальных пользователей
+                const localUsers = [
+                    { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72 * 3600000).toISOString() },
+                    { id: 2, name: 'Мария Петрова', email: 'maria@example.com', created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
+                    { id: 3, name: 'Иван Сидоров', email: 'ivan@company.ru', created_at: new Date(Date.now() - 24 * 3600000).toISOString() }
+                ];
+                displayUsers(localUsers);
             }
         }
-
+        
         function displayUsers(users) {
             const usersGrid = document.getElementById('usersGrid');
             if (!usersGrid) return;
-
+            
             usersGrid.innerHTML = '';
-
+            
+            if (users.length === 0) {
+                usersGrid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+                        <h3 style="color: #64748b; margin-bottom: 1rem;">Нет пользователей</h3>
+                        <p>База данных пуста.</p>
+                    </div>
+                `;
+                return;
+            }
+            
             users.forEach(user => {
                 const userCard = document.createElement('div');
                 userCard.className = 'user-card';
-
+                
                 const createdDate = new Date(user.created_at);
                 const formattedDate = createdDate.toLocaleDateString('ru-RU');
-
+                
                 userCard.innerHTML = `
                     <div style="width: 50px; height: 50px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
                         ${user.name.charAt(0)}
@@ -1172,11 +1316,11 @@
                         <div style="color: #94a3b8; font-size: 0.8rem;">Зарегистрирован: ${formattedDate}</div>
                     </div>
                 `;
-
+                
                 usersGrid.appendChild(userCard);
             });
         }
-
+        
         // Создание графиков
         function createCharts() {
             // График активности
@@ -1227,7 +1371,7 @@
                     }
                 });
             }
-
+            
             // График распределения
             const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
             if (distributionCtx) {
@@ -1262,19 +1406,6 @@
                 });
             }
         }
-
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function () {
-            createStars();
-            loadData();
-            createCharts();
-
-            // Обновляем кнопку режима
-            updateModeButtons();
-
-            // Периодическое обновление данных
-            setInterval(loadData, 30000);
-        });
     </script>
 </body>
 

@@ -4,10 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+     <!-- Anti-cache мета-теги -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="<?php echo date('D, d M Y H:i:s') . ' GMT'; ?>">
+
     <title>UserManager - Современный CRM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Добавляем версию к стилям и скриптам -->
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
+    <script src="script.js?v=<?php echo time(); ?>" defer></script>
+
     <style>
+
         /* Темно-синий градиентный фон с космосом */
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -1059,6 +1072,57 @@
             setInterval(loadData, 30000);
         });
     </script>
+
+    <script>
+    // Регистрация Service Worker для контроля кеширования
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    
+                    // Проверяем обновления каждые 5 минут
+                    setInterval(() => {
+                        registration.update();
+                    }, 5 * 60 * 1000);
+                    
+                    // Принудительное обновление при клике
+                    document.addEventListener('click', function(e) {
+                        if (e.target.id === 'forceRefresh') {
+                            registration.update().then(() => {
+                                alert('Кеш обновлен. Страница перезагрузится.');
+                                window.location.reload(true);
+                            });
+                        }
+                    });
+                })
+                .catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    }
+    
+    // Кнопка принудительного обновления (только для админа)
+    function addForceRefreshButton() {
+        const adminBtn = document.getElementById('adminModeToggle');
+        if (adminBtn && isAdmin) {
+            const refreshBtn = document.createElement('a');
+            refreshBtn.href = '#';
+            refreshBtn.className = 'nav-item';
+            refreshBtn.id = 'forceRefresh';
+            refreshBtn.innerHTML = `
+                <i class="fas fa-sync-alt"></i>
+                <span>Обновить кеш</span>
+            `;
+            refreshBtn.style.background = 'linear-gradient(45deg, #10b981, #059669)';
+            adminBtn.parentNode.insertBefore(refreshBtn, adminBtn.nextSibling);
+        }
+    }
+    
+    // Добавляем кнопку после загрузки
+    document.addEventListener('DOMContentLoaded', addForceRefreshButton);
+</script>
+
 </body>
 
 </html>

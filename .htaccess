@@ -1,0 +1,27 @@
+# .htaccess для отключения кеширования
+<IfModule mod_headers.c>
+    # Отключаем кеширование для HTML, CSS, JS файлов
+    <FilesMatch "\.(html|htm|css|js|json)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    
+    # Для GitHub Pages добавляем заголовки
+    Header always set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+    Header always set Pragma "no-cache"
+    Header always set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+</IfModule>
+
+# Включаем gzip сжатие для производительности
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Настройки для GitHub Pages
+RewriteEngine On
+
+# Если файл не существует, пробуем добавить .html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ $1.html [L,QSA]

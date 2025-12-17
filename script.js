@@ -3,10 +3,50 @@
 // Работает с Go API или локально
 // ============================================
 
+// Принудительное обновление кеша при загрузке
+(function() {
+    // Проверяем версию в localStorage
+    const CURRENT_VERSION = '2.0.1';
+    const savedVersion = localStorage.getItem('usermanager_version');
+    
+    if (savedVersion !== CURRENT_VERSION) {
+        console.log('🔄 Обновление версии с', savedVersion, 'на', CURRENT_VERSION);
+        
+        // Очищаем localStorage для обновления
+        localStorage.removeItem('usermanager_local_data');
+        localStorage.removeItem('usermanager_use_real_api');
+        
+        // Сохраняем новую версию
+        localStorage.setItem('usermanager_version', CURRENT_VERSION);
+        
+        // Принудительно перезагружаем страницу один раз
+        if (!sessionStorage.getItem('already_reloaded')) {
+            sessionStorage.setItem('already_reloaded', 'true');
+            console.log('🔄 Принудительная перезагрузка для обновления');
+            setTimeout(() => {
+                window.location.reload(true); // true = игнорировать кеш
+            }, 100);
+        }
+    }
+    
+    // Добавляем параметр для игнорирования кеша при загрузке API
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        // Добавляем timestamp для GET запросов к API
+        if (url && typeof url === 'string' && url.includes('/api/')) {
+            const separator = url.includes('?') ? '&' : '?';
+            url = url + separator + '_=' + Date.now();
+        }
+        return originalFetch.call(this, url, options);
+    };
+})();
+
 const CONFIG = {
     USE_REAL_API: false,
     API_URL: 'http://localhost:8068/api',
-    STORAGE_KEY: 'usermanager_local_data'
+    STORAGE_KEY: 'usermanager_local_data',
+    VERSION: '2.0.1',
+    LAST_UPDATE: '<?php echo date("Y-m-d H:i:s"); ?>'
 };
 
 // ================== СИСТЕМА до АДМИНИСТРАТОРА ==================

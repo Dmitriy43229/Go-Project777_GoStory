@@ -28,14 +28,25 @@ type InMemoryDB struct {
 
 var db *InMemoryDB
 
-// Глобальная переменная режима работы
-var serverMode = "server" // "server" или "local"
-var modeMutex sync.RWMutex
-
-// Структура для клиентских подключений (для мгновенного обновления)
+// Глобальные переменные для управления режимом и клиентами
 var (
-	clients      = make(map[chan string]bool)
-	clientsMutex sync.RWMutex
+	serverMode    = "server" // "server" или "local"
+	modeMutex     sync.RWMutex
+	clients       = make(map[chan string]bool)
+	clientsMutex  sync.RWMutex
+	lastModeChange time.Time
+)
+
+// ClientInfo хранит информацию о подключенных клиентах
+type ClientInfo struct {
+	LastSeen time.Time
+	IP       string
+	IsAdmin  bool
+}
+
+var (
+	connectedClients = make(map[string]*ClientInfo)
+	clientsInfoMutex sync.RWMutex
 )
 
 func init() {
@@ -48,26 +59,57 @@ func init() {
 	db.users[1] = User{ID: 1, Name: "Алексей Иванов", Email: "alex@example.com", CreatedAt: now.Add(-72 * time.Hour)}
 	db.users[2] = User{ID: 2, Name: "Мария Петрова", Email: "maria@example.com", CreatedAt: now.Add(-48 * time.Hour)}
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
+	
+	lastModeChange = time.Now()
 }
 
 // Функция отправки обновления всем клиентам
-func broadcastModeChange(newMode string) {
+func broadcastToAllClients(eventType, data string) {
 	clientsMutex.RLock()
 	defer clientsMutex.RUnlock()
 	
-	message := fmt.Sprintf(`{"event": "mode_changed", "mode": "%s", "timestamp": %d}`, 
-		newMode, time.Now().Unix())
+	message := fmt.Sprintf(`{"event": "%s", "data": %s, "timestamp": %d}`, 
+		eventType, data, time.Now().Unix())
 	
+	activeClients := 0
 	for clientChan := range clients {
 		select {
 		case clientChan <- message:
-			// Сообщение отправлено
+			activeClients++
 		default:
-			// Канал заблокирован, пропускаем
+			// Канал заблокирован, удаляем его
+			go func(ch chan string) {
+				clientsMutex.Lock()
+				delete(clients, ch)
+				clientsMutex.Unlock()
+			}(clientChan)
 		}
 	}
 	
-	fmt.Printf("📢 Отправлено обновление режима '%s' для %d клиентов\n", newMode, len(clients))
+	fmt.Printf("📢 Отправлено '%s' для %d активных клиентов\n", eventType, activeClients)
+}
+
+// Отправка сообщения конкретному событию
+func broadcastModeChange(newMode string) {
+	data := fmt.Sprintf(`{"mode": "%s", "force_reload": true}`, newMode)
+	broadcastToAllClients("mode_changed", data)
+	
+	// Также отправляем команду на принудительную перезагрузку
+	reloadCommand := `{"command": "force_reload", "reason": "mode_changed"}`
+	broadcastToAllClients("system_command", reloadCommand)
+}
+
+// Проверка и очистка старых клиентов
+func cleanupOldClients() {
+	clientsInfoMutex.Lock()
+	defer clientsInfoMutex.Unlock()
+	
+	now := time.Now()
+	for ip, info := range connectedClients {
+		if now.Sub(info.LastSeen) > 5*time.Minute {
+			delete(connectedClients, ip)
+		}
+	}
 }
 
 // CORS middleware
@@ -75,7 +117,7 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token, X-Client-ID")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -97,7 +139,8 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || 
 		   r.URL.Path == "/api/stats" || r.URL.Path == "/" ||
 		   r.URL.Path == "/api/status" || r.URL.Path == "/api/info" ||
-		   r.URL.Path == "/api/events" {
+		   r.URL.Path == "/api/events" || r.URL.Path == "/api/force-reload" ||
+		   strings.HasPrefix(r.URL.Path, "/api/cleanup") {
 			next(w, r)
 			return
 		}
@@ -196,21 +239,38 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
             <strong>Примечание для администратора:</strong><br>
             Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
         </div>
-        <button class="refresh-btn" onclick="location.reload()">
-            🔄 Обновить страницу
+        <button class="refresh-btn" onclick="forceReload()">
+            🔄 Проверить обновление
         </button>
         <div class="status">
             UserManager Pro • Локальный режим активен • Время: %s
         </div>
     </div>
     <script>
+        function forceReload() {
+            fetch('/api/force-reload')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.reload) {
+                        console.log('Принудительная перезагрузка...');
+                        location.reload(true);
+                    }
+                });
+        }
+        
         // Автоматическая проверка каждые 2 секунды
         const eventSource = new EventSource('/api/events');
         eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.event === 'mode_changed' && data.mode === 'server') {
+            console.log('Получено событие:', data);
+            
+            if (data.event === 'mode_changed' && data.data.mode === 'server') {
                 console.log('Режим изменился на серверный, перезагружаем...');
-                location.reload();
+                location.reload(true);
+            }
+            if (data.event === 'system_command' && data.data.command === 'force_reload') {
+                console.log('Получена команда на перезагрузку...');
+                location.reload(true);
             }
         };
         
@@ -220,8 +280,12 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
                 .then(response => response.json())
                 .then(data => {
                     if (data.mode === 'server') {
-                        location.reload();
+                        console.log('Обнаружен серверный режим, перезагружаем...');
+                        location.reload(true);
                     }
+                })
+                .catch(() => {
+                    console.log('Проверка статуса...');
                 });
         }, 3000);
     </script>
@@ -478,7 +542,7 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
         const eventSource = new EventSource('/api/events');
         eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.event === 'mode_changed' && data.mode === 'server') {
+            if (data.event === 'mode_changed' && data.data.mode === 'server') {
                 console.log('Режим изменился на серверный, перезагружаем...');
                 location.reload();
             }
@@ -650,6 +714,7 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"GET /api/mode":            "Get current mode",
 			"GET /api/status":          "Check status and mode",
 			"GET /api/events":          "Server-Sent Events для обновлений",
+			"GET /api/force-reload":    "Force client reload",
 		},
 		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
 	}
@@ -661,6 +726,7 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 			info["endpoints"] = map[string]string{
 				"GET /api/status": "Check system status",
 				"GET /api/events": "Get real-time updates",
+				"GET /api/force-reload": "Force reload",
 			}
 		}
 	}
@@ -687,6 +753,7 @@ func apiStatusHandler(w http.ResponseWriter, r *http.Request) {
 		"is_admin":  isAdmin,
 		"timestamp": time.Now().Unix(),
 		"status":    "ok",
+		"clients":   len(clients),
 	}
 	
 	// Если режим локальный и не админ - сообщаем о блокировке
@@ -714,14 +781,24 @@ func apiEventsHandler(w http.ResponseWriter, r *http.Request) {
 	clients[messageChan] = true
 	clientsMutex.Unlock()
 	
-	fmt.Printf("📡 Новый клиент подключен. Всего клиентов: %d\n", len(clients))
+	// Регистрируем клиента в системе мониторинга
+	clientIP := strings.Split(r.RemoteAddr, ":")[0]
+	clientsInfoMutex.Lock()
+	connectedClients[clientIP] = &ClientInfo{
+		LastSeen: time.Now(),
+		IP:       clientIP,
+		IsAdmin:  checkAdminAccess(r),
+	}
+	clientsInfoMutex.Unlock()
+	
+	fmt.Printf("📡 Новый клиент подключен. IP: %s. Всего клиентов: %d\n", clientIP, len(clients))
 	
 	// Отправляем текущий режим сразу при подключении
 	modeMutex.RLock()
 	currentMode := serverMode
 	modeMutex.RUnlock()
 	
-	initialMessage := fmt.Sprintf(`{"event": "connected", "mode": "%s", "timestamp": %d}`, 
+	initialMessage := fmt.Sprintf(`{"event": "connected", "data": {"mode": "%s", "timestamp": %d}}`, 
 		currentMode, time.Now().Unix())
 	fmt.Fprintf(w, "data: %s\n\n", initialMessage)
 	
@@ -734,6 +811,9 @@ func apiEventsHandler(w http.ResponseWriter, r *http.Request) {
 	notify := w.(http.CloseNotifier).CloseNotify()
 	
 	// Бесконечный цикл для отправки сообщений
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
 	for {
 		select {
 		case <-notify:
@@ -742,7 +822,7 @@ func apiEventsHandler(w http.ResponseWriter, r *http.Request) {
 			delete(clients, messageChan)
 			clientsMutex.Unlock()
 			close(messageChan)
-			fmt.Printf("📡 Клиент отключился. Осталось клиентов: %d\n", len(clients))
+			fmt.Printf("📡 Клиент отключился. IP: %s. Осталось клиентов: %d\n", clientIP, len(clients))
 			return
 			
 		case msg := <-messageChan:
@@ -752,13 +832,20 @@ func apiEventsHandler(w http.ResponseWriter, r *http.Request) {
 				f.Flush()
 			}
 			
-		case <-time.After(30 * time.Second):
+		case <-ticker.C:
 			// Отправляем ping каждые 30 секунд чтобы соединение не разрывалось
-			pingMsg := fmt.Sprintf(`{"event": "ping", "timestamp": %d}`, time.Now().Unix())
+			pingMsg := fmt.Sprintf(`{"event": "ping", "data": {"timestamp": %d}}`, time.Now().Unix())
 			fmt.Fprintf(w, "data: %s\n\n", pingMsg)
 			if f, ok := w.(http.Flusher); ok {
 				f.Flush()
 			}
+			
+			// Обновляем время последней активности
+			clientsInfoMutex.Lock()
+			if info, exists := connectedClients[clientIP]; exists {
+				info.LastSeen = time.Now()
+			}
+			clientsInfoMutex.Unlock()
 		}
 	}
 }
@@ -792,10 +879,14 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	modeMutex.Lock()
 	oldMode := serverMode
 	serverMode = newMode
+	lastModeChange = time.Now()
 	modeMutex.Unlock()
 	
 	// Отправляем обновление ВСЕМ подключенным клиентам
 	broadcastModeChange(newMode)
+	
+	// Принудительно очищаем кеш для всех клиентов
+	broadcastToAllClients("clear_cache", `{"reason": "mode_changed"}`)
 	
 	// Логируем изменение
 	fmt.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!\n")
@@ -803,7 +894,7 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("   Новый режим: %s\n", newMode)
 	fmt.Printf("   Время: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	fmt.Printf("   IP админ: %s\n", r.RemoteAddr)
-	fmt.Printf("   Уведомлено клиентов: %d\n", len(clients))
+	fmt.Printf("   Активных клиентов: %d\n", len(clients))
 	
 	if newMode == "local" {
 		fmt.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!\n")
@@ -812,11 +903,11 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("   ✅ Теперь все пользователи видят общие данные\n")
 	}
 	
-	response := map[string]string{
+	response := map[string]interface{}{
 		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
 		"mode":    newMode,
 		"time":    time.Now().Format("2006-01-02 15:04:05"),
-		"clients": fmt.Sprintf("%d", len(clients)),
+		"clients": len(clients),
 		"warning": "",
 	}
 	
@@ -837,10 +928,61 @@ func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
 	
 	modeMutex.RLock()
 	currentMode := serverMode
+	lastChange := lastModeChange
 	modeMutex.RUnlock()
 	
-	sendJSON(w, http.StatusOK, map[string]string{
+	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"mode": currentMode,
+		"last_change": lastChange.Format(time.RFC3339),
+		"clients": len(clients),
+	})
+}
+
+// Новый обработчик для принудительной перезагрузки клиентов
+func apiForceReloadHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
+	// Проверяем, нужно ли перезагружаться
+	reloadNeeded := false
+	if currentMode == "local" {
+		if !checkAdminAccess(r) {
+			reloadNeeded = true
+		}
+	}
+	
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"reload": reloadNeeded,
+		"mode": currentMode,
+		"timestamp": time.Now().Unix(),
+	})
+}
+
+// Обработчик для очистки клиентов
+func apiCleanupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	if !checkAdminAccess(r) {
+		sendError(w, http.StatusUnauthorized, "Admin access required")
+		return
+	}
+	
+	// Очищаем старых клиентов
+	cleanupOldClients()
+	
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Cleanup completed",
+		"clients_before": len(connectedClients),
+		"timestamp": time.Now().Unix(),
 	})
 }
 
@@ -854,6 +996,8 @@ func main() {
 	http.HandleFunc("/api/mode", enableCORS(apiGetModeHandler))
 	http.HandleFunc("/api/status", enableCORS(apiStatusHandler))
 	http.HandleFunc("/api/events", enableCORS(apiEventsHandler))
+	http.HandleFunc("/api/force-reload", enableCORS(apiForceReloadHandler))
+	http.HandleFunc("/api/cleanup", enableCORS(apiCleanupHandler))
 	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
@@ -865,18 +1009,23 @@ func main() {
 	fmt.Println("   GET  /api/mode       - Получить текущий режим")
 	fmt.Println("   GET  /api/status     - Проверить статус и доступ")
 	fmt.Println("   GET  /api/events     - Server-Sent Events для мгновенных обновлений")
+	fmt.Println("   GET  /api/force-reload - Принудительная перезагрузка клиента")
+	fmt.Println("   GET  /api/cleanup    - Очистить старых клиентов (админ)")
 	fmt.Println("\n🔒 Локальный режим:")
 	fmt.Println("   - Обычные пользователи немедленно получают 404 ошибку")
 	fmt.Println("   - Белый экран с сообщением для не-админов")
 	fmt.Println("   - Мгновенное обновление через SSE для всех клиентов")
+	fmt.Println("   - Принудительная перезагрузка всех клиентов при смене режима")
 	fmt.Println("   - Админский токен: admin_local_token_123")
 	fmt.Println("   - Админский пароль: admin123 (в заголовках)")
 	fmt.Println("\n⚡ Мгновенное обновление:")
 	fmt.Println("   - Все клиенты получают уведомление при смене режима")
 	fmt.Println("   - Автоматическая перезагрузка страниц")
 	fmt.Println("   - Режим меняется у всех пользователей одновременно")
+	fmt.Println("   - Принудительная очистка кеша клиентов")
 	fmt.Println("\n⚠️  ВАЖНО: При включении локального режима все обычные пользователи")
 	fmt.Println("          сразу увидят белую страницу 404!")
+	fmt.Println("          Клиенты автоматически перезагрузятся при смене режима!")
 	fmt.Println("\n🌐 API Endpoints:")
 	fmt.Println("   GET  /api/users      - Все пользователи")
 	fmt.Println("   POST /api/users      - Создать пользователя")
@@ -887,8 +1036,17 @@ func main() {
 	fmt.Println("   GET  /api/info       - Информация об API")
 	fmt.Println("   GET  /api/status     - Проверить статус системы")
 	fmt.Println("   GET  /api/events     - Получить мгновенные обновления")
+	fmt.Println("   GET  /api/force-reload - Принудительная перезагрузка")
 	fmt.Println("\n🔗 Frontend доступен по адресу:")
 	fmt.Println("   https://dmitriy43229.github.io/Go-Project777_GoStory/")
+
+	// Запускаем периодическую очистку
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for range ticker.C {
+			cleanupOldClients()
+		}
+	}()
 
 	log.Fatal(http.ListenAndServe(port, nil))
 }

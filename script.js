@@ -6,7 +6,7 @@
 // Принудительное обновление кеша при загрузке
 (function () {
     // Проверяем версию в localStorage
-    const CURRENT_VERSION = '2.0.8';
+    const CURRENT_VERSION = '2.1.0';
     const savedVersion = localStorage.getItem('usermanager_version');
 
     if (savedVersion !== CURRENT_VERSION) {
@@ -15,6 +15,8 @@
         // Очищаем localStorage для обновления
         localStorage.removeItem('usermanager_local_data');
         localStorage.removeItem('usermanager_use_real_api');
+        localStorage.removeItem('usermanager_last_mode_check');
+        localStorage.removeItem('usermanager_server_mode');
 
         // Сохраняем новую версию
         localStorage.setItem('usermanager_version', CURRENT_VERSION);
@@ -45,7 +47,7 @@ const CONFIG = {
     USE_REAL_API: true, // По умолчанию серверный режим
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data',
-    VERSION: '2.0.8',
+    VERSION: '2.1.0',
     LAST_UPDATE: new Date().toISOString()
 };
 
@@ -60,7 +62,10 @@ let currentServerMode = "server"; // Храним текущий режим се
 let isBlocked = false;
 let eventSource = null;
 let blockCheckerInterval = null;
-const BLOCK_CHECK_INTERVAL = 3000; // Проверять каждые 3 секунды
+const BLOCK_CHECK_INTERVAL = 2000; // Проверять каждые 2 секунды
+
+// Флаг для предотвращения множественных перезагрузок
+let isReloading = false;
 
 // Функция получения режима с сервера
 async function getServerMode() {
@@ -68,6 +73,11 @@ async function getServerMode() {
         const response = await fetch(`${CONFIG.API_URL}/mode?_=${Date.now()}`);
         if (response.ok) {
             const data = await response.json();
+            
+            // Сохраняем режим сервера в localStorage для сравнения
+            localStorage.setItem('usermanager_server_mode', data.mode);
+            localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
+            
             return data.mode;
         }
     } catch (error) {
@@ -81,12 +91,60 @@ async function getServerStatus() {
     try {
         const response = await fetch(`${CONFIG.API_URL}/status?_=${Date.now()}`);
         if (response.ok) {
-            return await response.json();
+            const data = await response.json();
+            
+            // Сохраняем режим сервера
+            localStorage.setItem('usermanager_server_mode', data.mode);
+            localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
+            
+            return data;
         }
     } catch (error) {
         console.log('Не удалось получить статус сервера:', error);
     }
     return { mode: 'server', is_admin: false };
+}
+
+// Проверяем, изменился ли режим на сервере
+function checkForModeChange() {
+    const savedServerMode = localStorage.getItem('usermanager_server_mode');
+    const lastCheck = localStorage.getItem('usermanager_last_mode_check');
+    
+    // Если прошло больше 30 секунд с последней проверки, или режим отличается
+    if (!lastCheck || Date.now() - parseInt(lastCheck) > 30000 || 
+        (savedServerMode && savedServerMode !== currentServerMode)) {
+        
+        console.log('🔄 Проверка изменения режима сервера...');
+        getServerMode().then(mode => {
+            if (mode && mode !== currentServerMode) {
+                console.log(`🎯 Режим изменился на сервере: ${currentServerMode} -> ${mode}`);
+                currentServerMode = mode;
+                
+                // Принудительно обновляем настройки
+                if (mode === 'local') {
+                    if (isAdmin) {
+                        CONFIG.USE_REAL_API = false;
+                        localStorage.setItem('usermanager_use_real_api', 'false');
+                    } else {
+                        // Если не админ в локальном режиме - блокируем
+                        showBlockPage();
+                    }
+                } else {
+                    CONFIG.USE_REAL_API = true;
+                    localStorage.setItem('usermanager_use_real_api', 'true');
+                    
+                    // Если был заблокирован - разблокируем
+                    if (isBlocked) {
+                        console.log('✅ Разблокировка: серверный режим восстановлен');
+                        location.reload(true);
+                    }
+                }
+                
+                // Обновляем интерфейс
+                updateInterface();
+            }
+        });
+    }
 }
 
 // Подключение к Server-Sent Events для мгновенных обновлений
@@ -108,29 +166,68 @@ function connectToEvents() {
                 console.log('📨 Получено событие:', data);
                 
                 if (data.event === 'mode_changed') {
-                    console.log(`🔄 Режим изменился на: ${data.mode}`);
-                    currentServerMode = data.mode;
+                    console.log(`🔄 Режим изменился на: ${data.data.mode}`);
+                    currentServerMode = data.data.mode;
+                    
+                    // Обновляем локальные настройки
+                    localStorage.setItem('usermanager_server_mode', data.data.mode);
+                    localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
                     
                     // Если режим изменился на серверный и мы были заблокированы
-                    if (data.mode === 'server' && isBlocked) {
+                    if (data.data.mode === 'server' && isBlocked) {
                         console.log('✅ Разблокировка: включен серверный режим');
-                        location.reload(true);
+                        if (!isReloading) {
+                            isReloading = true;
+                            setTimeout(() => {
+                                location.reload(true);
+                            }, 1000);
+                        }
+                    }
+                    
+                    // Если режим изменился на локальный и мы не админ
+                    if (data.data.mode === 'local' && !isAdmin) {
+                        console.log('🚫 Блокировка: включен локальный режим');
+                        showBlockPage();
                     }
                     
                     // Обновляем интерфейс
                     updateInterface();
                     
-                    // Обновляем данные
-                    if (!isBlocked) {
+                    // Принудительно обновляем данные
+                    if (data.data.force_reload && !isBlocked) {
+                        console.log('⚡ Принудительное обновление данных');
                         loadInitialData();
                     }
+                    
                 } else if (data.event === 'connected') {
-                    console.log('✅ Подключение установлено, текущий режим:', data.mode);
-                    currentServerMode = data.mode;
+                    console.log('✅ Подключение установлено, текущий режим:', data.data.mode);
+                    currentServerMode = data.data.mode;
+                    localStorage.setItem('usermanager_server_mode', data.data.mode);
                     updateInterface();
+                    
                 } else if (data.event === 'ping') {
                     console.log('🏓 Ping от сервера');
+                    
+                } else if (data.event === 'system_command') {
+                    console.log('⚡ Получена системная команда:', data.data.command);
+                    
+                    if (data.data.command === 'force_reload') {
+                        console.log('🔄 Получена команда на принудительную перезагрузку');
+                        if (!isReloading) {
+                            isReloading = true;
+                            setTimeout(() => {
+                                location.reload(true);
+                            }, 1000);
+                        }
+                    }
+                    
+                } else if (data.event === 'clear_cache') {
+                    console.log('🧹 Получена команда на очистку кеша');
+                    // Очищаем некоторые данные
+                    localStorage.removeItem('usermanager_local_data');
+                    sessionStorage.removeItem('already_reloaded');
                 }
+                
             } catch (error) {
                 console.log('Ошибка обработки события:', error);
             }
@@ -157,6 +254,7 @@ async function checkBlockStatus() {
         console.log('📡 Статус сервера:', status);
         
         // Сохраняем текущий режим сервера
+        const oldMode = currentServerMode;
         currentServerMode = status.mode;
         
         // Если режим серверный - НИКОГДА не блокируем
@@ -166,8 +264,18 @@ async function checkBlockStatus() {
                 // Если был заблокирован, но теперь серверный режим - разблокируем
                 console.log('✅ Разблокировка: включен серверный режим');
                 isBlocked = false;
-                location.reload(true);
+                if (!isReloading) {
+                    isReloading = true;
+                    setTimeout(() => {
+                        location.reload(true);
+                    }, 1000);
+                }
             }
+            
+            // Обновляем локальные настройки
+            CONFIG.USE_REAL_API = true;
+            localStorage.setItem('usermanager_use_real_api', 'true');
+            
             return false;
         }
         
@@ -186,6 +294,11 @@ async function checkBlockStatus() {
                     isBlocked = false;
                     location.reload(true);
                 }
+                
+                // Обновляем локальные настройки
+                CONFIG.USE_REAL_API = false;
+                localStorage.setItem('usermanager_use_real_api', 'false');
+                
                 return false;
             }
             
@@ -242,7 +355,7 @@ function showBlockPage() {
                 <strong>Примечание для администратора:</strong><br>
                 Для возврата в серверный режим нажмите кнопку "Режим: Локальный" на главной странице.
             </div>
-            <button onclick="location.reload(true)" style="
+            <button onclick="forceReloadCheck()" style="
                 margin-top: 2rem;
                 padding: 0.75rem 1.5rem;
                 background: #3b82f6;
@@ -253,7 +366,7 @@ function showBlockPage() {
                 font-size: 1rem;
                 transition: background 0.3s;
             ">
-                🔄 Обновить страницу
+                🔄 Проверить обновление
             </button>
             <div style="font-size: 1rem; color: #9ca3af; margin-top: 2rem; 
                        padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
@@ -261,12 +374,35 @@ function showBlockPage() {
             </div>
         </div>
         <script>
+            // Глобальная функция для проверки обновлений
+            function forceReloadCheck() {
+                fetch('${CONFIG.API_URL}/force-reload?_=' + Date.now())
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.reload) {
+                            console.log('Принудительная перезагрузка...');
+                            location.reload(true);
+                        } else {
+                            alert('Режим все еще локальный. Попробуйте позже.');
+                        }
+                    })
+                    .catch(() => {
+                        alert('Не удалось проверить статус сервера.');
+                    });
+            }
+            
             // Подключаемся к серверу событий для мгновенных обновлений
             const eventSource = new EventSource('${CONFIG.API_URL}/events');
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                if (data.event === 'mode_changed' && data.mode === 'server') {
+                console.log('Получено событие:', data);
+                
+                if (data.event === 'mode_changed' && data.data.mode === 'server') {
                     console.log('✅ Режим изменился на серверный, перезагружаем...');
+                    location.reload(true);
+                }
+                if (data.event === 'system_command' && data.data.command === 'force_reload') {
+                    console.log('🔄 Получена команда на принудительную перезагрузку...');
                     location.reload(true);
                 }
             };
@@ -282,6 +418,11 @@ function showBlockPage() {
                         }
                     });
             }, 3000);
+            
+            // Проверяем каждые 10 секунды через force-reload
+            setInterval(() => {
+                forceReloadCheck();
+            }, 10000);
         </script>
     `;
 
@@ -500,9 +641,12 @@ function startBlockChecker() {
         clearInterval(blockCheckerInterval);
     }
     
-    // Проверяем каждые 3 секунды
+    // Проверяем каждые 2 секунды
     blockCheckerInterval = setInterval(async () => {
         await checkBlockStatus();
+        
+        // Также проверяем изменение режима
+        checkForModeChange();
     }, BLOCK_CHECK_INTERVAL);
 }
 

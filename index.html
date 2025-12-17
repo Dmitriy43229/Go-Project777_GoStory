@@ -8,55 +8,43 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* --- Глобальные переменные для темизации --- */
-        :root {
-            --bg-primary: #0a192f;
-            --bg-secondary: #112240;
-            --accent-blue: #3b82f6;
-            --accent-blue-dark: #1d4ed8;
-            --accent-green: #4ade80;
-            --text-primary: #e2e8f0;
-            --text-secondary: #bbdefb;
-            --border-light: rgba(255, 255, 255, 0.1);
-            --shadow-primary: rgba(59, 130, 246, 0.3);
-            --card-bg: rgba(255, 255, 255, 0.07);
-            --card-hover-bg: rgba(255, 255, 255, 0.1);
-            --transition: all 0.3s ease;
-            --transition-bg: background 0.5s ease, color 0.5s ease;
-        }
-
-        .light-theme {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #f1f5f9;
-            --accent-green: #059669;
-            --text-primary: #334155;
-            --text-secondary: #64748b;
-            --border-light: rgba(0, 0, 0, 0.1);
-            --shadow-primary: rgba(0, 0, 0, 0.15);
-            --card-bg: rgba(255, 255, 255, 0.9);
-            --card-hover-bg: rgba(255, 255, 255, 0.95);
-        }
-
+        /* Темно-синий градиентный фон с космосом */
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary), var(--bg-primary));
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg,
+                    #0a192f 0%,
+                    #112240 25%,
+                    #1a365d 50%,
+                    #2d3748 75%,
+                    #0a192f 100%);
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
-            color: var(--text-primary);
+            color: #e2e8f0;
             line-height: 1.6;
             min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
             margin: 0;
             padding: 0;
-            transition: var(--transition-bg);
+            transition: background 0.5s ease, color 0.5s ease;
         }
 
         @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
-        .stars, .star {
+        /* Звездное небо */
+        .stars {
             position: fixed;
             top: 0;
             left: 0;
@@ -65,37 +53,66 @@
             pointer-events: none;
             z-index: 0;
         }
+
         .star {
+            position: absolute;
             background: white;
             border-radius: 50%;
-            animation: twinkle calc(var(--duration) * 1s) infinite var(--delay);
-        }
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.2; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.1); }
+            animation: twinkle var(--duration) infinite var(--delay);
         }
 
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.2;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        /* Планета */
         .planet {
             position: fixed;
             width: 300px;
             height: 300px;
             border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, var(--accent-blue), var(--accent-blue-dark));
-            box-shadow: inset -20px -20px 40px rgba(0,0,0,0.5), 0 0 80px var(--shadow-primary);
+            background: radial-gradient(circle at 30% 30%,
+                    #3b82f6 0%,
+                    #1d4ed8 30%,
+                    #0c4a6e 70%);
+            box-shadow:
+                inset -20px -20px 40px rgba(0, 0, 0, 0.5),
+                inset 10px 10px 40px rgba(255, 255, 255, 0.1),
+                0 0 80px rgba(59, 130, 246, 0.3);
             top: 10%;
             right: 5%;
             z-index: 0;
             opacity: 0.7;
             animation: float 20s infinite ease-in-out;
         }
-        .light-theme .planet { opacity: 0.3; }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(120deg); }
-            66% { transform: translateY(20px) rotate(240deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            33% {
+                transform: translateY(-20px) rotate(120deg);
+            }
+
+            66% {
+                transform: translateY(20px) rotate(240deg);
+            }
         }
 
+        /* Контент поверх фона */
         .container {
             position: relative;
             z-index: 1;
@@ -104,80 +121,68 @@
             padding: 0 20px;
         }
 
-        .main-title-container, .stat-card, .feature-card, .users-section, .chart-card, .mode-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-light);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            transition: var(--transition);
+        /* Центральное выравнивание */
+        .centered-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
         }
 
-        .stat-card:hover, .feature-card:hover, .user-card:hover, .mode-card:hover {
-            transform: translateY(-5px);
-            background: var(--card-hover-bg);
+        /* Главный заголовок */
+        .main-title-container {
+            margin: 3rem 0;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 900px;
+            width: 90%;
+            transition: all 0.5s ease;
         }
 
         .main-title {
-            background: linear-gradient(45deg, #60a5fa, var(--accent-blue), var(--accent-blue-dark));
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6, #1d4ed8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .section-title {
-            background: linear-gradient(45deg, #60a5fa, var(--accent-blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .main-subtitle {
+            font-size: 1.2rem;
+            color: #bbdefb;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
 
-        .feature-title {
-            background: linear-gradient(45deg, var(--text-secondary), #90caf9);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stat-number { color: var(--accent-green); }
-
-        .action-button {
-            background: linear-gradient(45deg, var(--accent-blue), var(--accent-blue-dark));
-            box-shadow: 0 10px 25px var(--shadow-primary);
-            transition: var(--transition);
-        }
-        .action-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px var(--shadow-primary);
-        }
-
-        .search-input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--border-light);
-            color: var(--text-primary);
-        }
-        .search-container::before {
-            color: var(--text-secondary);
-        }
-
-        /* ===== НАВИГАЦИЯ С КНОПКАМИ ДОСТУПА ===== */
+        /* Навигация */
         .nav-menu {
             display: flex;
             justify-content: center;
-            gap: 1.5rem;
+            gap: 2rem;
             margin: 2rem 0;
             flex-wrap: wrap;
-            align-items: center;
         }
 
         .nav-item {
-            color: var(--text-secondary);
+            color: #bbdefb;
             text-decoration: none;
-            padding: 0.8rem 1.2rem;
+            padding: 0.8rem 1.5rem;
             border-radius: 12px;
-            transition: var(--transition);
+            transition: all 0.3s;
             font-weight: 500;
             border: 1px solid transparent;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.95rem;
         }
 
         .nav-item:hover {
@@ -187,64 +192,267 @@
         }
 
         .nav-item.active {
-            background: linear-gradient(45deg, var(--accent-blue), var(--accent-blue-dark));
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
             color: white;
-            box-shadow: 0 5px 15px var(--shadow-primary);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
         }
 
-        /* Кнопка входа */
-        .login-btn {
+        /* Статистика */
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 20px;
+            padding: 2rem;
+            min-width: 200px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #4ade80;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: #bbdefb;
+        }
+
+        /* Карточка режима работы */
+        .mode-card-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            margin-top: -1rem;
+            margin-bottom: 3rem;
+        }
+
+        .mode-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 1.5rem 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .mode-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .mode-status {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            gap: 1rem;
+        }
+
+        .mode-icon {
+            font-size: 2rem;
+        }
+
+        .mode-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .mode-details {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .mode-item {
+            text-align: center;
+        }
+
+        .mode-label {
+            display: block;
+            color: #bbdefb;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .mode-value {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #4ade80;
+        }
+
+        /* Карточки */
+        .feature-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #fff;
+            background: linear-gradient(45deg, #bbdefb, #90caf9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-description {
+            color: #bbdefb;
+            line-height: 1.6;
+        }
+
+        /* Кнопки */
+        .action-button {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .action-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+        }
+
+        .action-button.secondary {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: inherit;
-            font-size: 0.85rem;
-            text-decoration: none;
         }
 
-        .login-btn:hover {
+        .action-button.secondary:hover {
             background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
         }
 
-        .login-btn.admin {
-            background: rgba(245, 158, 11, 0.2);
-            border-color: rgba(245, 158, 11, 0.4);
-            color: #fbbf24;
-            font-weight: 600;
+        /* Секция пользователей */
+        .users-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            padding: 3rem;
+            margin: 3rem auto;
+            max-width: 1200px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
 
-        /* Переключатель режимов */
-        .api-mode-btn {
-            display: none;
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Сетка пользователей */
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .user-card {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(59, 130, 246, 0.2);
-            border: 1px solid rgba(59, 130, 246, 0.4);
+            gap: 1.25rem;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        /* Графики */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(15px);
             border-radius: 20px;
-            color: #93c5fd;
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 0.85rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        .api-mode-btn:hover {
-            background: rgba(59, 130, 246, 0.3);
-            transform: translateY(-2px);
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            text-align: center;
         }
 
-        .api-mode-btn.local {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: rgba(139, 92, 246, 0.4);
-            color: #a78bfa;
+        .chart-wrapper {
+            height: 250px;
+            position: relative;
         }
 
         /* Переключатель темы */
@@ -256,11 +464,11 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 20px;
-            color: var(--text-secondary);
+            color: #bbdefb;
             cursor: pointer;
-            transition: var(--transition);
+            transition: all 0.3s;
+            border: none;
             font-family: inherit;
-            font-size: 0.85rem;
         }
 
         .theme-toggle:hover {
@@ -268,339 +476,277 @@
             transform: translateY(-2px);
         }
 
-        /* ===== СТАТИСТИКА ПОЛЬЗОВАТЕЛЕЙ И УПРАВЛЕНИЕ ГРАФИКОМ ===== */
-        .stats-control-panel {
+        /* Кнопка режима API */
+        .api-mode-btn {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: var(--card-bg);
-            border-radius: 16px;
-            border: 1px solid var(--border-light);
-            flex-wrap: wrap;
-            gap: 1rem;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: #bbdefb;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
         }
 
-        .live-stats {
-            display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
+        .api-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
 
-        .live-stats .stat-item {
+        /* Empty State */
+        .empty-state {
             text-align: center;
+            padding: 3rem;
+            display: none;
         }
 
-        .live-stats .stat-number {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: var(--accent-green);
-            line-height: 1;
-            margin-bottom: 0.25rem;
+        /* Поиск */
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
         }
 
-        .live-stats .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-right: 1rem;
         }
 
-        .chart-controls {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
+        .search-container::before {
+            content: '🔍';
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #bbdefb;
         }
 
-        .last-update {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .chart-footer {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        /* ===== МОДАЛЬНОЕ ОКНО ВХОДА ===== */
-        .login-modal {
+        /* Модальное окно */
+        .modal {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(20px);
-            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
             align-items: center;
             justify-content: center;
-            z-index: 10000;
-            animation: fadeIn 0.3s ease;
+            padding: 1rem;
         }
 
-        .login-modal.active {
+        .modal.active {
             display: flex;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .login-container {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
-            border-radius: 24px;
-            padding: 2.5rem;
-            width: 90%;
-            max-width: 400px;
-            border: 2px solid rgba(96, 165, 250, 0.25);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-            position: relative;
-            animation: slideUp 0.4s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .login-icon {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            display: block;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .login-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(45deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .login-subtitle {
-            color: #94a3b8;
-            font-size: 0.95rem;
-        }
-
-        .password-input {
+        .modal-container {
+            background: rgba(26, 35, 126, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
             width: 100%;
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.07);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s;
-            outline: none;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 2px;
-        }
-
-        .password-input:focus {
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
-        }
-
-        .password-hint {
-            text-align: center;
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-bottom: 1.5rem;
-        }
-
-        .login-actions {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .login-btn-primary, .login-btn-secondary {
-            flex: 1;
-            padding: 0.9rem;
-            border-radius: 12px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .login-btn-primary {
-            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
-            color: white;
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
-        }
-
-        .login-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(59, 130, 246, 0.6);
-        }
-
-        .login-btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #cbd5e1;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .login-btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
+        /* Светлая тема */
+        body.light-theme {
+            background: linear-gradient(135deg,
+                    #f8fafc 0%,
+                    #f1f5f9 25%,
+                    #e2e8f0 50%,
+                    #cbd5e1 75%,
+                    #f8fafc 100%);
+            color: #334155;
         }
 
-        .login-error {
-            color: #f87171;
-            margin-top: 1rem;
-            text-align: center;
-            font-size: 0.9rem;
-            padding: 0.75rem;
-            background: rgba(239, 68, 68, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            display: none;
+        body.light-theme .main-title-container,
+        body.light-theme .stat-card,
+        body.light-theme .feature-card,
+        body.light-theme .users-section,
+        body.light-theme .chart-card,
+        body.light-theme .modal-container,
+        body.light-theme .mode-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        body.light-theme .main-subtitle,
+        body.light-theme .stat-label,
+        body.light-theme .feature-description,
+        body.light-theme .nav-item,
+        body.light-theme .search-container::before,
+        body.light-theme .mode-label {
+            color: #64748b;
         }
 
-        /* Уведомления */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 0.75rem 1.25rem;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            z-index: 10001;
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-            word-break: break-word;
-            color: white;
+        body.light-theme .search-input,
+        body.light-theme .theme-toggle,
+        body.light-theme .api-mode-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #64748b;
         }
 
-        .notification.success { background: #10b981; }
-        .notification.error { background: #ef4444; }
-        .notification.warning { background: #f59e0b; }
-        .notification.info { background: #3b82f6; }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        body.light-theme .nav-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #334155;
         }
 
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
+        body.light-theme .action-button.secondary {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #334155;
         }
 
-        /* Спиннер */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
+        body.light-theme .star {
+            background: rgba(0, 0, 0, 0.1);
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        body.light-theme .planet {
+            opacity: 0.3;
         }
 
+        body.light-theme .mode-value {
+            color: #059669;
+        }
+
+        /* Обновляем стили для кнопок поиска */
+        .users-section > div:first-of-type {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        /* Делаем кнопку "Обновить" вровень с поиском */
+        .users-section .action-button {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        /* Адаптивность */
         @media (max-width: 768px) {
-            .planet { display: none; }
-            .mode-card { flex-direction: column; text-align: center; }
-            .mode-details { flex-direction: column; }
+            .main-title {
+                font-size: 2.5rem;
+            }
+
+            .planet {
+                display: none;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-container {
+                gap: 1.5rem;
+            }
+
+            .stat-card {
+                min-width: 150px;
+                padding: 1.5rem;
+            }
+
+            .mode-card {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .mode-details {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            /* Улучшаем адаптивность для мобильных */
             .users-section > div:first-of-type {
                 flex-direction: column;
                 align-items: stretch;
             }
-            .users-section .action-button { width: 100%; }
             
-            .stats-control-panel {
-                flex-direction: column;
-                text-align: center;
+            .search-container {
+                margin-right: 0;
+                max-width: 100%;
             }
             
-            .live-stats {
-                justify-content: center;
-                gap: 1.5rem;
+            .users-section .action-button {
+                width: 100%;
             }
-            
-            .chart-controls {
-                flex-direction: column;
-                gap: 0.75rem;
+        }
+
+        @media (max-width: 480px) {
+            .main-title {
+                font-size: 2rem;
             }
-            
-            .login-actions {
-                flex-direction: column;
+
+            .main-title-container {
+                padding: 1.5rem;
             }
-            
-            .nav-menu {
-                flex-direction: column;
-                gap: 0.8rem;
+
+            .users-section {
+                padding: 1.5rem;
             }
         }
     </style>
 </head>
 
 <body>
+    <!-- Звездное небо и планета -->
     <div class="stars" id="stars"></div>
     <div class="planet"></div>
 
     <div class="container">
         <!-- Навигация -->
         <div class="nav-menu">
-            <a href="index.html" class="nav-item active">🏠 Главная</a>
-            <a href="about.html" class="nav-item">📖 О проекте</a>
-            <a href="presentation.html" class="nav-item">🎬 Презентация</a>
-            
-            <!-- Кнопка входа -->
-            <button class="login-btn" onclick="showLoginModal()" id="loginButton">
-                <span>🔐</span> <span>Войти</span>
+            <a href="index.html" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                Главная
+            </a>
+            <a href="about.html" class="nav-item">
+                <span class="nav-icon">📖</span>
+                О проекте
+            </a>
+            <a href="presentation.html" class="nav-item">
+                <span class="nav-icon">🎬</span>
+                Презентация
+            </a>
+
+            <!-- Кнопка переключения режима API -->
+            <button class="api-mode-btn" onclick="toggleApiMode()" title="Переключить режим работы" id="apiModeButton">
+                <span id="apiModeIcon">🌐</span>
+                <span id="apiModeText">Локальный</span>
             </button>
-            
-            <!-- Переключатель режимов (только для админа) -->
-            <button class="api-mode-btn" onclick="toggleApiMode()" id="apiModeButton" style="display: none;">
-                <span id="apiModeIcon">🌐</span> <span id="apiModeText">Серверный</span>
-            </button>
-            
+
             <!-- Переключатель темы -->
-            <button class="theme-toggle" id="themeToggle">
-                <span id="themeIcon">🌙</span> <span id="themeText">Темная</span>
+            <button class="theme-toggle" id="themeToggle" title="Сменить тему">
+                <span class="theme-icon" id="themeIcon">🌙</span>
+                <span class="theme-text" id="themeText">Темная тема</span>
             </button>
         </div>
 
-        <!-- Заголовок -->
+        <!-- Главный заголовок -->
         <section class="main-title-container">
-            <div style="font-size: 4rem;">👥</div>
+            <div class="logo-icon" style="font-size: 4rem; margin-bottom: 1rem;">👥</div>
             <h1 class="main-title">UserManager Pro</h1>
             <p class="main-subtitle">
                 Современная система управления пользователями с искусственным интеллектом,
@@ -620,15 +766,15 @@
             </div>
             <div class="stat-card">
                 <div class="stat-number">100%</div>
-                <div class="stat-label">Доступность</div>
+                <div class="stat-label">Доступность системы</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">24/7</div>
-                <div class="stat-label">Работа</div>
+                <div class="stat-label">Работа без перерывов</div>
             </div>
         </section>
 
-        <!-- Режим -->
+        <!-- Карточка режима работы под статистикой -->
         <div class="mode-card-container">
             <div class="mode-card" id="modeCard">
                 <div class="mode-status">
@@ -641,669 +787,758 @@
                         <span class="mode-value" id="serverStatus">🟢 Онлайн</span>
                     </div>
                     <div class="mode-item">
-                        <span class="mode-label">Ответ:</span>
+                        <span class="mode-label">Время ответа:</span>
                         <span class="mode-value" id="realResponseTime">50ms</span>
                     </div>
                     <div class="mode-item">
-                        <span class="mode-label">Обновлено:</span>
-                        <span class="mode-value" id="lastUpdate">21:45</span>
+                        <span class="mode-label">Последнее обновление:</span>
+                        <span class="mode-value" id="lastUpdate">2025.12.15 21:45</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Особенности -->
+        <!-- Ключевые особенности -->
         <section class="centered-container">
-            <h2 class="section-title">✨ Особенности</h2>
+            <h2 class="section-title">✨ Ключевые особенности</h2>
             <div class="feature-card-container">
-                <div class="feature-card"><span class="feature-icon">🚀</span>
-                    <h3 class="feature-title">Скорость</h3>
-                    <p class="feature-description">Мгновенная обработка запросов</p>
+                <div class="feature-card">
+                    <span class="feature-icon">🚀</span>
+                    <h3 class="feature-title">Молниеносная скорость</h3>
+                    <p class="feature-description">
+                        Оптимизированные алгоритмы обеспечивают мгновенную обработку запросов
+                    </p>
                 </div>
-                <div class="feature-card"><span class="feature-icon">🔒</span>
-                    <h3 class="feature-title">Безопасность</h3>
-                    <p class="feature-description">Многоуровневая защита данных</p>
+                <div class="feature-card">
+                    <span class="feature-icon">🔒</span>
+                    <h3 class="feature-title">Максимальная безопасность</h3>
+                    <p class="feature-description">
+                        Многоуровневая система защиты данных и шифрование
+                    </p>
                 </div>
-                <div class="feature-card"><span class="feature-icon">📱</span>
-                    <h3 class="feature-title">Адаптивность</h3>
-                    <p class="feature-description">Поддержка всех устройств</p>
+                <div class="feature-card">
+                    <span class="feature-icon">📱</span>
+                    <h3 class="feature-title">Адаптивный дизайн</h3>
+                    <p class="feature-description">
+                        Идеальное отображение на всех устройствах
+                    </p>
                 </div>
+            </div>
+        </section>
+
+        <!-- Быстрые действия -->
+        <section class="centered-container">
+            <h2 class="section-title">🚀 Быстрые действия</h2>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                <button class="action-button" onclick="openModal()">
+                    <span>➕</span>
+                    Добавить пользователя
+                </button>
+                <button class="action-button secondary" onclick="loadDemoData()">
+                    <span>🎮</span>
+                    Загрузить демо
+                </button>
+                <button class="action-button secondary" onclick="refreshCharts()">
+                    <span>📊</span>
+                    Обновить графики
+                </button>
             </div>
         </section>
 
         <!-- Управление пользователями -->
         <section class="users-section">
             <h2 class="section-title">👥 Управление пользователями</h2>
-            <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;align-items:center;">
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
                 <div class="search-container">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Поиск..."
-                           onkeyup="searchUsers(this.value)">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Поиск пользователей..."
+                        onkeyup="searchUsers(this.value)">
                 </div>
                 <button class="action-button secondary" onclick="loadUsers()">
-                    <span>🔄</span> Обновить
+                    <span>🔄</span>
+                    Обновить
                 </button>
             </div>
-            <div class="users-grid" id="usersGrid"></div>
+
+            <div class="users-grid" id="usersGrid">
+                <!-- Пользователи загружаются динамически -->
+            </div>
+
             <div class="empty-state" id="emptyState">
-                <div style="font-size:4rem;">👤</div>
+                <div style="font-size: 4rem; margin-bottom: 1rem;">👤</div>
                 <h3>Нет пользователей</h3>
-                <p>Добавьте первого пользователя</p>
-                <button class="action-button" onclick="openModal()" style="margin-top:1rem;">
-                    Добавить
+                <p>Добавьте первого пользователя, чтобы начать работу</p>
+                <button class="action-button" onclick="openModal()" style="margin-top: 1rem;">
+                    Добавить пользователя
                 </button>
             </div>
         </section>
 
-        <!-- СТАТИСТИКА ПОЛЬЗОВАТЕЛЕЙ И ГРАФИК -->
+        <!-- Графики статистики -->
         <section class="centered-container">
-            <h2 class="section-title">📊 Статистика пользователей</h2>
+            <h2 class="section-title">📊 Статистика и аналитика</h2>
             
-            <!-- Панель управления статистикой -->
-            <div class="stats-control-panel">
-                <div class="live-stats">
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalVisitors">0</div>
-                        <div class="stat-label">Всего посетителей</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="activeUsers">0</div>
-                        <div class="stat-label">Сейчас онлайн</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalVisits">0</div>
-                        <div class="stat-label">Всего посещений</div>
-                    </div>
-                </div>
-                
-                <div class="chart-controls">
-                    <div class="last-update">
-                        Обновлено: <span id="lastChartUpdate">--:--</span>
-                    </div>
-                    <button class="action-button" onclick="updateChartData()" id="refreshChartBtn">
-                        <span class="refresh-icon">🔄</span> Обновить график
-                    </button>
-                    <button class="action-button secondary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
-                        <span class="auto-refresh-icon">⏱️</span> Авто: <span id="autoRefreshStatus">Вкл</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- График активности -->
-            <div class="chart-card">
-                <h3 class="chart-title">📈 Активность пользователей</h3>
-                <div class="chart-wrapper">
-                    <canvas id="activityChart"></canvas>
-                </div>
-                <div class="chart-footer">
-                    <div>История активности за последние 7 дней</div>
-                    <div>Данные обновляются в реальном времени</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Графики доменов и роста -->
-        <section class="centered-container">
-            <h2 class="section-title">📈 Аналитика</h2>
-            <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;">
+            <!-- Кнопки управления графиками -->
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
                 <button class="action-button" onclick="refreshCharts()">
-                    <span>🔄</span> Обновить
+                    <span>🔄</span>
+                    Обновить графики
                 </button>
                 <button class="action-button secondary" onclick="exportCharts()">
-                    <span>📥</span> Экспорт
+                    <span>📥</span>
+                    Экспорт данных
                 </button>
             </div>
+            
             <div class="charts-container">
+                <!-- График 1: Активность пользователей -->
                 <div class="chart-card">
-                    <h3 class="chart-title">🎯 Домены email</h3>
-                    <div class="chart-wrapper"><canvas id="domainChart"></canvas></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 class="chart-title">📈 Активность пользователей (последние 7 дней)</h3>
+                        <div style="color: #60a5fa; font-weight: 600;">Навык пользователя</div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="activityChart"></canvas>
+                    </div>
                 </div>
+
+                <!-- График 2: Распределение по доменам -->
                 <div class="chart-card">
-                    <h3 class="chart-title">📅 Новые по месяцам</h3>
-                    <div class="chart-wrapper"><canvas id="growthChart"></canvas></div>
+                    <h3 class="chart-title">🎯 Распределение по доменам email</h3>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <div style="color: #34d399;">Количество пользователей</div>
+                        <div style="color: #fbbf24;">Время пользователей</div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="domainChart"></canvas>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
+                        Имеющая 2025 год
+                    </div>
+                </div>
+
+                <!-- График 3: Новые пользователи -->
+                <div class="chart-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 class="chart-title">📅 Новые пользователи по месяцам (2025 год)</h3>
+                        <div style="color: #34d399; font-weight: 600;">Всего пользователей</div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                        <div style="color: #f87171;">Новые и месяц</div>
+                        <div style="color: #94a3b8;">Месяцы 2025 года</div>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- Технологии -->
+        <section class="centered-container">
+            <h2 class="section-title">🛠️ Технологии проекта</h2>
+            <div class="feature-card-container">
+                <div class="feature-card">
+                    <span class="feature-icon">🐹</span>
+                    <h3 class="feature-title">Go Backend</h3>
+                    <p class="feature-description">
+                        Мощный и быстрый сервер на языке Go
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3 class="feature-title">JavaScript ES6+</h3>
+                    <p class="feature-description">
+                        Современный фронтенд с async/await
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🎨</span>
+                    <h3 class="feature-title">CSS3 Анимации</h3>
+                    <p class="feature-description">
+                        Плавные анимации и современные эффекты
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Футер -->
+        <footer
+            style="text-align: center; padding: 3rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="font-size: 2rem; font-weight: 700; background: linear-gradient(45deg, #60a5fa, #3b82f6); 
+                       -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
+                👥 UserManager Pro
+            </div>
+            <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <a href="index.html" style="color: #bbdefb; text-decoration: none;">Главная</a>
+                <a href="about.html" style="color: #bbdefb; text-decoration: none;">О проекте</a>
+                <a href="presentation.html" style="color: #bbdefb; text-decoration: none;">Презентация</a>
+            </div>
+            <div style="color: #94a3b8;">
+                © 2024 UserManager Pro. Все права защищены.
+            </div>
+        </footer>
     </div>
 
-    <!-- Модальное окно пользователя -->
+    <!-- Модальное окно -->
     <div class="modal" id="userModal">
         <div class="modal-container">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-                <h3 style="background:linear-gradient(45deg,#60a5fa,var(--accent-blue));-webkit-background-clip:text;color:transparent;"
-                    id="modalTitle">Добавить пользователя</h3>
-                <button onclick="closeModal()" style="background:none;border:none;font-size:2rem;color:var(--text-secondary);">
-                    &times;
-                </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; 
+                          background: linear-gradient(45deg, #60a5fa, #3b82f6); 
+                          -webkit-background-clip: text; -webkit-text-fill-color: transparent;" id="modalTitle">
+                    Добавить пользователя</h3>
+                <button onclick="closeModal()" style="background: none; border: none; font-size: 2rem; 
+                               color: #bbdefb; cursor: pointer;">&times;</button>
             </div>
             <form id="userForm" onsubmit="saveUser(event)">
                 <input type="hidden" id="userId">
-                <div style="margin-bottom:1.5rem;">
-                    <label style="display:block;color:var(--text-secondary);margin-bottom:0.5rem;">👤 Имя</label>
-                    <input type="text" id="userName" class="search-input" placeholder="Введите имя" required>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: #bbdefb; margin-bottom: 0.5rem;">👤 Имя пользователя</label>
+                    <input type="text" id="userName" class="search-input" placeholder="Введите полное имя" required>
                 </div>
-                <div style="margin-bottom:1.5rem;">
-                    <label style="display:block;color:var(--text-secondary);margin-bottom:0.5rem;">✉️ Email</label>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: #bbdefb; margin-bottom: 0.5rem;">✉️ Email адрес</label>
                     <input type="email" id="userEmail" class="search-input" placeholder="user@example.com" required>
                 </div>
-                <div style="display:flex;gap:1rem;margin-top:2rem;">
-                    <button type="button" class="action-button secondary" onclick="closeModal()" style="flex:1;">
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="action-button secondary" onclick="closeModal()" style="flex: 1;">
                         Отмена
                     </button>
-                    <button type="submit" class="action-button" style="flex:1;">
-                        <span>✓</span> Сохранить
+                    <button type="submit" class="action-button" style="flex: 1;">
+                        <span>✓</span>
+                        Сохранить
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Модальное окно входа -->
-    <div class="login-modal" id="loginModal">
-        <div class="login-container">
-            <div class="login-header">
-                <div class="login-icon">🔐</div>
-                <h2 class="login-title">Панель администратора</h2>
-                <p class="login-subtitle">Введите пароль для доступа</p>
-            </div>
-            
-            <input type="password" 
-                   id="adminPassword" 
-                   class="password-input" 
-                   placeholder="Введите пароль администратора">
-            
-            <p class="password-hint">Пароль знает только администратор системы</p>
-            
-            <div class="login-actions">
-                <button class="login-btn-secondary" onclick="closeLoginModal()">
-                    <span>❌</span> Отмена
-                </button>
-                <button class="login-btn-primary" onclick="loginAdmin()">
-                    <span>🔓</span> Войти
-                </button>
-            </div>
-            
-            <div class="login-error" id="loginError">
-                ❌ Неверный пароль
-            </div>
-        </div>
-    </div>
-
-    <!-- Подключаем ваш скрипт -->
     <script src="script.js"></script>
-    
-    <!-- Скрипт системы доступа и статистики -->
     <script>
-        // ===== СИСТЕМА ДОСТУПА =====
-        const ADMIN_PASSWORD = 'admin123';
-        let autoRefreshInterval = null;
+        // Инициализация звездного неба
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            if (!starsContainer) return;
 
-        // Показать модальное окно входа
-        function showLoginModal() {
-            const modal = document.getElementById('loginModal');
-            if (modal) {
-                modal.classList.add('active');
-                document.getElementById('adminPassword').focus();
-                
-                // Закрытие по Esc
-                document.addEventListener('keydown', function closeOnEsc(e) {
-                    if (e.key === 'Escape') {
-                        closeLoginModal();
-                        document.removeEventListener('keydown', closeOnEsc);
-                    }
-                });
-                
-                // Ввод по Enter
-                document.getElementById('adminPassword').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') loginAdmin();
-                });
+            starsContainer.innerHTML = '';
+
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+
+                const size = Math.random() * 3 + 1;
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                const duration = Math.random() * 5 + 3;
+                const delay = Math.random() * 5;
+
+                star.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${x}%;
+                    top: ${y}%;
+                    --duration: ${duration}s;
+                    --delay: ${delay}s;
+                `;
+
+                starsContainer.appendChild(star);
             }
         }
 
-        // Закрыть модальное окно
-        function closeLoginModal() {
-            const modal = document.getElementById('loginModal');
-            if (modal) {
-                modal.classList.remove('active');
+        // Инициализация переключателя темы
+        function initThemeToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+
+            // Проверяем сохраненную тему
+            const savedTheme = localStorage.getItem('usermanager_theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                if (themeIcon) themeIcon.textContent = '☀️';
+                if (themeText) themeText.textContent = 'Светлая тема';
             }
+
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('light-theme');
+
+                const isLight = document.body.classList.contains('light-theme');
+                localStorage.setItem('usermanager_theme', isLight ? 'light' : 'dark');
+
+                if (themeIcon) {
+                    themeIcon.textContent = isLight ? '☀️' : '🌙';
+                }
+                if (themeText) {
+                    themeText.textContent = isLight ? 'Светлая тема' : 'Темная тема';
+                }
+
+                // Обновляем графики при смене темы
+                if (window.charts && typeof window.updateChartColors === 'function') {
+                    setTimeout(window.updateChartColors, 100);
+                }
+            });
         }
 
-        // Вход администратора
-        function loginAdmin() {
-            const password = document.getElementById('adminPassword').value;
-            const errorEl = document.getElementById('loginError');
-            
-            if (password === ADMIN_PASSWORD) {
-                // Сохраняем данные сессии
-                const expiry = Date.now() + (30 * 60 * 1000); // 30 минут
-                localStorage.setItem('usermanager_admin_data', JSON.stringify({
-                    logged: true,
-                    expiry: expiry
-                }));
-                
-                closeLoginModal();
-                updateAccessUI();
-                showNotification('✅ Вы вошли как администратор', 'success');
-            } else {
-                errorEl.style.display = 'block';
-                const input = document.getElementById('adminPassword');
-                input.style.animation = 'shake 0.5s';
-                input.style.borderColor = '#f87171';
-                input.value = '';
-                setTimeout(() => input.style.animation = '', 500);
-            }
-        }
-
-        // Переключение режима
-        function toggleApiMode() {
-            const adminData = localStorage.getItem('usermanager_admin_data');
-            const isAdmin = adminData ? JSON.parse(adminData).logged && Date.now() < JSON.parse(adminData).expiry : false;
-            
-            if (!isAdmin) {
-                showNotification('🔒 Только администратор может переключать режимы', 'warning');
-                showLoginModal();
+        // Инициализация графиков
+        let charts = {};
+        function initCharts() {
+            // Проверяем доступен ли Chart.js
+            if (typeof Chart === 'undefined') {
+                console.log('Chart.js не загружен');
+                setTimeout(initCharts, 100);
                 return;
             }
 
-            const useRealApi = localStorage.getItem('usermanager_use_real_api') !== 'false';
-            const newMode = !useRealApi;
-            
-            localStorage.setItem('usermanager_use_real_api', newMode.toString());
-            
-            showNotification(
-                newMode ? 
-                '🌐 Включен серверный режим' : 
-                '💾 Включен локальный режим',
-                newMode ? 'info' : 'warning'
-            );
-            
-            updateAccessUI();
-            
-            // Если локальный режим и не админ - перенаправляем
-            if (!newMode && !isAdmin) {
-                setTimeout(() => {
-                    window.location.href = 'maintenance.html';
-                }, 1500);
-            }
-        }
-
-        // Обновление UI системы доступа
-        function updateAccessUI() {
-            const adminData = localStorage.getItem('usermanager_admin_data');
-            const isAdmin = adminData ? JSON.parse(adminData).logged && Date.now() < JSON.parse(adminData).expiry : false;
-            const useRealApi = localStorage.getItem('usermanager_use_real_api') !== 'false';
-            
-            // Кнопка входа
-            const loginBtn = document.getElementById('loginButton');
-            if (loginBtn) {
-                if (isAdmin) {
-                    loginBtn.innerHTML = '<span>👑</span> <span>Админ</span>';
-                    loginBtn.classList.add('admin');
-                    loginBtn.onclick = function() {
-                        if (confirm('Вы действительно хотите выйти из режима администратора?')) {
-                            localStorage.removeItem('usermanager_admin_data');
-                            updateAccessUI();
-                            showNotification('👋 Вы вышли из режима администратора', 'info');
+            // График активности пользователей (7 дней)
+            const activityCtx = document.getElementById('activityChart');
+            if (activityCtx) {
+                charts.activity = new Chart(activityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+                        datasets: [{
+                            label: 'Активность',
+                            data: [65, 59, 80, 81, 56, 55, 40],
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#60a5fa',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#bbdefb',
+                                    callback: function(value) {
+                                        return value + ' чел.';
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Количество пользователей',
+                                    color: '#94a3b8'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#bbdefb'
+                                }
+                            }
                         }
-                    };
-                } else {
-                    loginBtn.innerHTML = '<span>🔐</span> <span>Войти</span>';
-                    loginBtn.classList.remove('admin');
-                    loginBtn.onclick = showLoginModal;
-                }
-            }
-            
-            // Переключатель режимов
-            const apiModeBtn = document.getElementById('apiModeButton');
-            const apiModeIcon = document.getElementById('apiModeIcon');
-            const apiModeText = document.getElementById('apiModeText');
-            
-            if (apiModeBtn && apiModeIcon && apiModeText) {
-                if (isAdmin) {
-                    apiModeBtn.style.display = 'flex';
-                    apiModeIcon.textContent = useRealApi ? '🌐' : '💾';
-                    apiModeText.textContent = useRealApi ? 'Серверный' : 'Локальный';
-                    apiModeBtn.className = useRealApi ? 'api-mode-btn' : 'api-mode-btn local';
-                    apiModeBtn.title = `Переключить на ${useRealApi ? 'локальный' : 'серверный'} режим`;
-                } else {
-                    apiModeBtn.style.display = 'none';
-                }
-            }
-            
-            // Обновляем статус в режиме
-            const serverStatus = document.getElementById('serverStatus');
-            if (serverStatus) {
-                serverStatus.textContent = useRealApi ? '🟢 Онлайн' : '🔒 Локальный';
-                serverStatus.style.color = useRealApi ? '#4ade80' : '#a78bfa';
-            }
-            
-            const modeText = document.getElementById('modeText');
-            const modeIcon = document.getElementById('modeIcon');
-            if (modeText && modeIcon) {
-                modeText.textContent = useRealApi ? 'Серверный режим' : 'Локальный режим';
-                modeIcon.textContent = useRealApi ? '🌐' : '💾';
-            }
-        }
-
-        // ===== СИСТЕМА СТАТИСТИКИ ПОЛЬЗОВАТЕЛЕЙ =====
-        function updateUserStats() {
-            let stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-            
-            // Инициализируем статистику если её нет
-            if (!stats.totalVisitors) {
-                stats = {
-                    totalVisitors: 1,
-                    activeUsers: 1,
-                    totalVisits: 1,
-                    visitorHistory: [],
-                    userSessions: {}
-                };
-            }
-            
-            // Создаем уникальный ID для посетителя
-            let visitorId = localStorage.getItem('usermanager_visitor_id');
-            if (!visitorId) {
-                visitorId = 'visitor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('usermanager_visitor_id', visitorId);
-                stats.totalVisitors++;
-            }
-            
-            // Регистрируем сессию
-            const sessionId = 'session_' + Date.now();
-            stats.userSessions[sessionId] = {
-                visitorId: visitorId,
-                startTime: Date.now(),
-                lastActivity: Date.now(),
-                active: true
-            };
-            
-            stats.totalVisits++;
-            
-            // Очищаем неактивные сессии (более 5 минут)
-            const now = Date.now();
-            const inactiveTime = 5 * 60 * 1000;
-            for (const sid in stats.userSessions) {
-                if (now - stats.userSessions[sid].lastActivity > inactiveTime) {
-                    delete stats.userSessions[sid];
-                }
-            }
-            
-            stats.activeUsers = Object.keys(stats.userSessions).length;
-            
-            // Сохраняем статистику
-            localStorage.setItem('usermanager_user_stats', JSON.stringify(stats));
-            
-            // Обновляем отображение
-            const totalVisitorsEl = document.getElementById('totalVisitors');
-            const activeUsersEl = document.getElementById('activeUsers');
-            const totalVisitsEl = document.getElementById('totalVisits');
-            
-            if (totalVisitorsEl) totalVisitorsEl.textContent = stats.totalVisitors;
-            if (activeUsersEl) activeUsersEl.textContent = stats.activeUsers;
-            if (totalVisitsEl) totalVisitsEl.textContent = stats.totalVisits;
-        }
-
-        // ===== СИСТЕМА ГРАФИКОВ =====
-        function updateChartData() {
-            const refreshBtn = document.getElementById('refreshChartBtn');
-            if (!refreshBtn) return;
-            
-            const originalHTML = refreshBtn.innerHTML;
-            refreshBtn.innerHTML = '<span class="spinner"></span> Обновление...';
-            refreshBtn.disabled = true;
-            
-            // Обновляем статистику пользователей
-            updateUserStats();
-            
-            // Загружаем историю из localStorage
-            const history = JSON.parse(localStorage.getItem('usermanager_chart_history') || '[]');
-            
-            // Обновляем текущий день
-            const today = new Date().toLocaleDateString('ru-RU');
-            const todayData = history.find(h => h.date === today);
-            
-            if (todayData) {
-                todayData.visits += Math.floor(Math.random() * 5) + 1;
-                const stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-                todayData.activeUsers = stats.activeUsers || 0;
-            } else {
-                // Добавляем новый день
-                const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-                const stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-                history.push({
-                    date: today,
-                    day: days[new Date().getDay()],
-                    visits: stats.totalVisits || 1,
-                    activeUsers: stats.activeUsers || 1
+                    }
                 });
+            }
+
+            // Круговая диаграмма доменов
+            const domainCtx = document.getElementById('domainChart');
+            if (domainCtx) {
+                charts.domain = new Chart(domainCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['example.com', 'gmail.com', 'mail.ru', 'yandex.ru', 'company.com'],
+                        datasets: [{
+                            data: [30, 25, 20, 15, 10],
+                            backgroundColor: [
+                                '#60a5fa',
+                                '#34d399',
+                                '#fbbf24',
+                                '#f87171',
+                                '#a78bfa'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#0a192f'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: '#bbdefb',
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // График роста пользователей по месяцам
+            const growthCtx = document.getElementById('growthChart');
+            if (growthCtx) {
+                const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+                const currentMonth = new Date().getMonth();
                 
-                // Ограничиваем историю 7 днями
-                if (history.length > 7) {
-                    history.shift();
+                // Берем 6 последних месяцев
+                const lastSixMonths = [];
+                for (let i = 5; i >= 0; i--) {
+                    const monthIndex = (currentMonth - i + 12) % 12;
+                    lastSixMonths.push(months[monthIndex]);
                 }
+                
+                charts.growth = new Chart(growthCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: lastSixMonths,
+                        datasets: [{
+                            label: 'Новые пользователи',
+                            data: [42, 38, 45, 50, 47, 52],
+                            backgroundColor: '#34d399',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Новых пользователей: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#bbdefb',
+                                    stepSize: 10
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Количество новых',
+                                    color: '#94a3b8'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#bbdefb'
+                                }
+                            }
+                        }
+                    }
+                });
             }
-            
-            // Сохраняем обновленную историю
-            localStorage.setItem('usermanager_chart_history', JSON.stringify(history));
-            
-            // Обновляем график активности (если он существует)
-            if (window.charts && window.charts.activity) {
-                const chart = window.charts.activity;
-                
-                // Обновляем данные
-                chart.data.datasets[0].data = history.map(h => h.visits);
-                
-                // Добавляем или обновляем второй набор данных (активные пользователи)
-                if (chart.data.datasets.length < 2) {
-                    chart.data.datasets.push({
-                        label: 'Активные пользователи',
-                        data: history.map(h => h.activeUsers),
-                        borderColor: '#34d399',
-                        backgroundColor: 'rgba(52, 211, 153, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#34d399'
-                    });
-                } else {
-                    chart.data.datasets[1].data = history.map(h => h.activeUsers);
-                }
-                
-                // Обновляем подписи
-                chart.data.labels = history.map(h => `${h.day} (${h.date})`);
-                
-                chart.update('none');
+
+            // Сохраняем ссылку на глобальные графики
+            window.charts = charts;
+        }
+
+        // Обновление графиков данными из системы
+        function refreshCharts() {
+            if (!window.getUsersForCharts) {
+                console.log('Функция getUsersForCharts не найдена');
+                showNotification('❌ Невозможно обновить графики: функция не найдена', 'error');
+                return;
             }
-            
-            // Обновляем время последнего обновления
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const updateElement = document.getElementById('lastChartUpdate');
-            if (updateElement) {
-                updateElement.textContent = timeStr;
-                updateElement.style.color = '#34d399';
-                updateElement.style.fontWeight = '600';
-                
-                setTimeout(() => {
-                    updateElement.style.color = '';
-                    updateElement.style.fontWeight = '';
-                }, 2000);
+
+            const users = window.getUsersForCharts();
+            if (!users || !Array.isArray(users)) {
+                console.log('Нет данных для графиков');
+                showNotification('❌ Нет данных для отображения', 'warning');
+                return;
             }
-            
-            // Возвращаем кнопку в исходное состояние
+
+            // Показываем загрузку
+            showNotification('📊 Обновление графиков...', 'info');
+
+            // Обновляем данные для графиков
             setTimeout(() => {
-                refreshBtn.innerHTML = originalHTML;
-                refreshBtn.disabled = false;
-                showNotification('✅ Данные графика обновлены', 'success');
+                try {
+                    // Обновляем график активности (симуляция)
+                    if (charts.activity) {
+                        const newData = Array.from({length: 7}, () => Math.floor(Math.random() * 30) + 20);
+                        charts.activity.data.datasets[0].data = newData;
+                        charts.activity.update();
+                    }
+
+                    // Обновляем круговую диаграмму доменов
+                    if (charts.domain) {
+                        const domains = {};
+                        users.forEach(user => {
+                            if (user.email) {
+                                const domain = user.email.split('@')[1];
+                                domains[domain] = (domains[domain] || 0) + 1;
+                            }
+                        });
+
+                        // Преобразуем в проценты
+                        const totalUsers = users.length;
+                        const domainLabels = Object.keys(domains).slice(0, 5);
+                        const domainData = domainLabels.map(label => Math.round((domains[label] / totalUsers) * 100));
+                        
+                        // Если меньше 5 доменов, добавляем остальные как "другие"
+                        if (domainLabels.length < 5) {
+                            const otherPercent = 100 - domainData.reduce((a, b) => a + b, 0);
+                            if (otherPercent > 0) {
+                                domainLabels.push('другие');
+                                domainData.push(otherPercent);
+                            }
+                        }
+
+                        charts.domain.data.labels = domainLabels;
+                        charts.domain.data.datasets[0].data = domainData;
+                        charts.domain.update();
+                    }
+
+                    // Обновляем график роста
+                    if (charts.growth) {
+                        // Генерируем новые данные для роста
+                        const newGrowthData = Array.from({length: 6}, () => Math.floor(Math.random() * 20) + 35);
+                        charts.growth.data.datasets[0].data = newGrowthData;
+                        charts.growth.update();
+                    }
+
+                    // Обновляем время последнего обновления
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+                    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const lastUpdateEl = document.getElementById('lastUpdate');
+                    if (lastUpdateEl) {
+                        lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
+                    }
+
+                    showNotification('✅ Графики успешно обновлены', 'success');
+                    
+                } catch (error) {
+                    console.error('Ошибка обновления графиков:', error);
+                    showNotification('❌ Ошибка обновления графиков', 'error');
+                }
             }, 500);
         }
 
-        function toggleAutoRefresh() {
-            const isEnabled = localStorage.getItem('usermanager_auto_refresh') !== 'false';
-            const newState = !isEnabled;
+        // Экспорт данных графиков
+        function exportCharts() {
+            if (!charts || Object.keys(charts).length === 0) {
+                showNotification('❌ Нет данных для экспорта', 'warning');
+                return;
+            }
+
+            const data = {
+                exportedAt: new Date().toISOString(),
+                charts: {}
+            };
+
+            // Собираем данные из всех графиков
+            Object.entries(charts).forEach(([name, chart]) => {
+                data.charts[name] = {
+                    labels: chart.data.labels,
+                    datasets: chart.data.datasets.map(dataset => ({
+                        label: dataset.label || '',
+                        data: dataset.data
+                    }))
+                };
+            });
+
+            // Добавляем информацию о пользователях
+            const users = window.getUsersForCharts ? window.getUsersForCharts() : [];
+            data.users = users;
+            data.totalUsers = users.length;
+
+            // Создаем JSON файл для скачивания
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             
-            localStorage.setItem('usermanager_auto_refresh', newState.toString());
+            const link = document.createElement('a');
+            link.setAttribute('href', dataUri);
+            const fileName = `usermanager-charts-${new Date().toISOString().split('T')[0]}.json`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification('✅ Данные экспортированы в JSON файл', 'success');
+        }
+
+        // Обновление статуса сервера
+        function updateServerStatus() {
+            const statusEl = document.getElementById('serverStatus');
+            const modeIcon = document.getElementById('modeIcon');
+            const modeText = document.getElementById('modeText');
+            const modeCard = document.getElementById('modeCard');
             
-            if (newState) {
-                startAutoRefresh();
-                showNotification('⏱️ Автообновление включено (каждые 30 сек)', 'info');
+            // Получаем текущий режим
+            const currentMode = localStorage.getItem('usermanager_use_real_api');
+            const isServerMode = currentMode !== 'false'; // Если не 'false', то true
+            
+            if (isServerMode) {
+                if (statusEl) {
+                    statusEl.innerHTML = '🟢 Онлайн';
+                    statusEl.style.color = '#4ade80';
+                }
+                if (modeIcon) modeIcon.textContent = '🌐';
+                if (modeText) modeText.textContent = 'Серверный режим';
+                if (modeCard) {
+                    modeCard.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                    modeCard.style.background = 'rgba(59, 130, 246, 0.1)';
+                }
             } else {
-                stopAutoRefresh();
-                showNotification('⏱️ Автообновление отключено', 'warning');
-            }
-            
-            updateAutoRefreshButton(newState);
-        }
-
-        function startAutoRefresh() {
-            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            
-            autoRefreshInterval = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    updateChartData();
+                if (statusEl) {
+                    statusEl.innerHTML = '💾 Локальный';
+                    statusEl.style.color = '#a78bfa';
                 }
-            }, 30000); // 30 секунд
-        }
-
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
+                if (modeIcon) modeIcon.textContent = '💾';
+                if (modeText) modeText.textContent = 'Локальный режим';
+                if (modeCard) {
+                    modeCard.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                    modeCard.style.background = 'rgba(139, 92, 246, 0.1)';
+                }
             }
         }
 
-        function updateAutoRefreshButton(isEnabled) {
-            const btn = document.getElementById('autoRefreshBtn');
-            const status = document.getElementById('autoRefreshStatus');
-            
-            if (btn && status) {
-                btn.innerHTML = isEnabled ? 
-                    '<span>⏱️</span> Авто: <span id="autoRefreshStatus">Вкл</span>' :
-                    '<span>⏱️</span> Авто: <span id="autoRefreshStatus">Выкл</span>';
-                btn.style.background = isEnabled ? 
-                    'rgba(34, 197, 94, 0.2)' : 
-                    'rgba(239, 68, 68, 0.2)';
-                btn.style.borderColor = isEnabled ? 
-                    'rgba(34, 197, 94, 0.4)' : 
-                    'rgba(239, 68, 68, 0.4)';
-            }
+        // Обновление цветов графиков
+        function updateChartColors() {
+            const isLight = document.body.classList.contains('light-theme');
+            const gridColor = isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            const textColor = isLight ? '#334155' : '#e2e8f0';
+            const legendColor = isLight ? '#334155' : '#bbdefb';
+
+            Object.values(charts).forEach(chart => {
+                if (chart.options && chart.options.scales) {
+                    if (chart.options.scales.y) {
+                        chart.options.scales.y.grid.color = gridColor;
+                        chart.options.scales.y.ticks.color = textColor;
+                    }
+                    if (chart.options.scales.x) {
+                        chart.options.scales.x.grid.color = gridColor;
+                        chart.options.scales.x.ticks.color = textColor;
+                    }
+                    // Обновляем цвета легенды
+                    if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                        chart.options.plugins.legend.labels.color = legendColor;
+                    }
+                    chart.update();
+                }
+            });
         }
 
-        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
-        function showNotification(message, type = 'info') {
-            // Удаляем старые уведомления
-            document.querySelectorAll('.notification').forEach(n => n.remove());
-            
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="font-size: 1.2rem;">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
-                    <span>${message}</span>
-                </div>
+        // Показать статистику
+        function showStats() {
+            const stats = `
+Статистика UserManager Pro:
+
+• Всего пользователей: ${localStorage.getItem('usermanager_local_data') ?
+                    JSON.parse(localStorage.getItem('usermanager_local_data')).length : 0}
+• Режим работы: ${localStorage.getItem('usermanager_use_real_api') === 'false' ?
+                    'Локальный' : 'Серверный'}
+• Тема: ${localStorage.getItem('usermanager_theme') === 'light' ?
+                    'Светлая' : 'Темная'}
+• Версия: 1.0.0
+• Поддержка графиков: ✅
             `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
+            alert(stats);
         }
 
-        // ===== ИНИЦИАЛИЗАЦИЯ =====
-        document.addEventListener('DOMContentLoaded', () => {
-            // Звезды и планета
-            function createStars() {
-                const c = document.getElementById('stars');
-                if (!c) return;
-                c.innerHTML = '';
-                for (let i = 0; i < 150; i++) {
-                    const s = document.createElement('div');
-                    s.className = 'star';
-                    const sz = Math.random() * 2 + 1;
-                    const x = Math.random() * 100;
-                    const y = Math.random() * 100;
-                    const d = Math.random() * 3 + 2;
-                    const dl = Math.random() * 5;
-                    s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}%;top:${y}%;--duration:${d};--delay:${dl};`;
-                    c.appendChild(s);
-                }
-            }
-            
+        // Глобальные функции
+        window.refreshCharts = refreshCharts;
+        window.showStats = showStats;
+        window.exportCharts = exportCharts;
+        window.updateChartColors = updateChartColors;
+        window.updateServerStatus = updateServerStatus;
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('UserManager Pro инициализируется...');
+
+            // Создаем звездное небо
             createStars();
             window.addEventListener('resize', createStars);
-            
-            // Тема
-            function initThemeToggle() {
-                const t = document.getElementById('themeToggle');
-                const i = document.getElementById('themeIcon');
-                const txt = document.getElementById('themeText');
-                const light = localStorage.getItem('usermanager_theme') === 'light';
-                if (light) document.body.classList.add('light-theme');
 
-                const u = (l) => {
-                    i.textContent = l ? '☀️' : '🌙';
-                    txt.textContent = l ? 'Светлая' : 'Темная';
-                };
-                u(light);
-
-                t.addEventListener('click', () => {
-                    const l = !document.body.classList.contains('light-theme');
-                    document.body.classList.toggle('light-theme', l);
-                    localStorage.setItem('usermanager_theme', l ? 'light' : 'dark');
-                    u(l);
-                });
-            }
-            
+            // Инициализируем переключатель темы
             initThemeToggle();
-            
-            // Время обновления
-            const now = new Date();
-            document.getElementById('lastUpdate').textContent = 
-                `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            
-            // Инициализация системы доступа
-            updateAccessUI();
-            
-            // Инициализация статистики пользователей
-            updateUserStats();
-            
-            // Запуск автообновления если включено
-            const autoRefreshEnabled = localStorage.getItem('usermanager_auto_refresh') !== 'false';
-            if (autoRefreshEnabled) {
-                startAutoRefresh();
-                updateAutoRefreshButton(true);
+
+            // Инициализируем графики
+            setTimeout(initCharts, 500);
+
+            // Обновляем статус API
+            if (typeof updateApiModeUI === 'function') {
+                setTimeout(() => {
+                    updateApiModeUI();
+                    updateServerStatus(); // Добавлен вызов обновления статуса
+                }, 100);
             }
-            
-            // Обновляем статистику каждую минуту
-            setInterval(updateUserStats, 60000);
-            
-            // Обновляем активность пользователя
-            document.addEventListener('mousemove', () => {
-                const stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-                if (stats.userSessions) {
-                    const sessionId = Object.keys(stats.userSessions)[0];
-                    if (sessionId && stats.userSessions[sessionId]) {
-                        stats.userSessions[sessionId].lastActivity = Date.now();
-                        localStorage.setItem('usermanager_user_stats', JSON.stringify(stats));
-                    }
-                }
-            });
-            
-            document.addEventListener('keydown', () => {
-                const stats = JSON.parse(localStorage.getItem('usermanager_user_stats') || '{}');
-                if (stats.userSessions) {
-                    const sessionId = Object.keys(stats.userSessions)[0];
-                    if (sessionId && stats.userSessions[sessionId]) {
-                        stats.userSessions[sessionId].lastActivity = Date.now();
-                        localStorage.setItem('usermanager_user_stats', JSON.stringify(stats));
-                    }
-                }
-            });
-            
-            // Обновляем данные графика при загрузке
-            setTimeout(updateChartData, 1000);
+
+            // Устанавливаем начальную дату
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const lastUpdateEl = document.getElementById('lastUpdate');
+            if (lastUpdateEl) {
+                lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
+            }
+
+            console.log('UserManager Pro готов!');
         });
     </script>
+    <script>
+     // Автоматическая проверка администратора при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        // Если не администратор и локальный режим, показываем окно входа
+        const savedMode = localStorage.getItem('usermanager_use_real_api');
+        const isLocalMode = savedMode === 'false';
+        const savedAdmin = localStorage.getItem('usermanager_admin_access');
+        const isAdmin = savedAdmin === "admin123";
+        
+        if (!isAdmin && isLocalMode) {
+            // Показываем окно входа администратора
+            setTimeout(() => {
+                if (typeof showAdminLoginModal === 'function') {
+                    showAdminLoginModal();
+                }
+            }, 1000);
+        }
+    });
+</script>
 </body>
+
 </html>

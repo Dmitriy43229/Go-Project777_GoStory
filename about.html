@@ -466,7 +466,7 @@
         .theme-toggle:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Кнопка администратора */
         .admin-mode-btn {
             background: linear-gradient(45deg, #8b5cf6, #7c3aed);
@@ -513,7 +513,7 @@
                 <i class="fas fa-presentation"></i>
                 <span>Презентация</span>
             </a>
-            
+
             <!-- Кнопка входа для администратора -->
             <a href="#" class="nav-item admin-mode-btn" onclick="aboutPageLogin(); return false;">
                 <i class="fas fa-user-shield"></i>
@@ -525,7 +525,7 @@
         <div class="about-hero">
             <h1>О проекте UserManager Pro</h1>
             <p>
-                UserManager Pro — это современная CRM система для управления пользователями, разработанная 
+                UserManager Pro — это современная CRM система для управления пользователями, разработанная
                 с использованием передовых технологий и лучших практик веб-разработки.
             </p>
         </div>
@@ -536,28 +536,32 @@
                 <div class="benefit-icon">🚀</div>
                 <h3 class="benefit-title">Высокая производительность</h3>
                 <p class="benefit-description">
-                    Оптимизированный код и эффективные алгоритмы обеспечивают быструю работу даже с большими объемами данных.
+                    Оптимизированный код и эффективные алгоритмы обеспечивают быструю работу даже с большими объемами
+                    данных.
                 </p>
             </div>
             <div class="benefit-card">
                 <div class="benefit-icon">🔒</div>
                 <h3 class="benefit-title">Безопасность данных</h3>
                 <p class="benefit-description">
-                    Многоуровневая система безопасности с поддержкой различных режимов доступа и административных привилегий.
+                    Многоуровневая система безопасности с поддержкой различных режимов доступа и административных
+                    привилегий.
                 </p>
             </div>
             <div class="benefit-card">
                 <div class="benefit-icon">🌐</div>
                 <h3 class="benefit-title">Гибкие режимы работы</h3>
                 <p class="benefit-description">
-                    Поддержка как локального, так и серверного режимов работы с возможностью переключения администратором.
+                    Поддержка как локального, так и серверного режимов работы с возможностью переключения
+                    администратором.
                 </p>
             </div>
         </div>
 
         <!-- Секция технологий -->
         <div class="tech-section">
-            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem; color: white;">Используемые технологии</h2>
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem; color: white;">Используемые
+                технологии</h2>
             <div class="tech-grid">
                 <div class="tech-item">
                     <div class="tech-icon">🌐</div>
@@ -656,7 +660,8 @@
                 <i class="fas fa-arrow-left"></i>
                 <span>На главную</span>
             </button>
-            <button class="action-button secondary" onclick="window.open('https://github.com/Dmitriy43229/Go-Project777_GoStory', '_blank')">
+            <button class="action-button secondary"
+                onclick="window.open('https://github.com/Dmitriy43229/Go-Project777_GoStory', '_blank')">
                 <i class="fab fa-github"></i>
                 <span>GitHub репозиторий</span>
             </button>
@@ -678,13 +683,17 @@
     </div>
 
     <!-- Модальное окно входа для страницы "О проекте" -->
-    <div id="aboutAdminModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+    <div id="aboutAdminModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
         <div style="background: #1e293b; padding: 2rem; border-radius: 15px; max-width: 400px; width: 90%;">
             <h3 style="color: white; margin-bottom: 1rem;">Вход для администратора</h3>
-            <input type="password" id="aboutPassword" placeholder="Пароль" style="width: 100%; padding: 0.75rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #475569;">
+            <input type="password" id="aboutPassword" placeholder="Пароль"
+                style="width: 100%; padding: 0.75rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #475569;">
             <div style="display: flex; gap: 1rem;">
-                <button onclick="aboutAdminLogin()" style="flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px;">Войти</button>
-                <button onclick="document.getElementById('aboutAdminModal').style.display='none'" style="flex: 1; padding: 0.75rem; background: #64748b; color: white; border: none; border-radius: 8px;">Отмена</button>
+                <button onclick="aboutAdminLogin()"
+                    style="flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px;">Войти</button>
+                <button onclick="document.getElementById('aboutAdminModal').style.display='none'"
+                    style="flex: 1; padding: 0.75rem; background: #64748b; color: white; border: none; border-radius: 8px;">Отмена</button>
             </div>
             <div id="aboutError" style="color: #ef4444; margin-top: 1rem; display: none;">Неверный пароль</div>
         </div>
@@ -695,32 +704,32 @@
         function createStars() {
             const starsContainer = document.getElementById('stars');
             if (!starsContainer) return;
-            
+
             starsContainer.innerHTML = '';
             const starCount = 150;
-            
+
             for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
-                
+
                 const size = Math.random() * 3 + 1;
                 const x = Math.random() * 100;
                 const y = Math.random() * 100;
-                
+
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.left = `${x}%`;
                 star.style.top = `${y}%`;
-                
+
                 starsContainer.appendChild(star);
             }
         }
-        
+
         // Функция для кнопки "Войти" на странице "О проекте"
         function aboutPageLogin() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-            
+
             if (savedAdmin && expiry && Date.now() < parseInt(expiry)) {
                 // Админ уже вошел - переключаемся на главную с режимом
                 window.location.href = 'index.html';
@@ -730,24 +739,24 @@
                 document.getElementById('aboutPassword').focus();
             }
         }
-        
+
         function aboutAdminLogin() {
             const password = document.getElementById('aboutPassword').value;
             const errorDiv = document.getElementById('aboutError');
-            
+
             if (password === "admin123") {
                 // Создаем сессию
                 const sessionId = 'admin_' + Date.now();
                 const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-                
+
                 localStorage.setItem('usermanager_admin_session', sessionId);
                 localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
                 // По умолчанию локальный режим для админа
                 localStorage.setItem('usermanager_use_real_api', 'false');
-                
+
                 errorDiv.style.display = 'none';
                 document.getElementById('aboutAdminModal').style.display = 'none';
-                
+
                 // Перенаправляем на главную
                 alert('Успешный вход! Перенаправление на главную страницу...');
                 window.location.href = 'index.html';
@@ -757,16 +766,16 @@
                 document.getElementById('aboutPassword').focus();
             }
         }
-        
+
         // Обновляем кнопку на странице "О проекте"
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             createStars();
-            
+
             // Проверяем статус администратора
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
             const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-            
+
             // Обновляем текст кнопки если админ уже вошел
             const adminBtn = document.querySelector('.admin-mode-btn');
             if (adminBtn && isAdminActive) {
@@ -774,14 +783,14 @@
                     <i class="fas fa-user-shield"></i>
                     <span>Вы вошли как администратор</span>
                 `;
-                adminBtn.onclick = function(e) {
+                adminBtn.onclick = function (e) {
                     e.preventDefault();
                     window.location.href = 'index.html';
                 };
             }
-            
+
             // Добавляем обработчик клавиши Enter в модальном окне
-            document.getElementById('aboutPassword')?.addEventListener('keypress', function(e) {
+            document.getElementById('aboutPassword')?.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
                     aboutAdminLogin();
                 }
@@ -789,4 +798,5 @@
         });
     </script>
 </body>
+
 </html>

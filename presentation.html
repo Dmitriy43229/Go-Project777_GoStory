@@ -460,7 +460,7 @@
             background: linear-gradient(45deg, #3b82f6, #1d4ed8);
             color: white;
         }
-        
+
         /* Кнопка администратора */
         .admin-mode-btn {
             background: linear-gradient(45deg, #8b5cf6, #7c3aed);
@@ -507,7 +507,7 @@
                 <i class="fas fa-presentation"></i>
                 <span>Презентация</span>
             </a>
-            
+
             <!-- Кнопка входа для администратора -->
             <a href="#" class="nav-item admin-mode-btn" onclick="presentationLogin(); return false;">
                 <i class="fas fa-user-shield"></i>
@@ -521,9 +521,9 @@
             <div class="slide" style="animation-delay: 0.1s">
                 <h2>📋 Введение в UserManager Pro</h2>
                 <p style="font-size: 1.2rem; line-height: 1.8;">
-                    UserManager Pro — это современная CRM система для управления пользователями, разработанная 
-                    с использованием передовых технологий веб-разработки. Система поддерживает два режима работы: 
-                    <strong>локальный</strong> и <strong>серверный</strong>, что делает её универсальным решением 
+                    UserManager Pro — это современная CRM система для управления пользователями, разработанная
+                    с использованием передовых технологий веб-разработки. Система поддерживает два режима работы:
+                    <strong>локальный</strong> и <strong>серверный</strong>, что делает её универсальным решением
                     для различных сценариев использования.
                 </p>
                 <div class="feature-list">
@@ -596,7 +596,7 @@
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="code-snippet">
                     // Пример структуры пользователя<br>
                     type User struct {<br>
@@ -612,7 +612,8 @@
             <div class="slide" style="animation-delay: 0.7s">
                 <h2>🌐 Режимы работы системы</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
-                    <div style="background: rgba(96, 165, 250, 0.1); padding: 2rem; border-radius: 15px; border: 2px solid #60a5fa;">
+                    <div
+                        style="background: rgba(96, 165, 250, 0.1); padding: 2rem; border-radius: 15px; border: 2px solid #60a5fa;">
                         <h3 style="color: #60a5fa;">Серверный режим</h3>
                         <ul style="list-style: none; padding: 0; color: #bbdefb;">
                             <li style="margin-bottom: 0.75rem;">✅ Все пользователи видят одни данные</li>
@@ -621,7 +622,8 @@
                             <li style="margin-bottom: 0.75rem;">✅ Режим по умолчанию для гостей</li>
                         </ul>
                     </div>
-                    <div style="background: rgba(139, 92, 246, 0.1); padding: 2rem; border-radius: 15px; border: 2px solid #8b5cf6;">
+                    <div
+                        style="background: rgba(139, 92, 246, 0.1); padding: 2rem; border-radius: 15px; border: 2px solid #8b5cf6;">
                         <h3 style="color: #8b5cf6;">Локальный режим</h3>
                         <ul style="list-style: none; padding: 0; color: #bbdefb;">
                             <li style="margin-bottom: 0.75rem;">✅ Только для администратора</li>
@@ -632,7 +634,8 @@
                     </div>
                 </div>
                 <p style="text-align: center; font-size: 1.1rem; margin-top: 2rem;">
-                    <strong>Администратор может переключать режимы с помощью специальной кнопки на главной странице</strong>
+                    <strong>Администратор может переключать режимы с помощью специальной кнопки на главной
+                        странице</strong>
                 </p>
             </div>
 
@@ -660,7 +663,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="code-snippet">
                     // Проверка администратора<br>
                     function checkAdminAccess() {<br>
@@ -670,13 +673,13 @@
                     &nbsp;&nbsp;if (savedSession && sessionExpiry) {<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;const now = Date.now();<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;if (now < parseInt(sessionExpiry)) {<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isAdmin = true;<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log('✅ Администратор: активная сессия');<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
-                    &nbsp;&nbsp;}<br>
-                    &nbsp;&nbsp;return false;<br>
-                    }
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isAdmin = true;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log('✅ Администратор: активная сессия');<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;return false;<br>
+                        }
                 </div>
             </div>
 
@@ -723,19 +726,21 @@
                     <div style="font-size: 4rem; margin-bottom: 1rem;">✨</div>
                     <h3 style="font-size: 2rem; color: #60a5fa;">UserManager Pro готов к использованию!</h3>
                     <p style="font-size: 1.2rem; max-width: 800px; margin: 2rem auto;">
-                        Система предоставляет полный функционал для управления пользователями с гибкой системой 
-                        доступа и двумя режимами работы. Администраторы получают полный контроль над системой, 
+                        Система предоставляет полный функционал для управления пользователями с гибкой системой
+                        доступа и двумя режимами работы. Администраторы получают полный контроль над системой,
                         в то время как обычные пользователи могут использовать серверный режим.
                     </p>
                 </div>
-                
+
                 <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 2rem;">
-                    <div style="text-align: center; background: rgba(96, 165, 250, 0.1); padding: 1.5rem; border-radius: 15px; flex: 1;">
+                    <div
+                        style="text-align: center; background: rgba(96, 165, 250, 0.1); padding: 1.5rem; border-radius: 15px; flex: 1;">
                         <div style="font-size: 2rem;">👥</div>
                         <div style="font-weight: bold; margin: 0.5rem 0;">Для всех</div>
                         <div>Серверный режим</div>
                     </div>
-                    <div style="text-align: center; background: rgba(139, 92, 246, 0.1); padding: 1.5rem; border-radius: 15px; flex: 1;">
+                    <div
+                        style="text-align: center; background: rgba(139, 92, 246, 0.1); padding: 1.5rem; border-radius: 15px; flex: 1;">
                         <div style="font-size: 2rem;">👑</div>
                         <div style="font-weight: bold; margin: 0.5rem 0;">Для администратора</div>
                         <div>Локальный режим + управление</div>
@@ -749,7 +754,8 @@
                     <i class="fas fa-home"></i>
                     <span>На главную</span>
                 </button>
-                <button class="action-button" onclick="window.open('https://github.com/Dmitriy43229/Go-Project777_GoStory', '_blank')">
+                <button class="action-button"
+                    onclick="window.open('https://github.com/Dmitriy43229/Go-Project777_GoStory', '_blank')">
                     <i class="fab fa-github"></i>
                     <span>GitHub репозиторий</span>
                 </button>
@@ -776,31 +782,31 @@
         function createStars() {
             const starsContainer = document.getElementById('stars');
             if (!starsContainer) return;
-            
+
             starsContainer.innerHTML = '';
             const starCount = 150;
-            
+
             for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
-                
+
                 const size = Math.random() * 3 + 1;
                 const x = Math.random() * 100;
                 const y = Math.random() * 100;
-                
+
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.left = `${x}%`;
                 star.style.top = `${y}%`;
-                
+
                 starsContainer.appendChild(star);
             }
         }
-        
+
         function presentationLogin() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-            
+
             if (savedAdmin && expiry && Date.now() < parseInt(expiry)) {
                 // Уже администратор
                 window.location.href = 'index.html';
@@ -811,12 +817,12 @@
                     // Создаем сессию
                     const sessionId = 'admin_' + Date.now();
                     const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-                    
+
                     localStorage.setItem('usermanager_admin_session', sessionId);
                     localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
                     // По умолчанию локальный режим для админа
                     localStorage.setItem('usermanager_use_real_api', 'false');
-                    
+
                     alert('Успешный вход! Перенаправление на главную...');
                     window.location.href = 'index.html';
                 } else if (password !== null) {
@@ -824,16 +830,16 @@
                 }
             }
         }
-        
+
         // Проверяем статус администратора и обновляем кнопку
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             createStars();
-            
+
             // Проверяем статус администратора
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
             const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-            
+
             // Обновляем текст кнопки если админ уже вошел
             const adminBtn = document.querySelector('.admin-mode-btn');
             if (adminBtn && isAdminActive) {
@@ -841,12 +847,12 @@
                     <i class="fas fa-user-shield"></i>
                     <span>Вы вошли как администратор</span>
                 `;
-                adminBtn.onclick = function(e) {
+                adminBtn.onclick = function (e) {
                     e.preventDefault();
                     window.location.href = 'index.html';
                 };
             }
-            
+
             // Анимация появления слайдов
             const slides = document.querySelectorAll('.slide');
             slides.forEach((slide, index) => {
@@ -855,4 +861,5 @@
         });
     </script>
 </body>
+
 </html>

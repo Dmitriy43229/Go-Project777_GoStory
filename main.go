@@ -28,6 +28,10 @@ type InMemoryDB struct {
 
 var db *InMemoryDB
 
+// Глобальная переменная режима работы
+var serverMode = "server" // "server" или "local"
+var modeMutex sync.RWMutex
+
 func init() {
 	db = &InMemoryDB{
 		users:  make(map[int]User),
@@ -52,6 +56,39 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		next(w, r)
+	}
+}
+
+// Проверка режима работы
+func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		modeMutex.RLock()
+		currentMode := serverMode
+		modeMutex.RUnlock()
+		
+		// Если режим локальный, проверяем админский токен
+		if currentMode == "local" {
+			adminToken := r.Header.Get("X-Admin-Token")
+			
+			// Список разрешенных админских токенов (в реальном приложении нужно хранить в БД)
+			allowedTokens := map[string]bool{
+				"admin_local_token_123": true, // Токен для локального режима
+			}
+			
+			if !allowedTokens[adminToken] {
+				// Проверяем также в query параметрах (для простоты)
+				tokenFromQuery := r.URL.Query().Get("admin_token")
+				if !allowedTokens[tokenFromQuery] {
+					sendJSON(w, http.StatusForbidden, map[string]string{
+						"error": "Локальный режим активен. Доступ только для администратора",
+						"mode":  "local",
+					})
+					return
+				}
+			}
+		}
+		
 		next(w, r)
 	}
 }
@@ -157,9 +194,15 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
 	sendJSON(w, http.StatusOK, map[string]string{
 		"message": "UserManager Pro API",
 		"version": "1.0.0",
+		"mode":    currentMode,
 		"docs":    "/api/info",
 	})
 }
@@ -167,10 +210,29 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		modeMutex.RLock()
+		currentMode := serverMode
+		modeMutex.RUnlock()
+		
+		// Для локального режима возвращаем пустой массив или сообщение
+		if currentMode == "local" {
+			sendJSON(w, http.StatusOK, []User{})
+			return
+		}
+		
 		users := db.GetAll()
 		sendJSON(w, http.StatusOK, users)
 
 	case http.MethodPost:
+		modeMutex.RLock()
+		currentMode := serverMode
+		modeMutex.RUnlock()
+		
+		if currentMode == "local" {
+			sendError(w, http.StatusForbidden, "Локальный режим активен. Операция запрещена")
+			return
+		}
+		
 		var user User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			sendError(w, http.StatusBadRequest, "Invalid JSON")
@@ -190,6 +252,15 @@ func apiUsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiUserHandler(w http.ResponseWriter, r *http.Request) {
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
+	if currentMode == "local" && r.Method != http.MethodGet {
+		sendError(w, http.StatusForbidden, "Локальный режим активен. Операция запрещена")
+		return
+	}
+	
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(pathParts) != 3 {
 		sendError(w, http.StatusBadRequest, "Invalid URL")
@@ -205,6 +276,11 @@ func apiUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
+		if currentMode == "local" {
+			sendJSON(w, http.StatusOK, User{})
+			return
+		}
+		
 		user, exists := db.GetByID(id)
 		if !exists {
 			sendError(w, http.StatusNotFound, "User not found")
@@ -248,6 +324,10 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
 
 	stats := map[string]interface{}{
 		"total_users": len(db.users),
@@ -255,7 +335,15 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 		"status":      "online",
 		"version":     "1.0.0",
 		"go_version":  "1.23.1",
+		"mode":        currentMode,
 	}
+	
+	// В локальном режиме показываем 0 пользователей
+	if currentMode == "local" {
+		stats["total_users"] = 0
+		stats["message"] = "Локальный режим активен"
+	}
+	
 	sendJSON(w, http.StatusOK, stats)
 }
 
@@ -264,12 +352,17 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
 
 	info := map[string]interface{}{
 		"name":        "UserManager Pro API",
 		"version":     "1.0.0",
 		"description": "Go Backend API for UserManager Pro",
 		"author":      "Dmitriy Kobelev",
+		"mode":        currentMode,
 		"endpoints": map[string]string{
 			"GET /api/users":           "Get all users",
 			"POST /api/users":          "Create user",
@@ -278,24 +371,95 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"DELETE /api/users/{id}":   "Delete user",
 			"GET /api/stats":           "Server statistics",
 			"GET /api/info":            "This info",
+			"POST /api/admin/mode":     "Change mode (admin only)",
 		},
 		"frontend": "https://dmitriy43229.github.io/Go-Project777_GoStory/",
 	}
 	sendJSON(w, http.StatusOK, info)
 }
 
+// Новые обработчики для управления режимом
+
+func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	// Проверяем админский пароль
+	adminPassword := r.Header.Get("X-Admin-Password")
+	if adminPassword != "admin123" {
+		// Проверяем также в теле запроса
+		var body map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			if body["password"] != "admin123" {
+				sendError(w, http.StatusUnauthorized, "Invalid admin password")
+				return
+			}
+		} else {
+			sendError(w, http.StatusUnauthorized, "Invalid admin password")
+			return
+		}
+	}
+	
+	// Получаем новый режим из запроса
+	var request map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	
+	newMode := request["mode"]
+	if newMode != "server" && newMode != "local" {
+		sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
+		return
+	}
+	
+	modeMutex.Lock()
+	serverMode = newMode
+	modeMutex.Unlock()
+	
+	fmt.Printf("🔧 Режим изменен на: %s\n", newMode)
+	
+	sendJSON(w, http.StatusOK, map[string]string{
+		"message": fmt.Sprintf("Режим изменен на %s", newMode),
+		"mode":    newMode,
+	})
+}
+
+func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
+	sendJSON(w, http.StatusOK, map[string]string{
+		"mode": currentMode,
+	})
+}
+
 func main() {
 	// Регистрация маршрутов с CORS
-	http.HandleFunc("/api/users", enableCORS(apiUsersHandler))
-	http.HandleFunc("/api/users/", enableCORS(apiUserHandler))
+	http.HandleFunc("/api/users", enableCORS(checkModeMiddleware(apiUsersHandler)))
+	http.HandleFunc("/api/users/", enableCORS(checkModeMiddleware(apiUserHandler)))
 	http.HandleFunc("/api/stats", enableCORS(apiStatsHandler))
 	http.HandleFunc("/api/info", enableCORS(apiInfoHandler))
+	http.HandleFunc("/api/admin/mode", enableCORS(apiAdminModeHandler))
+	http.HandleFunc("/api/mode", enableCORS(apiGetModeHandler))
 	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
 	fmt.Printf("🚀 Go API сервер запущен на порту %s\n", port)
 	fmt.Printf("📊 База данных инициализирована с %d пользователями\n", len(db.users))
-	fmt.Println("🌐 API Endpoints:")
+	fmt.Printf("🌐 Начальный режим: %s\n", serverMode)
+	fmt.Println("🔧 Управление режимами:")
+	fmt.Println("   POST /api/admin/mode - Изменить режим (требуется пароль admin123)")
+	fmt.Println("   GET  /api/mode       - Получить текущий режим")
+	fmt.Println("\n🌐 API Endpoints:")
 	fmt.Println("   GET  /api/users      - Все пользователи")
 	fmt.Println("   POST /api/users      - Создать пользователя")
 	fmt.Println("   GET  /api/users/{id} - Получить пользователя")

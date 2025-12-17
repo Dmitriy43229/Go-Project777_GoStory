@@ -806,42 +806,42 @@ body {
         gap: 1rem;
         text-align: center;
     }
-    
+
     .nav {
         flex-direction: column;
         width: 100%;
     }
-    
+
     .nav-link {
         width: 100%;
         justify-content: center;
     }
-    
+
     .hero {
         grid-template-columns: 1fr;
         text-align: center;
     }
-    
+
     .hero-stats {
         justify-content: center;
     }
-    
+
     .hero-actions {
         justify-content: center;
     }
-    
+
     .users-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-actions {
         flex-direction: column;
     }
-    
+
     .menu-toggle {
         display: flex;
     }
-    
+
     .nav {
         display: none;
     }
@@ -851,11 +851,11 @@ body {
     .hero-title {
         font-size: 2rem;
     }
-    
+
     .stat-number {
         font-size: 2rem;
     }
-    
+
     .section-title {
         font-size: 1.5rem;
     }
@@ -867,12 +867,12 @@ body {
         transform: scale(1);
         opacity: 0.3;
     }
-    
+
     50% {
         transform: scale(1.05);
         opacity: 0.5;
     }
-    
+
     100% {
         transform: scale(1);
         opacity: 0.3;
@@ -884,7 +884,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
-    
+
     to {
         opacity: 1;
         transform: translateY(0);

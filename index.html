@@ -541,16 +541,16 @@
             color: white;
         }
     </style>
-    
+
     <!-- Скрипт инициализации режима работы -->
     <script>
         // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Проверяем сохраненный режим
             const savedMode = localStorage.getItem('usermanager_use_real_api');
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-            
+
             // Проверяем активность админской сессии
             let isAdminActive = false;
             if (savedAdmin && expiry) {
@@ -563,7 +563,7 @@
                     localStorage.setItem('usermanager_use_real_api', 'true');
                 }
             }
-            
+
             // Если нет админской сессии, форсируем серверный режим
             if (!isAdminActive) {
                 localStorage.setItem('usermanager_use_real_api', 'true');
@@ -571,18 +571,18 @@
                     CONFIG.USE_REAL_API = true;
                 }
             }
-            
+
             // Показываем/скрываем кнопку переключения режима
             updateModeButton();
         });
-        
+
         function updateModeButton() {
             const adminBtn = document.getElementById('adminModeToggle');
             if (adminBtn) {
                 const savedAdmin = localStorage.getItem('usermanager_admin_session');
                 const expiry = localStorage.getItem('usermanager_admin_expiry');
                 const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
-                
+
                 if (isAdminActive) {
                     adminBtn.style.display = 'flex';
                     const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
@@ -595,33 +595,33 @@
                 }
             }
         }
-        
+
         // Функция переключения режима (только для админа)
         function toggleServerMode() {
             const savedAdmin = localStorage.getItem('usermanager_admin_session');
             const expiry = localStorage.getItem('usermanager_admin_expiry');
-            
+
             if (!savedAdmin || !expiry || Date.now() >= parseInt(expiry)) {
                 showAdminLoginModal();
                 return;
             }
-            
+
             const currentMode = localStorage.getItem('usermanager_use_real_api');
             const newMode = currentMode === 'true' ? 'false' : 'true';
-            
+
             localStorage.setItem('usermanager_use_real_api', newMode);
             if (typeof CONFIG !== 'undefined') {
                 CONFIG.USE_REAL_API = newMode === 'true';
             }
-            
+
             // Показываем уведомление
             alert(`Режим изменен на: ${newMode === 'true' ? 'Серверный (все видят)' : 'Локальный (только вы)'}\nСтраница будет перезагружена.`);
-            
+
             // Обновляем кнопку и перезагружаем
             updateModeButton();
             setTimeout(() => location.reload(), 1000);
         }
-        
+
         // Показывает модальное окно входа администратора
         function showAdminLoginModal() {
             const password = prompt('Введите пароль администратора:');
@@ -629,11 +629,11 @@
                 // Создаем сессию
                 const sessionId = 'admin_' + Date.now();
                 const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-                
+
                 localStorage.setItem('usermanager_admin_session', sessionId);
                 localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
                 localStorage.setItem('usermanager_use_real_api', 'false'); // По умолчанию локальный режим для админа
-                
+
                 alert('Успешный вход! Включен локальный режим.');
                 location.reload();
             } else if (password !== null) {
@@ -646,7 +646,7 @@
 <body>
     <!-- Звездное небо -->
     <div class="stars" id="stars"></div>
-    
+
     <!-- Планета -->
     <div class="planet"></div>
 
@@ -666,13 +666,14 @@
                 <i class="fas fa-presentation"></i>
                 <span>Презентация</span>
             </a>
-            
+
             <!-- Эта кнопка показывается только администратору -->
-            <a href="#" class="nav-item admin-mode-btn" id="adminModeToggle" onclick="toggleServerMode(); return false;" style="display: none;">
+            <a href="#" class="nav-item admin-mode-btn" id="adminModeToggle" onclick="toggleServerMode(); return false;"
+                style="display: none;">
                 <i class="fas fa-cogs"></i>
                 <span>Режим: Серверный</span>
             </a>
-            
+
             <!-- Кнопка входа для администратора -->
             <a href="#" class="nav-item" onclick="showAdminLoginModal(); return false;">
                 <i class="fas fa-user-shield"></i>
@@ -741,7 +742,8 @@
                     </div>
                     <h3 class="feature-title">Управление пользователями</h3>
                     <p class="feature-description">
-                        Создавайте, редактируйте и удаляйте пользователей с удобным интерфейсом и поддержкой различных режимов работы.
+                        Создавайте, редактируйте и удаляйте пользователей с удобным интерфейсом и поддержкой различных
+                        режимов работы.
                     </p>
                 </div>
                 <div class="feature-card">
@@ -809,43 +811,43 @@
         function createStars() {
             const starsContainer = document.getElementById('stars');
             if (!starsContainer) return;
-            
+
             starsContainer.innerHTML = '';
             const starCount = 150;
-            
+
             for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
-                
+
                 // Случайные параметры звезды
                 const size = Math.random() * 3 + 1;
                 const x = Math.random() * 100;
                 const y = Math.random() * 100;
                 const duration = Math.random() * 5 + 3;
                 const delay = Math.random() * 5;
-                
+
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.left = `${x}%`;
                 star.style.top = `${y}%`;
                 star.style.setProperty('--duration', `${duration}s`);
                 star.style.setProperty('--delay', `-${delay}s`);
-                
+
                 starsContainer.appendChild(star);
             }
         }
-        
+
         // Загрузка данных
         async function loadData() {
             try {
                 const savedMode = localStorage.getItem('usermanager_use_real_api');
                 const useRealAPI = savedMode === 'true' || savedMode === null;
-                
+
                 // Обновляем текст режима
                 const modeText = document.getElementById('currentModeText');
                 const statusValue = document.getElementById('statusValue');
                 const apiValue = document.getElementById('apiValue');
-                
+
                 if (modeText) {
                     modeText.textContent = useRealAPI ? 'Режим: Серверный' : 'Режим: Локальный';
                 }
@@ -857,7 +859,7 @@
                     apiValue.textContent = useRealAPI ? 'Активен' : 'Отключен';
                     apiValue.style.color = useRealAPI ? '#4ade80' : '#ef4444';
                 }
-                
+
                 if (useRealAPI) {
                     // Пробуем загрузить с сервера
                     try {
@@ -872,51 +874,51 @@
                         console.log('Сервер недоступен, используем локальные данные');
                     }
                 }
-                
+
                 // Используем локальные данные
                 loadLocalData();
-                
+
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
                 loadLocalData();
             }
         }
-        
+
         function loadLocalData() {
             // Локальные данные
             const localStats = {
                 total_users: 3,
                 status: 'Локальный'
             };
-            
+
             updateStats(localStats);
             loadLocalUsers();
         }
-        
+
         function updateStats(stats) {
             // Обновляем статистику
             const totalUsersEl = document.getElementById('totalUsers');
             const activeUsersEl = document.getElementById('activeUsers');
             const usersValueEl = document.getElementById('usersValue');
-            
+
             if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 3;
             if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 3;
             if (usersValueEl) usersValueEl.textContent = stats.total_users || 3;
         }
-        
+
         function loadLocalUsers() {
             const usersGrid = document.getElementById('usersGrid');
             if (!usersGrid) return;
-            
+
             const localUsers = [
-                { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72*3600000).toISOString() },
-                { id: 2, name: 'Мария Петрова', email: 'maria@example.com', created_at: new Date(Date.now() - 48*3600000).toISOString() },
-                { id: 3, name: 'Иван Сидоров', email: 'ivan@company.ru', created_at: new Date(Date.now() - 24*3600000).toISOString() }
+                { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72 * 3600000).toISOString() },
+                { id: 2, name: 'Мария Петрова', email: 'maria@example.com', created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
+                { id: 3, name: 'Иван Сидоров', email: 'ivan@company.ru', created_at: new Date(Date.now() - 24 * 3600000).toISOString() }
             ];
-            
+
             displayUsers(localUsers);
         }
-        
+
         async function loadUsersFromServer() {
             try {
                 const response = await fetch('http://localhost:8068/api/users');
@@ -929,20 +931,20 @@
                 loadLocalUsers();
             }
         }
-        
+
         function displayUsers(users) {
             const usersGrid = document.getElementById('usersGrid');
             if (!usersGrid) return;
-            
+
             usersGrid.innerHTML = '';
-            
+
             users.forEach(user => {
                 const userCard = document.createElement('div');
                 userCard.className = 'user-card';
-                
+
                 const createdDate = new Date(user.created_at);
                 const formattedDate = createdDate.toLocaleDateString('ru-RU');
-                
+
                 userCard.innerHTML = `
                     <div style="width: 50px; height: 50px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
                         ${user.name.charAt(0)}
@@ -953,11 +955,11 @@
                         <div style="color: #94a3b8; font-size: 0.8rem;">Зарегистрирован: ${formattedDate}</div>
                     </div>
                 `;
-                
+
                 usersGrid.appendChild(userCard);
             });
         }
-        
+
         // Создание графиков
         function createCharts() {
             // График активности
@@ -1008,7 +1010,7 @@
                     }
                 });
             }
-            
+
             // График распределения
             const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
             if (distributionCtx) {
@@ -1043,19 +1045,20 @@
                 });
             }
         }
-        
+
         // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             createStars();
             loadData();
             createCharts();
-            
+
             // Обновляем кнопку режима
             updateModeButton();
-            
+
             // Периодическое обновление данных
             setInterval(loadData, 30000);
         });
     </script>
 </body>
+
 </html>

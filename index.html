@@ -467,711 +467,514 @@
             color: #bbdefb;
             cursor: pointer;
             transition: all 0.3s;
-            border: none;
             font-family: inherit;
+            margin-left: 1rem;
         }
 
         .theme-toggle:hover {
             background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
         }
 
-        /* Кнопка режима API */
-        .api-mode-btn {
+        /* Кнопка админа */
+        .admin-mode-btn {
+            background: linear-gradient(45deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            color: #bbdefb;
-            cursor: pointer;
             transition: all 0.3s;
-            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
         }
 
-        .api-mode-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+        .admin-mode-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+            background: linear-gradient(45deg, #7c3aed, #6d28d9);
         }
 
-        /* Empty State */
-        .empty-state {
+        /* Футер */
+        .footer {
+            margin-top: 4rem;
+            padding: 3rem 0;
             text-align: center;
-            padding: 3rem;
-            display: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Поиск */
-        .search-input {
-            width: 100%;
-            max-width: 400px;
-            padding: 0.875rem 1rem 0.875rem 3rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            font-family: inherit;
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
-        .search-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin-right: 1rem;
+        .footer-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .search-container::before {
-            content: '🔍';
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #bbdefb;
-        }
-
-        /* Модальное окно */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-container {
-            background: rgba(26, 35, 126, 0.95);
-            border-radius: 20px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Светлая тема */
-        body.light-theme {
-            background: linear-gradient(135deg,
-                    #f8fafc 0%,
-                    #f1f5f9 25%,
-                    #e2e8f0 50%,
-                    #cbd5e1 75%,
-                    #f8fafc 100%);
-            color: #334155;
-        }
-
-        body.light-theme .main-title-container,
-        body.light-theme .stat-card,
-        body.light-theme .feature-card,
-        body.light-theme .users-section,
-        body.light-theme .chart-card,
-        body.light-theme .modal-container,
-        body.light-theme .mode-card {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        body.light-theme .main-subtitle,
-        body.light-theme .stat-label,
-        body.light-theme .feature-description,
-        body.light-theme .nav-item,
-        body.light-theme .search-container::before,
-        body.light-theme .mode-label {
-            color: #64748b;
-        }
-
-        body.light-theme .search-input,
-        body.light-theme .theme-toggle,
-        body.light-theme .api-mode-btn {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            color: #64748b;
-        }
-
-        body.light-theme .nav-item:hover {
-            background: rgba(0, 0, 0, 0.05);
-            color: #334155;
-        }
-
-        body.light-theme .action-button.secondary {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            color: #334155;
-        }
-
-        body.light-theme .star {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        body.light-theme .planet {
-            opacity: 0.3;
-        }
-
-        body.light-theme .mode-value {
-            color: #059669;
-        }
-
-        /* Обновляем стили для кнопок поиска */
-        .users-section > div:first-of-type {
+        .footer-links {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 2rem;
+            margin: 1.5rem 0;
             flex-wrap: wrap;
         }
 
-        /* Делаем кнопку "Обновить" вровень с поиском */
-        .users-section .action-button {
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            white-space: nowrap;
+        .footer-link {
+            color: #bbdefb;
+            text-decoration: none;
+            transition: color 0.3s;
         }
 
-        /* Адаптивность */
-        @media (max-width: 768px) {
-            .main-title {
-                font-size: 2.5rem;
-            }
-
-            .planet {
-                display: none;
-            }
-
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-container {
-                gap: 1.5rem;
-            }
-
-            .stat-card {
-                min-width: 150px;
-                padding: 1.5rem;
-            }
-
-            .mode-card {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .mode-details {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            /* Улучшаем адаптивность для мобильных */
-            .users-section > div:first-of-type {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-container {
-                margin-right: 0;
-                max-width: 100%;
-            }
-            
-            .users-section .action-button {
-                width: 100%;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .main-title {
-                font-size: 2rem;
-            }
-
-            .main-title-container {
-                padding: 1.5rem;
-            }
-
-            .users-section {
-                padding: 1.5rem;
-            }
+        .footer-link:hover {
+            color: white;
         }
     </style>
+    
+    <!-- Скрипт инициализации режима работы -->
+    <script>
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем сохраненный режим
+            const savedMode = localStorage.getItem('usermanager_use_real_api');
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+            
+            // Проверяем активность админской сессии
+            let isAdminActive = false;
+            if (savedAdmin && expiry) {
+                if (Date.now() < parseInt(expiry)) {
+                    isAdminActive = true;
+                } else {
+                    // Очищаем просроченную сессию
+                    localStorage.removeItem('usermanager_admin_session');
+                    localStorage.removeItem('usermanager_admin_expiry');
+                    localStorage.setItem('usermanager_use_real_api', 'true');
+                }
+            }
+            
+            // Если нет админской сессии, форсируем серверный режим
+            if (!isAdminActive) {
+                localStorage.setItem('usermanager_use_real_api', 'true');
+                if (typeof CONFIG !== 'undefined') {
+                    CONFIG.USE_REAL_API = true;
+                }
+            }
+            
+            // Показываем/скрываем кнопку переключения режима
+            updateModeButton();
+        });
+        
+        function updateModeButton() {
+            const adminBtn = document.getElementById('adminModeToggle');
+            if (adminBtn) {
+                const savedAdmin = localStorage.getItem('usermanager_admin_session');
+                const expiry = localStorage.getItem('usermanager_admin_expiry');
+                const isAdminActive = savedAdmin && expiry && Date.now() < parseInt(expiry);
+                
+                if (isAdminActive) {
+                    adminBtn.style.display = 'flex';
+                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+                    adminBtn.innerHTML = `
+                        <i class="fas fa-cogs"></i>
+                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+                    `;
+                } else {
+                    adminBtn.style.display = 'none';
+                }
+            }
+        }
+        
+        // Функция переключения режима (только для админа)
+        function toggleServerMode() {
+            const savedAdmin = localStorage.getItem('usermanager_admin_session');
+            const expiry = localStorage.getItem('usermanager_admin_expiry');
+            
+            if (!savedAdmin || !expiry || Date.now() >= parseInt(expiry)) {
+                showAdminLoginModal();
+                return;
+            }
+            
+            const currentMode = localStorage.getItem('usermanager_use_real_api');
+            const newMode = currentMode === 'true' ? 'false' : 'true';
+            
+            localStorage.setItem('usermanager_use_real_api', newMode);
+            if (typeof CONFIG !== 'undefined') {
+                CONFIG.USE_REAL_API = newMode === 'true';
+            }
+            
+            // Показываем уведомление
+            alert(`Режим изменен на: ${newMode === 'true' ? 'Серверный (все видят)' : 'Локальный (только вы)'}\nСтраница будет перезагружена.`);
+            
+            // Обновляем кнопку и перезагружаем
+            updateModeButton();
+            setTimeout(() => location.reload(), 1000);
+        }
+        
+        // Показывает модальное окно входа администратора
+        function showAdminLoginModal() {
+            const password = prompt('Введите пароль администратора:');
+            if (password === "admin123") {
+                // Создаем сессию
+                const sessionId = 'admin_' + Date.now();
+                const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+                
+                localStorage.setItem('usermanager_admin_session', sessionId);
+                localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+                localStorage.setItem('usermanager_use_real_api', 'false'); // По умолчанию локальный режим для админа
+                
+                alert('Успешный вход! Включен локальный режим.');
+                location.reload();
+            } else if (password !== null) {
+                alert('Неверный пароль');
+            }
+        }
+    </script>
 </head>
 
 <body>
-    <!-- Звездное небо и планета -->
+    <!-- Звездное небо -->
     <div class="stars" id="stars"></div>
+    
+    <!-- Планета -->
     <div class="planet"></div>
 
+    <!-- Контейнер -->
     <div class="container">
         <!-- Навигация -->
-        <div class="nav-menu">
+        <nav class="nav-menu">
             <a href="index.html" class="nav-item active">
-                <span class="nav-icon">🏠</span>
-                Главная
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
             </a>
             <a href="about.html" class="nav-item">
-                <span class="nav-icon">📖</span>
-                О проекте
+                <i class="fas fa-info-circle"></i>
+                <span>О проекте</span>
             </a>
             <a href="presentation.html" class="nav-item">
-                <span class="nav-icon">🎬</span>
-                Презентация
+                <i class="fas fa-presentation"></i>
+                <span>Презентация</span>
             </a>
+            
+            <!-- Эта кнопка показывается только администратору -->
+            <a href="#" class="nav-item admin-mode-btn" id="adminModeToggle" onclick="toggleServerMode(); return false;" style="display: none;">
+                <i class="fas fa-cogs"></i>
+                <span>Режим: Серверный</span>
+            </a>
+            
+            <!-- Кнопка входа для администратора -->
+            <a href="#" class="nav-item" onclick="showAdminLoginModal(); return false;">
+                <i class="fas fa-user-shield"></i>
+                <span>Вход администратора</span>
+            </a>
+        </nav>
 
-            <!-- Кнопка переключения режима API -->
-            <button class="api-mode-btn" onclick="toggleApiMode()" title="Переключить режим работы" id="apiModeButton">
-                <span id="apiModeIcon">🌐</span>
-                <span id="apiModeText">Локальный</span>
-            </button>
-
-            <!-- Переключатель темы -->
-            <button class="theme-toggle" id="themeToggle" title="Сменить тему">
-                <span class="theme-icon" id="themeIcon">🌙</span>
-                <span class="theme-text" id="themeText">Темная тема</span>
-            </button>
-        </div>
-
-        <!-- Главный заголовок -->
-        <section class="main-title-container">
-            <div class="logo-icon" style="font-size: 4rem; margin-bottom: 1rem;">👥</div>
-            <h1 class="main-title">UserManager Pro</h1>
-            <p class="main-subtitle">
-                Современная система управления пользователями с искусственным интеллектом,
-                аналитикой в реальном времени и безупречным интерфейсом
-            </p>
-        </section>
-
-        <!-- Статистика -->
-        <section class="stats-container">
-            <div class="stat-card">
-                <div class="stat-number" id="totalUsers">0</div>
-                <div class="stat-label">Активных пользователей</div>
+        <!-- Основной контент -->
+        <div class="centered-container">
+            <div class="main-title-container">
+                <h1 class="main-title">UserManager Pro</h1>
+                <p class="main-subtitle">
+                    Современная CRM система для управления пользователями с поддержкой локального и серверного режимов
+                </p>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="apiResponseTime">50ms</div>
-                <div class="stat-label">Время ответа API</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">100%</div>
-                <div class="stat-label">Доступность системы</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">24/7</div>
-                <div class="stat-label">Работа без перерывов</div>
-            </div>
-        </section>
 
-        <!-- Карточка режима работы под статистикой -->
-        <div class="mode-card-container">
-            <div class="mode-card" id="modeCard">
-                <div class="mode-status">
-                    <span class="mode-icon" id="modeIcon">🌐</span>
-                    <span class="mode-text" id="modeText">Серверный режим</span>
-                </div>
-                <div class="mode-details">
-                    <div class="mode-item">
-                        <span class="mode-label">Статус:</span>
-                        <span class="mode-value" id="serverStatus">🟢 Онлайн</span>
+            <!-- Карточка режима работы -->
+            <div class="mode-card-container">
+                <div class="mode-card">
+                    <div class="mode-status">
+                        <div class="mode-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="mode-text" id="currentModeText">
+                            Режим: Загрузка...
+                        </div>
                     </div>
-                    <div class="mode-item">
-                        <span class="mode-label">Время ответа:</span>
-                        <span class="mode-value" id="realResponseTime">50ms</span>
-                    </div>
-                    <div class="mode-item">
-                        <span class="mode-label">Последнее обновление:</span>
-                        <span class="mode-value" id="lastUpdate">2025.12.15 21:45</span>
+                    <div class="mode-details">
+                        <div class="mode-item">
+                            <span class="mode-label">Статус</span>
+                            <span class="mode-value" id="statusValue">...</span>
+                        </div>
+                        <div class="mode-item">
+                            <span class="mode-label">Пользователей</span>
+                            <span class="mode-value" id="usersValue">...</span>
+                        </div>
+                        <div class="mode-item">
+                            <span class="mode-label">API</span>
+                            <span class="mode-value" id="apiValue">...</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Ключевые особенности -->
-        <section class="centered-container">
-            <h2 class="section-title">✨ Ключевые особенности</h2>
+            <!-- Статистика -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Всего пользователей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeUsers">0</div>
+                    <div class="stat-label">Активных</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="uptime">100%</div>
+                    <div class="stat-label">Доступность</div>
+                </div>
+            </div>
+
+            <!-- Функциональные карточки -->
             <div class="feature-card-container">
                 <div class="feature-card">
-                    <span class="feature-icon">🚀</span>
-                    <h3 class="feature-title">Молниеносная скорость</h3>
-                    <p class="feature-description">
-                        Оптимизированные алгоритмы обеспечивают мгновенную обработку запросов
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">🔒</span>
-                    <h3 class="feature-title">Максимальная безопасность</h3>
-                    <p class="feature-description">
-                        Многоуровневая система защиты данных и шифрование
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">📱</span>
-                    <h3 class="feature-title">Адаптивный дизайн</h3>
-                    <p class="feature-description">
-                        Идеальное отображение на всех устройствах
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Быстрые действия -->
-        <section class="centered-container">
-            <h2 class="section-title">🚀 Быстрые действия</h2>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-                <button class="action-button" onclick="openModal()">
-                    <span>➕</span>
-                    Добавить пользователя
-                </button>
-                <button class="action-button secondary" onclick="loadDemoData()">
-                    <span>🎮</span>
-                    Загрузить демо
-                </button>
-                <button class="action-button secondary" onclick="refreshCharts()">
-                    <span>📊</span>
-                    Обновить графики
-                </button>
-            </div>
-        </section>
-
-        <!-- Управление пользователями -->
-        <section class="users-section">
-            <h2 class="section-title">👥 Управление пользователями</h2>
-            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
-                <div class="search-container">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Поиск пользователей..."
-                        onkeyup="searchUsers(this.value)">
-                </div>
-                <button class="action-button secondary" onclick="loadUsers()">
-                    <span>🔄</span>
-                    Обновить
-                </button>
-            </div>
-
-            <div class="users-grid" id="usersGrid">
-                <!-- Пользователи загружаются динамически -->
-            </div>
-
-            <div class="empty-state" id="emptyState">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">👤</div>
-                <h3>Нет пользователей</h3>
-                <p>Добавьте первого пользователя, чтобы начать работу</p>
-                <button class="action-button" onclick="openModal()" style="margin-top: 1rem;">
-                    Добавить пользователя
-                </button>
-            </div>
-        </section>
-
-        <!-- Графики статистики -->
-        <section class="centered-container">
-            <h2 class="section-title">📊 Статистика и аналитика</h2>
-            
-            <!-- Кнопки управления графиками -->
-            <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center;">
-                <button class="action-button" onclick="refreshCharts()">
-                    <span>🔄</span>
-                    Обновить графики
-                </button>
-                <button class="action-button secondary" onclick="exportCharts()">
-                    <span>📥</span>
-                    Экспорт данных
-                </button>
-            </div>
-            
-            <div class="charts-container">
-                <!-- График 1: Активность пользователей -->
-                <div class="chart-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 class="chart-title">📈 Активность пользователей (последние 7 дней)</h3>
-                        <div style="color: #60a5fa; font-weight: 600;">Навык пользователя</div>
+                    <div class="feature-icon">
+                        <i class="fas fa-users-cog"></i>
                     </div>
+                    <h3 class="feature-title">Управление пользователями</h3>
+                    <p class="feature-description">
+                        Создавайте, редактируйте и удаляйте пользователей с удобным интерфейсом и поддержкой различных режимов работы.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="feature-title">Аналитика и отчеты</h3>
+                    <p class="feature-description">
+                        Детальная статистика по активности пользователей, визуализация данных и автоматические отчеты.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">Безопасность</h3>
+                    <p class="feature-description">
+                        Надежная защита данных с поддержкой различных режимов доступа и админскими привилегиями.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Секция пользователей -->
+            <div class="users-section">
+                <h2 class="section-title">Пользователи системы</h2>
+                <div class="users-grid" id="usersGrid">
+                    <!-- Пользователи будут загружены через JavaScript -->
+                </div>
+            </div>
+
+            <!-- Графики -->
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3 class="chart-title">Активность по дням</h3>
                     <div class="chart-wrapper">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
-
-                <!-- График 2: Распределение по доменам -->
                 <div class="chart-card">
-                    <h3 class="chart-title">🎯 Распределение по доменам email</h3>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                        <div style="color: #34d399;">Количество пользователей</div>
-                        <div style="color: #fbbf24;">Время пользователей</div>
-                    </div>
+                    <h3 class="chart-title">Распределение пользователей</h3>
                     <div class="chart-wrapper">
-                        <canvas id="domainChart"></canvas>
-                    </div>
-                    <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-                        Имеющая 2025 год
-                    </div>
-                </div>
-
-                <!-- График 3: Новые пользователи -->
-                <div class="chart-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 class="chart-title">📅 Новые пользователи по месяцам (2025 год)</h3>
-                        <div style="color: #34d399; font-weight: 600;">Всего пользователей</div>
-                    </div>
-                    <div class="chart-wrapper">
-                        <canvas id="growthChart"></canvas>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-                        <div style="color: #f87171;">Новые и месяц</div>
-                        <div style="color: #94a3b8;">Месяцы 2025 года</div>
+                        <canvas id="distributionChart"></canvas>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Технологии -->
-        <section class="centered-container">
-            <h2 class="section-title">🛠️ Технологии проекта</h2>
-            <div class="feature-card-container">
-                <div class="feature-card">
-                    <span class="feature-icon">🐹</span>
-                    <h3 class="feature-title">Go Backend</h3>
-                    <p class="feature-description">
-                        Мощный и быстрый сервер на языке Go
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">⚡</span>
-                    <h3 class="feature-title">JavaScript ES6+</h3>
-                    <p class="feature-description">
-                        Современный фронтенд с async/await
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon">🎨</span>
-                    <h3 class="feature-title">CSS3 Анимации</h3>
-                    <p class="feature-description">
-                        Плавные анимации и современные эффекты
-                    </p>
-                </div>
-            </div>
-        </section>
+        </div>
 
         <!-- Футер -->
-        <footer
-            style="text-align: center; padding: 3rem 0; margin-top: 4rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-            <div style="font-size: 2rem; font-weight: 700; background: linear-gradient(45deg, #60a5fa, #3b82f6); 
-                       -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
-                👥 UserManager Pro
-            </div>
-            <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <a href="index.html" style="color: #bbdefb; text-decoration: none;">Главная</a>
-                <a href="about.html" style="color: #bbdefb; text-decoration: none;">О проекте</a>
-                <a href="presentation.html" style="color: #bbdefb; text-decoration: none;">Презентация</a>
-            </div>
-            <div style="color: #94a3b8;">
-                © 2024 UserManager Pro. Все права защищены.
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-logo">UserManager Pro</div>
+                <div class="footer-links">
+                    <a href="index.html" class="footer-link">Главная</a>
+                    <a href="about.html" class="footer-link">О проекте</a>
+                    <a href="presentation.html" class="footer-link">Презентация</a>
+                    <a href="https://github.com/Dmitriy43229/Go-Project777_GoStory" class="footer-link">GitHub</a>
+                </div>
+                <p>© 2024 UserManager Pro. Все права защищены.</p>
             </div>
         </footer>
     </div>
 
-    <!-- Модальное окно -->
-    <div class="modal" id="userModal">
-        <div class="modal-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.5rem; font-weight: 700; 
-                          background: linear-gradient(45deg, #60a5fa, #3b82f6); 
-                          -webkit-background-clip: text; -webkit-text-fill-color: transparent;" id="modalTitle">
-                    Добавить пользователя</h3>
-                <button onclick="closeModal()" style="background: none; border: none; font-size: 2rem; 
-                               color: #bbdefb; cursor: pointer;">&times;</button>
-            </div>
-            <form id="userForm" onsubmit="saveUser(event)">
-                <input type="hidden" id="userId">
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; color: #bbdefb; margin-bottom: 0.5rem;">👤 Имя пользователя</label>
-                    <input type="text" id="userName" class="search-input" placeholder="Введите полное имя" required>
-                </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; color: #bbdefb; margin-bottom: 0.5rem;">✉️ Email адрес</label>
-                    <input type="email" id="userEmail" class="search-input" placeholder="user@example.com" required>
-                </div>
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button type="button" class="action-button secondary" onclick="closeModal()" style="flex: 1;">
-                        Отмена
-                    </button>
-                    <button type="submit" class="action-button" style="flex: 1;">
-                        <span>✓</span>
-                        Сохранить
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
     <script>
-        // Инициализация звездного неба
+        // Создание звездного неба
         function createStars() {
             const starsContainer = document.getElementById('stars');
             if (!starsContainer) return;
-
+            
             starsContainer.innerHTML = '';
-
-            for (let i = 0; i < 200; i++) {
+            const starCount = 150;
+            
+            for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
-
+                
+                // Случайные параметры звезды
                 const size = Math.random() * 3 + 1;
                 const x = Math.random() * 100;
                 const y = Math.random() * 100;
                 const duration = Math.random() * 5 + 3;
                 const delay = Math.random() * 5;
-
-                star.style.cssText = `
-                    width: ${size}px;
-                    height: ${size}px;
-                    left: ${x}%;
-                    top: ${y}%;
-                    --duration: ${duration}s;
-                    --delay: ${delay}s;
-                `;
-
+                
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${x}%`;
+                star.style.top = `${y}%`;
+                star.style.setProperty('--duration', `${duration}s`);
+                star.style.setProperty('--delay', `-${delay}s`);
+                
                 starsContainer.appendChild(star);
             }
         }
-
-        // Инициализация переключателя темы
-        function initThemeToggle() {
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = document.getElementById('themeIcon');
-            const themeText = document.getElementById('themeText');
-
-            // Проверяем сохраненную тему
-            const savedTheme = localStorage.getItem('usermanager_theme') || 'dark';
-            if (savedTheme === 'light') {
-                document.body.classList.add('light-theme');
-                if (themeIcon) themeIcon.textContent = '☀️';
-                if (themeText) themeText.textContent = 'Светлая тема';
+        
+        // Загрузка данных
+        async function loadData() {
+            try {
+                const savedMode = localStorage.getItem('usermanager_use_real_api');
+                const useRealAPI = savedMode === 'true' || savedMode === null;
+                
+                // Обновляем текст режима
+                const modeText = document.getElementById('currentModeText');
+                const statusValue = document.getElementById('statusValue');
+                const apiValue = document.getElementById('apiValue');
+                
+                if (modeText) {
+                    modeText.textContent = useRealAPI ? 'Режим: Серверный' : 'Режим: Локальный';
+                }
+                if (statusValue) {
+                    statusValue.textContent = useRealAPI ? 'Онлайн' : 'Локально';
+                    statusValue.style.color = useRealAPI ? '#4ade80' : '#f59e0b';
+                }
+                if (apiValue) {
+                    apiValue.textContent = useRealAPI ? 'Активен' : 'Отключен';
+                    apiValue.style.color = useRealAPI ? '#4ade80' : '#ef4444';
+                }
+                
+                if (useRealAPI) {
+                    // Пробуем загрузить с сервера
+                    try {
+                        const response = await fetch('http://localhost:8068/api/stats');
+                        if (response.ok) {
+                            const data = await response.json();
+                            updateStats(data);
+                            loadUsersFromServer();
+                            return;
+                        }
+                    } catch (error) {
+                        console.log('Сервер недоступен, используем локальные данные');
+                    }
+                }
+                
+                // Используем локальные данные
+                loadLocalData();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                loadLocalData();
             }
-
-            themeToggle.addEventListener('click', () => {
-                document.body.classList.toggle('light-theme');
-
-                const isLight = document.body.classList.contains('light-theme');
-                localStorage.setItem('usermanager_theme', isLight ? 'light' : 'dark');
-
-                if (themeIcon) {
-                    themeIcon.textContent = isLight ? '☀️' : '🌙';
+        }
+        
+        function loadLocalData() {
+            // Локальные данные
+            const localStats = {
+                total_users: 3,
+                status: 'Локальный'
+            };
+            
+            updateStats(localStats);
+            loadLocalUsers();
+        }
+        
+        function updateStats(stats) {
+            // Обновляем статистику
+            const totalUsersEl = document.getElementById('totalUsers');
+            const activeUsersEl = document.getElementById('activeUsers');
+            const usersValueEl = document.getElementById('usersValue');
+            
+            if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 3;
+            if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 3;
+            if (usersValueEl) usersValueEl.textContent = stats.total_users || 3;
+        }
+        
+        function loadLocalUsers() {
+            const usersGrid = document.getElementById('usersGrid');
+            if (!usersGrid) return;
+            
+            const localUsers = [
+                { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', created_at: new Date(Date.now() - 72*3600000).toISOString() },
+                { id: 2, name: 'Мария Петрова', email: 'maria@example.com', created_at: new Date(Date.now() - 48*3600000).toISOString() },
+                { id: 3, name: 'Иван Сидоров', email: 'ivan@company.ru', created_at: new Date(Date.now() - 24*3600000).toISOString() }
+            ];
+            
+            displayUsers(localUsers);
+        }
+        
+        async function loadUsersFromServer() {
+            try {
+                const response = await fetch('http://localhost:8068/api/users');
+                if (response.ok) {
+                    const users = await response.json();
+                    displayUsers(users);
                 }
-                if (themeText) {
-                    themeText.textContent = isLight ? 'Светлая тема' : 'Темная тема';
-                }
-
-                // Обновляем графики при смене темы
-                if (window.charts && typeof window.updateChartColors === 'function') {
-                    setTimeout(window.updateChartColors, 100);
-                }
+            } catch (error) {
+                console.log('Не удалось загрузить пользователей с сервера');
+                loadLocalUsers();
+            }
+        }
+        
+        function displayUsers(users) {
+            const usersGrid = document.getElementById('usersGrid');
+            if (!usersGrid) return;
+            
+            usersGrid.innerHTML = '';
+            
+            users.forEach(user => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+                
+                const createdDate = new Date(user.created_at);
+                const formattedDate = createdDate.toLocaleDateString('ru-RU');
+                
+                userCard.innerHTML = `
+                    <div style="width: 50px; height: 50px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
+                        ${user.name.charAt(0)}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: white; margin-bottom: 0.25rem;">${user.name}</div>
+                        <div style="color: #bbdefb; font-size: 0.9rem; margin-bottom: 0.5rem;">${user.email}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem;">Зарегистрирован: ${formattedDate}</div>
+                    </div>
+                `;
+                
+                usersGrid.appendChild(userCard);
             });
         }
-
-        // Инициализация графиков
-        let charts = {};
-        function initCharts() {
-            // Проверяем доступен ли Chart.js
-            if (typeof Chart === 'undefined') {
-                console.log('Chart.js не загружен');
-                setTimeout(initCharts, 100);
-                return;
-            }
-
-            // График активности пользователей (7 дней)
-            const activityCtx = document.getElementById('activityChart');
+        
+        // Создание графиков
+        function createCharts() {
+            // График активности
+            const activityCtx = document.getElementById('activityChart')?.getContext('2d');
             if (activityCtx) {
-                charts.activity = new Chart(activityCtx, {
+                new Chart(activityCtx, {
                     type: 'line',
                     data: {
-                        labels: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'],
+                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
                         datasets: [{
-                            label: 'Активность',
-                            data: [65, 59, 80, 81, 56, 55, 40],
-                            borderColor: '#60a5fa',
-                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#60a5fa',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleColor: '#ffffff',
-                                bodyColor: '#ffffff'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bbdefb',
-                                    callback: function(value) {
-                                        return value + ' чел.';
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Количество пользователей',
-                                    color: '#94a3b8'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bbdefb'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Круговая диаграмма доменов
-            const domainCtx = document.getElementById('domainChart');
-            if (domainCtx) {
-                charts.domain = new Chart(domainCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: ['example.com', 'gmail.com', 'mail.ru', 'yandex.ru', 'company.com'],
-                        datasets: [{
-                            data: [30, 25, 20, 15, 10],
-                            backgroundColor: [
-                                '#60a5fa',
-                                '#34d399',
-                                '#fbbf24',
-                                '#f87171',
-                                '#a78bfa'
-                            ],
+                            label: 'Активных пользователей',
+                            data: [12, 19, 15, 22, 18, 16, 20],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             borderWidth: 2,
-                            borderColor: '#0a192f'
+                            fill: true,
+                            tension: 0.4
                         }]
                     },
                     options: {
@@ -1179,366 +982,80 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'right',
                                 labels: {
-                                    color: '#bbdefb',
-                                    padding: 20,
-                                    usePointStyle: true,
-                                    pointStyle: 'circle'
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `${context.label}: ${context.raw}%`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // График роста пользователей по месяцам
-            const growthCtx = document.getElementById('growthChart');
-            if (growthCtx) {
-                const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-                const currentMonth = new Date().getMonth();
-                
-                // Берем 6 последних месяцев
-                const lastSixMonths = [];
-                for (let i = 5; i >= 0; i--) {
-                    const monthIndex = (currentMonth - i + 12) % 12;
-                    lastSixMonths.push(months[monthIndex]);
-                }
-                
-                charts.growth = new Chart(growthCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: lastSixMonths,
-                        datasets: [{
-                            label: 'Новые пользователи',
-                            data: [42, 38, 45, 50, 47, 52],
-                            backgroundColor: '#34d399',
-                            borderColor: '#10b981',
-                            borderWidth: 1,
-                            borderRadius: 8,
-                            barPercentage: 0.6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `Новых пользователей: ${context.raw}`;
-                                    }
+                                    color: '#e2e8f0'
                                 }
                             }
                         },
                         scales: {
-                            y: {
-                                beginAtZero: true,
+                            x: {
+                                ticks: {
+                                    color: '#94a3b8'
+                                },
                                 grid: {
                                     color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bbdefb',
-                                    stepSize: 10
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Количество новых',
-                                    color: '#94a3b8'
                                 }
                             },
-                            x: {
+                            y: {
+                                ticks: {
+                                    color: '#94a3b8'
+                                },
                                 grid: {
                                     color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#bbdefb'
                                 }
                             }
                         }
                     }
                 });
             }
-
-            // Сохраняем ссылку на глобальные графики
-            window.charts = charts;
-        }
-
-        // Обновление графиков данными из системы
-        function refreshCharts() {
-            if (!window.getUsersForCharts) {
-                console.log('Функция getUsersForCharts не найдена');
-                showNotification('❌ Невозможно обновить графики: функция не найдена', 'error');
-                return;
-            }
-
-            const users = window.getUsersForCharts();
-            if (!users || !Array.isArray(users)) {
-                console.log('Нет данных для графиков');
-                showNotification('❌ Нет данных для отображения', 'warning');
-                return;
-            }
-
-            // Показываем загрузку
-            showNotification('📊 Обновление графиков...', 'info');
-
-            // Обновляем данные для графиков
-            setTimeout(() => {
-                try {
-                    // Обновляем график активности (симуляция)
-                    if (charts.activity) {
-                        const newData = Array.from({length: 7}, () => Math.floor(Math.random() * 30) + 20);
-                        charts.activity.data.datasets[0].data = newData;
-                        charts.activity.update();
-                    }
-
-                    // Обновляем круговую диаграмму доменов
-                    if (charts.domain) {
-                        const domains = {};
-                        users.forEach(user => {
-                            if (user.email) {
-                                const domain = user.email.split('@')[1];
-                                domains[domain] = (domains[domain] || 0) + 1;
-                            }
-                        });
-
-                        // Преобразуем в проценты
-                        const totalUsers = users.length;
-                        const domainLabels = Object.keys(domains).slice(0, 5);
-                        const domainData = domainLabels.map(label => Math.round((domains[label] / totalUsers) * 100));
-                        
-                        // Если меньше 5 доменов, добавляем остальные как "другие"
-                        if (domainLabels.length < 5) {
-                            const otherPercent = 100 - domainData.reduce((a, b) => a + b, 0);
-                            if (otherPercent > 0) {
-                                domainLabels.push('другие');
-                                domainData.push(otherPercent);
+            
+            // График распределения
+            const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
+            if (distributionCtx) {
+                new Chart(distributionCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Администраторы', 'Модераторы', 'Пользователи', 'Гости'],
+                        datasets: [{
+                            data: [1, 3, 15, 42],
+                            backgroundColor: [
+                                '#3b82f6',
+                                '#8b5cf6',
+                                '#10b981',
+                                '#64748b'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#e2e8f0',
+                                    padding: 20
+                                }
                             }
                         }
-
-                        charts.domain.data.labels = domainLabels;
-                        charts.domain.data.datasets[0].data = domainData;
-                        charts.domain.update();
                     }
-
-                    // Обновляем график роста
-                    if (charts.growth) {
-                        // Генерируем новые данные для роста
-                        const newGrowthData = Array.from({length: 6}, () => Math.floor(Math.random() * 20) + 35);
-                        charts.growth.data.datasets[0].data = newGrowthData;
-                        charts.growth.update();
-                    }
-
-                    // Обновляем время последнего обновления
-                    const now = new Date();
-                    const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-                    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    const lastUpdateEl = document.getElementById('lastUpdate');
-                    if (lastUpdateEl) {
-                        lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
-                    }
-
-                    showNotification('✅ Графики успешно обновлены', 'success');
-                    
-                } catch (error) {
-                    console.error('Ошибка обновления графиков:', error);
-                    showNotification('❌ Ошибка обновления графиков', 'error');
-                }
-            }, 500);
-        }
-
-        // Экспорт данных графиков
-        function exportCharts() {
-            if (!charts || Object.keys(charts).length === 0) {
-                showNotification('❌ Нет данных для экспорта', 'warning');
-                return;
-            }
-
-            const data = {
-                exportedAt: new Date().toISOString(),
-                charts: {}
-            };
-
-            // Собираем данные из всех графиков
-            Object.entries(charts).forEach(([name, chart]) => {
-                data.charts[name] = {
-                    labels: chart.data.labels,
-                    datasets: chart.data.datasets.map(dataset => ({
-                        label: dataset.label || '',
-                        data: dataset.data
-                    }))
-                };
-            });
-
-            // Добавляем информацию о пользователях
-            const users = window.getUsersForCharts ? window.getUsersForCharts() : [];
-            data.users = users;
-            data.totalUsers = users.length;
-
-            // Создаем JSON файл для скачивания
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-            
-            const link = document.createElement('a');
-            link.setAttribute('href', dataUri);
-            const fileName = `usermanager-charts-${new Date().toISOString().split('T')[0]}.json`;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            showNotification('✅ Данные экспортированы в JSON файл', 'success');
-        }
-
-        // Обновление статуса сервера
-        function updateServerStatus() {
-            const statusEl = document.getElementById('serverStatus');
-            const modeIcon = document.getElementById('modeIcon');
-            const modeText = document.getElementById('modeText');
-            const modeCard = document.getElementById('modeCard');
-            
-            // Получаем текущий режим
-            const currentMode = localStorage.getItem('usermanager_use_real_api');
-            const isServerMode = currentMode !== 'false'; // Если не 'false', то true
-            
-            if (isServerMode) {
-                if (statusEl) {
-                    statusEl.innerHTML = '🟢 Онлайн';
-                    statusEl.style.color = '#4ade80';
-                }
-                if (modeIcon) modeIcon.textContent = '🌐';
-                if (modeText) modeText.textContent = 'Серверный режим';
-                if (modeCard) {
-                    modeCard.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-                    modeCard.style.background = 'rgba(59, 130, 246, 0.1)';
-                }
-            } else {
-                if (statusEl) {
-                    statusEl.innerHTML = '💾 Локальный';
-                    statusEl.style.color = '#a78bfa';
-                }
-                if (modeIcon) modeIcon.textContent = '💾';
-                if (modeText) modeText.textContent = 'Локальный режим';
-                if (modeCard) {
-                    modeCard.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-                    modeCard.style.background = 'rgba(139, 92, 246, 0.1)';
-                }
+                });
             }
         }
-
-        // Обновление цветов графиков
-        function updateChartColors() {
-            const isLight = document.body.classList.contains('light-theme');
-            const gridColor = isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
-            const textColor = isLight ? '#334155' : '#e2e8f0';
-            const legendColor = isLight ? '#334155' : '#bbdefb';
-
-            Object.values(charts).forEach(chart => {
-                if (chart.options && chart.options.scales) {
-                    if (chart.options.scales.y) {
-                        chart.options.scales.y.grid.color = gridColor;
-                        chart.options.scales.y.ticks.color = textColor;
-                    }
-                    if (chart.options.scales.x) {
-                        chart.options.scales.x.grid.color = gridColor;
-                        chart.options.scales.x.ticks.color = textColor;
-                    }
-                    // Обновляем цвета легенды
-                    if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
-                        chart.options.plugins.legend.labels.color = legendColor;
-                    }
-                    chart.update();
-                }
-            });
-        }
-
-        // Показать статистику
-        function showStats() {
-            const stats = `
-Статистика UserManager Pro:
-
-• Всего пользователей: ${localStorage.getItem('usermanager_local_data') ?
-                    JSON.parse(localStorage.getItem('usermanager_local_data')).length : 0}
-• Режим работы: ${localStorage.getItem('usermanager_use_real_api') === 'false' ?
-                    'Локальный' : 'Серверный'}
-• Тема: ${localStorage.getItem('usermanager_theme') === 'light' ?
-                    'Светлая' : 'Темная'}
-• Версия: 1.0.0
-• Поддержка графиков: ✅
-            `;
-            alert(stats);
-        }
-
-        // Глобальные функции
-        window.refreshCharts = refreshCharts;
-        window.showStats = showStats;
-        window.exportCharts = exportCharts;
-        window.updateChartColors = updateChartColors;
-        window.updateServerStatus = updateServerStatus;
-
+        
         // Инициализация
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('UserManager Pro инициализируется...');
-
-            // Создаем звездное небо
+        document.addEventListener('DOMContentLoaded', function() {
             createStars();
-            window.addEventListener('resize', createStars);
-
-            // Инициализируем переключатель темы
-            initThemeToggle();
-
-            // Инициализируем графики
-            setTimeout(initCharts, 500);
-
-            // Обновляем статус API
-            if (typeof updateApiModeUI === 'function') {
-                setTimeout(() => {
-                    updateApiModeUI();
-                    updateServerStatus(); // Добавлен вызов обновления статуса
-                }, 100);
-            }
-
-            // Устанавливаем начальную дату
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const lastUpdateEl = document.getElementById('lastUpdate');
-            if (lastUpdateEl) {
-                lastUpdateEl.textContent = `${dateStr} ${timeStr}`;
-            }
-
-            console.log('UserManager Pro готов!');
+            loadData();
+            createCharts();
+            
+            // Обновляем кнопку режима
+            updateModeButton();
+            
+            // Периодическое обновление данных
+            setInterval(loadData, 30000);
         });
     </script>
-    <script>
-     // Автоматическая проверка администратора при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        // Если не администратор и локальный режим, показываем окно входа
-        const savedMode = localStorage.getItem('usermanager_use_real_api');
-        const isLocalMode = savedMode === 'false';
-        const savedAdmin = localStorage.getItem('usermanager_admin_access');
-        const isAdmin = savedAdmin === "admin123";
-        
-        if (!isAdmin && isLocalMode) {
-            // Показываем окно входа администратора
-            setTimeout(() => {
-                if (typeof showAdminLoginModal === 'function') {
-                    showAdminLoginModal();
-                }
-            }, 1000);
-        }
-    });
-</script>
 </body>
-
 </html>

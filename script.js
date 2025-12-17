@@ -6,7 +6,7 @@
 // Принудительное обновление кеша при загрузке
 (function () {
     // Проверяем версию в localStorage
-    const CURRENT_VERSION = '2.0.5';
+    const CURRENT_VERSION = '2.0.6';
     const savedVersion = localStorage.getItem('usermanager_version');
 
     if (savedVersion !== CURRENT_VERSION) {
@@ -42,10 +42,10 @@
 })();
 
 const CONFIG = {
-    USE_REAL_API: false,
+    USE_REAL_API: true, // По умолчанию серверный режим
     API_URL: 'http://localhost:8068/api',
     STORAGE_KEY: 'usermanager_local_data',
-    VERSION: '2.0.5',
+    VERSION: '2.0.6',
     LAST_UPDATE: new Date().toISOString()
 };
 
@@ -75,7 +75,7 @@ async function getServerMode() {
     return "server";
 }
 
-// Функция проверки блокировки
+// Функция проверки блокировки - ИСПРАВЛЕНА
 async function checkBlockStatus() {
     try {
         // Используем timestamp для предотвращения кеширования
@@ -83,14 +83,26 @@ async function checkBlockStatus() {
         if (response.ok) {
             const data = await response.json();
             
-            // Если режим локальный и мы не админ - блокируем
-            if (data.mode === 'local' && !data.is_admin) {
+            console.log('Статус проверки:', {
+                mode: data.mode,
+                is_admin: data.is_admin,
+                blocked: data.blocked,
+                our_admin: isAdmin
+            });
+            
+            // Блокируем ТОЛЬКО если:
+            // 1. Режим локальный
+            // 2. Мы не админ
+            // 3. Сервер сообщает что мы заблокированы
+            if (data.mode === 'local' && !data.is_admin && data.blocked) {
+                console.log('🚫 Блокировка: локальный режим, не админ');
                 showBlockPage();
                 return true;
             }
             
             // Если был заблокирован, но теперь режим изменился
             if (isBlocked && (data.mode === 'server' || data.is_admin)) {
+                console.log('✅ Разблокировка: серверный режим или админ');
                 isBlocked = false;
                 location.reload(true); // Автоматическая перезагрузка при возврате в серверный режим
             }
@@ -99,6 +111,8 @@ async function checkBlockStatus() {
         }
     } catch (error) {
         console.log('Ошибка проверки статуса:', error);
+        // При ошибке соединения - не блокируем
+        return false;
     }
     return false;
 }
@@ -179,50 +193,162 @@ function showBlockPage() {
 
 // Функция инициализации с немедленной проверкой
 async function initializeSystem() {
-    // Немедленная проверка блокировки
-    const blocked = await checkBlockStatus();
-    if (blocked) {
-        return;
-    }
+    console.log('🚀 Инициализация системы...');
     
-    // Проверяем админский доступ
+    // Сначала проверяем админский доступ
     checkAdminAccess();
     
     // Получаем текущий режим сервера
     try {
         const serverMode = await getServerMode();
         currentServerMode = serverMode;
+        console.log('📡 Режим сервера:', serverMode);
+        
+        // Проверяем блокировку
+        const blocked = await checkBlockStatus();
+        if (blocked) {
+            console.log('🚫 Система заблокирована');
+            return;
+        }
         
         // Устанавливаем локальные настройки в соответствии с режимом сервера
         if (serverMode === 'local') {
             if (!isAdmin) {
                 // Если не админ в локальном режиме - показываем блокировку
+                console.log('🚫 Локальный режим, не админ - блокировка');
                 showBlockPage();
                 return;
             } else {
                 // Админ в локальном режиме
                 CONFIG.USE_REAL_API = false;
                 localStorage.setItem('usermanager_use_real_api', 'false');
+                console.log('👑 Админ в локальном режиме');
             }
         } else {
-            // Серверный режим
+            // Серверный режим - всегда используем API
             CONFIG.USE_REAL_API = true;
             localStorage.setItem('usermanager_use_real_api', 'true');
+            console.log('🌐 Серверный режим');
         }
     } catch (error) {
-        console.log('Ошибка получения режима сервера:', error);
+        console.log('⚠️ Ошибка получения режима сервера:', error);
+        // По умолчанию - серверный режим
         CONFIG.USE_REAL_API = true;
         localStorage.setItem('usermanager_use_real_api', 'true');
+        currentServerMode = "server";
     }
+    
+    // Обновляем интерфейс
+    updateInterface();
     
     // Запускаем периодическую проверку
     startBlockChecker();
     
+    // Загружаем данные
+    if (!isBlocked) {
+        setTimeout(() => {
+            loadInitialData();
+        }, 500);
+    }
+}
+
+// Обновление интерфейса
+function updateInterface() {
     // Добавляем кнопку очистки кеша
     addCacheClearButton();
     
+    // Обновляем кнопки админа
+    updateAdminButtons();
+    
     // Обновляем кнопку режима
     updateModeButton();
+}
+
+// Обновление кнопок админа
+function updateAdminButtons() {
+    const adminBtn = document.getElementById('adminModeToggle');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (isAdmin) {
+        console.log('👑 Отображаем кнопки админа');
+        
+        // Показываем кнопку переключения режима
+        if (adminBtn) {
+            adminBtn.style.display = 'flex';
+            const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+            adminBtn.innerHTML = `
+                <i class="fas fa-cogs"></i>
+                <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+            `;
+            adminBtn.onclick = function (e) {
+                e.preventDefault();
+                toggleServerMode();
+            };
+        }
+        
+        // Добавляем кнопку выхода если её нет
+        if (!logoutBtn) {
+            addLogoutButton();
+        } else {
+            logoutBtn.style.display = 'flex';
+        }
+    } else {
+        console.log('👤 Скрываем кнопки админа');
+        
+        // Скрываем кнопки
+        if (adminBtn) adminBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+    }
+}
+
+// Добавление кнопки выхода
+function addLogoutButton() {
+    const navMenu = document.querySelector('.nav-menu');
+    if (!navMenu) return;
+    
+    // Проверяем, не существует ли уже кнопка
+    if (document.getElementById('logoutBtn')) return;
+    
+    const logoutBtn = document.createElement('a');
+    logoutBtn.id = 'logoutBtn';
+    logoutBtn.href = '#';
+    logoutBtn.className = 'nav-item logout-btn';
+    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i><span>Выйти</span>';
+    logoutBtn.onclick = function(e) {
+        e.preventDefault();
+        logoutAdmin();
+    };
+    logoutBtn.style.display = isAdmin ? 'flex' : 'none';
+    
+    // Вставляем перед кнопкой очистки кеша
+    const cacheBtn = document.getElementById('cacheClearBtn');
+    if (cacheBtn) {
+        navMenu.insertBefore(logoutBtn, cacheBtn);
+    } else {
+        // Или в конец навигации
+        navMenu.appendChild(logoutBtn);
+    }
+}
+
+// Функция выхода из админ-режима
+function logoutAdmin() {
+    if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
+        // Очищаем сессию
+        localStorage.removeItem('usermanager_admin_session');
+        localStorage.removeItem('usermanager_admin_expiry');
+        localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
+        
+        // Обновляем состояние
+        isAdmin = false;
+        adminSessionId = null;
+        CONFIG.USE_REAL_API = true;
+        
+        // Обновляем интерфейс
+        updateInterface();
+        
+        alert('✅ Вы вышли из режима администратора.');
+        setTimeout(() => location.reload(true), 500);
+    }
 }
 
 // Запуск проверки блокировки
@@ -244,10 +370,20 @@ function checkAdminAccess() {
     const savedSession = localStorage.getItem('usermanager_admin_session');
     const sessionExpiry = localStorage.getItem('usermanager_admin_expiry');
 
+    console.log('🔍 Проверка админской сессии:', {
+        savedSession: !!savedSession,
+        sessionExpiry: sessionExpiry,
+        now: Date.now(),
+        expiryTime: sessionExpiry ? parseInt(sessionExpiry) : null,
+        isExpired: sessionExpiry ? Date.now() > parseInt(sessionExpiry) : true
+    });
+
     // Если есть активная сессия и она не истекла
     if (savedSession && sessionExpiry) {
         const now = Date.now();
-        if (now < parseInt(sessionExpiry)) {
+        const expiryTime = parseInt(sessionExpiry);
+        
+        if (now < expiryTime) {
             isAdmin = true;
             adminSessionId = savedSession;
             console.log('✅ Администратор: активная сессия восстановлена');
@@ -260,6 +396,8 @@ function checkAdminAccess() {
         }
     }
 
+    isAdmin = false;
+    adminSessionId = null;
     return false;
 }
 
@@ -346,13 +484,32 @@ async function toggleServerMode() {
             alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.`);
         }
         
-        // Обновляем кнопку и перезагружаем
-        updateModeButton();
+        // Обновляем интерфейс
+        updateInterface();
+        
+        // Перезагружаем страницу
         setTimeout(() => location.reload(true), 1000);
 
     } catch (error) {
         console.error('Ошибка переключения режима:', error);
         alert(`❌ Ошибка: ${error.message}`);
+    }
+}
+
+// Обновление кнопки режима
+function updateModeButton() {
+    const adminBtn = document.getElementById('adminModeToggle');
+    if (!adminBtn) return;
+
+    if (isAdmin) {
+        adminBtn.style.display = 'flex';
+        const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
+        adminBtn.innerHTML = `
+            <i class="fas fa-cogs"></i>
+            <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
+        `;
+    } else {
+        adminBtn.style.display = 'none';
     }
 }
 
@@ -390,29 +547,6 @@ function clearCache() {
     }
 }
 
-// Обновление кнопки режима
-function updateModeButton() {
-    const adminBtn = document.getElementById('adminModeToggle');
-    if (!adminBtn) return;
-
-    const isAdminActive = checkAdminAccess();
-
-    if (isAdminActive) {
-        adminBtn.style.display = 'flex';
-        const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-        adminBtn.innerHTML = `
-            <i class="fas fa-cogs"></i>
-            <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
-        `;
-        adminBtn.onclick = function (e) {
-            e.preventDefault();
-            toggleServerMode();
-        };
-    } else {
-        adminBtn.style.display = 'none';
-    }
-}
-
 // Добавляем кнопку обновления кеша в навигацию
 function addCacheClearButton() {
     // Ищем навигационное меню
@@ -431,9 +565,9 @@ function addCacheClearButton() {
             };
             
             // Находим кнопку "Вход администратора" и вставляем перед ней
-            const adminBtn = document.querySelector('.nav-item[onclick*="showAdminLoginModal"]');
-            if (adminBtn) {
-                navMenu.insertBefore(cacheBtn, adminBtn);
+            const adminLoginBtn = document.querySelector('.nav-item[onclick*="showAdminLoginModal"]');
+            if (adminLoginBtn) {
+                navMenu.insertBefore(cacheBtn, adminLoginBtn);
             } else {
                 // Ищем последнюю кнопку в навигации
                 const lastNavItem = navMenu.lastElementChild;
@@ -447,312 +581,31 @@ function addCacheClearButton() {
     }
 }
 
-// Окно входа для администратора
+// Окно входа для администратора (упрощенное)
 function showAdminLoginModal() {
-    const modalHTML = `
-        <div id="universalAdminModal" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.98);
-            backdrop-filter: blur(20px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 99999;
-            animation: fadeIn 0.4s ease;
-        ">
-            <div style="
-                background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
-                border-radius: 28px;
-                padding: 3.5rem 2.5rem;
-                width: 90%;
-                max-width: 500px;
-                border: 2px solid rgba(96, 165, 250, 0.25);
-                text-align: center;
-                box-shadow: 
-                    0 40px 100px rgba(0, 0, 0, 0.7),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                animation: slideUp 0.5s ease;
-                position: relative;
-                overflow: hidden;
-            ">
-                <!-- Декоративные элементы -->
-                <div style="
-                    position: absolute;
-                    top: -100px;
-                    right: -100px;
-                    width: 300px;
-                    height: 300px;
-                    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-                    border-radius: 50%;
-                "></div>
-
-                <div style="
-                    position: absolute;
-                    bottom: -80px;
-                    left: -80px;
-                    width: 200px;
-                    height: 200px;
-                    background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-                    border-radius: 50%;
-                "></div>
-
-                <!-- Контент -->
-                <div style="position: relative; z-index: 2;">
-                    <div style="
-                        width: 100px;
-                        height: 100px;
-                        margin: 0 auto 2rem;
-                        background: linear-gradient(45deg, #3b82f6, #1d4ed8, #8b5cf6);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 3.5rem;
-                        color: white;
-                        box-shadow: 
-                            0 20px 50px rgba(59, 130, 246, 0.4),
-                            inset 0 4px 20px rgba(255, 255, 255, 0.3);
-                        animation: pulse 2s infinite;
-                    ">
-                        👑
-                    </div>
-
-                    <h3 style="
-                        color: white; 
-                        margin-bottom: 0.75rem; 
-                        font-size: 2.2rem;
-                        font-weight: 800;
-                        background: linear-gradient(45deg, #60a5fa, #a78bfa);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        background-clip: text;
-                    ">
-                        Панель администратора
-                    </h3>
-
-                    <p style="
-                        color: #cbd5e1; 
-                        margin-bottom: 2.5rem; 
-                        line-height: 1.6;
-                        font-size: 1.1rem;
-                        max-width: 400px;
-                        margin-left: auto;
-                        margin-right: auto;
-                    ">
-                        Только администратор может управлять системой. 
-                        Введите пароль для доступа к управлению режимами работы.
-                    </p>
-
-                    <div style="margin-bottom: 2rem; position: relative;">
-                        <input type="password" 
-                               id="universalPasswordInput" 
-                               placeholder="Пароль администратора" 
-                               style="
-                                   width: 100%;
-                                   padding: 1.25rem 1.75rem;
-                                   background: rgba(255, 255, 255, 0.07);
-                                   border: 2px solid rgba(255, 255, 255, 0.15);
-                                   border-radius: 16px;
-                                   color: white;
-                                   font-size: 1.1rem;
-                                   text-align: center;
-                                   font-family: 'Courier New', monospace;
-                                   letter-spacing: 2px;
-                                   transition: all 0.3s;
-                                   outline: none;
-                               "
-                               onfocus="this.style.borderColor='#60a5fa'; this.style.boxShadow='0 0 0 4px rgba(96, 165, 250, 0.2)';"
-                               onblur="this.style.borderColor='rgba(255, 255, 255, 0.15)'; this.style.boxShadow='none';">
-                        <div style="
-                            position: absolute;
-                            bottom: -25px;
-                            left: 0;
-                            right: 0;
-                            text-align: center;
-                            font-size: 0.85rem;
-                            color: #94a3b8;
-                        ">
-                            Только администратор знает пароль
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 1rem; margin-top: 3rem;">
-                        <button onclick="universalGuestContinue()" style="
-                            flex: 1;
-                            padding: 1.25rem;
-                            background: rgba(255, 255, 255, 0.05);
-                            border: 2px solid rgba(255, 255, 255, 0.1);
-                            color: #cbd5e1;
-                            border-radius: 14px;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 1rem;
-                            transition: all 0.3s;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 0.75rem;
-                        "
-                        onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(-2px)';"
-                        onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.transform='translateY(0)';">
-                            <span>👤</span>
-                            <span>Продолжить как гость</span>
-                        </button>
-
-                        <button onclick="universalAdminLogin()" style="
-                            flex: 1;
-                            padding: 1.25rem;
-                            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
-                            border: none;
-                            color: white;
-                            border-radius: 14px;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 1rem;
-                            transition: all 0.3s;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 0.75rem;
-                            box-shadow: 0 12px 35px rgba(59, 130, 246, 0.35);
-                        "
-                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 40px rgba(59, 130, 246, 0.5)';"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 35px rgba(59, 130, 246, 0.35)';">
-                            <span>🔓</span>
-                            <span>Войти как администратор</span>
-                        </button>
-                    </div>
-
-                    <div id="universalError" style="
-                        color: #f87171;
-                        margin-top: 2rem;
-                        display: none;
-                        font-size: 0.95rem;
-                        padding: 1rem;
-                        background: rgba(239, 68, 68, 0.1);
-                        border-radius: 12px;
-                        border: 1px solid rgba(239, 68, 68, 0.2);
-                    ">
-                        ❌ Неверный пароль администратора
-                    </div>
-
-                    <div style="
-                        margin-top: 3rem;
-                        padding-top: 2rem;
-                        border-top: 1px solid rgba(255, 255, 255, 0.1);
-                    ">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align: left;">
-                            <div>
-                                <div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <span>🌐</span>
-                                    <span>Серверный режим</span>
-                                </div>
-                                <div style="color: #94a3b8; font-size: 0.9rem;">
-                                    • Доступен всем<br>
-                                    • Работает с Go API<br>
-                                    • Общие данные для всех
-                                </div>
-                            </div>
-
-                            <div>
-                                <div style="color: #a78bfa; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <span>🔒</span>
-                                    <span>Локальный режим</span>
-                                </div>
-                                <div style="color: #94a3b8; font-size: 0.9rem;">
-                                    • Только для администратора<br>
-                                    • Другие видят 404 ошибку<br>
-                                    • Белый экран для остальных
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Кнопка закрытия -->
-                <button onclick="universalCloseModal()" style="
-                    position: absolute;
-                    top: 1.5rem;
-                    right: 1.5rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    color: #94a3b8;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    font-size: 1.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s;
-                "
-                onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.color='white';"
-                onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.color='#94a3b8';">
-                    ×
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.getElementById('universalPasswordInput').focus();
+    const password = prompt('Введите пароль администратора:');
     
-    // Добавляем обработчик клавиши Enter
-    document.getElementById('universalPasswordInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            universalAdminLogin();
-        }
-    });
-}
-
-function universalCloseModal() {
-    const modal = document.getElementById('universalAdminModal');
-    if (modal) {
-        modal.remove();
+    if (password === null) {
+        return; // Пользователь отменил ввод
     }
-}
-
-function universalGuestContinue() {
-    // Устанавливаем серверный режим для гостя
-    localStorage.setItem('usermanager_use_real_api', 'true');
-    CONFIG.USE_REAL_API = true;
-    isAdmin = false;
-    universalCloseModal();
-
-    // Обновляем страницу
-    alert('Включен серверный режим. Все пользователи видят общие данные.');
-    setTimeout(() => location.reload(true), 500);
-}
-
-function universalAdminLogin() {
-    const passwordInput = document.getElementById('universalPasswordInput');
-    const errorDiv = document.getElementById('universalError');
-
-    if (!passwordInput) return;
-
-    if (passwordInput.value === ADMIN_PASSWORD) {
+    
+    if (password === ADMIN_PASSWORD) {
         // Создаем сессию администратора
         createAdminSession();
-
+        
         // По умолчанию устанавливаем локальный режим для админа
         localStorage.setItem('usermanager_use_real_api', 'false');
         CONFIG.USE_REAL_API = false;
-
-        errorDiv.style.display = 'none';
-        universalCloseModal();
-
-        // Обновляем страницу
-        alert('✅ Успешный вход как администратор!\nТеперь вы можете переключать режимы работы системы.\nПри включении локального режима другие увидят 404 ошибку.');
+        
+        alert('✅ Успешный вход как администратор!\nТеперь вы можете переключать режимы работы системы.');
+        
+        // Обновляем интерфейс
+        updateInterface();
+        
+        // Перезагружаем страницу
         setTimeout(() => location.reload(true), 500);
-    } else {
-        errorDiv.style.display = 'block';
-        passwordInput.value = '';
-        passwordInput.focus();
+    } else if (password !== '') {
+        alert('❌ Неверный пароль администратора');
     }
 }
 
@@ -801,50 +654,6 @@ function saveLocalData() {
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(localUsers));
 }
 
-// Функция для выполнения запросов с проверкой 404
-async function safeFetch(url, options = {}) {
-    // Сначала проверяем блокировку
-    if (isBlocked) {
-        throw new Error('Blocked by server mode');
-    }
-
-    try {
-        // Добавляем админские заголовки если мы админ
-        if (checkAdminAccess()) {
-            if (!options.headers) options.headers = {};
-
-            // Если это запрос в локальном режиме, добавляем токен
-            if (currentServerMode === "local" || !CONFIG.USE_REAL_API) {
-                options.headers['X-Admin-Token'] = ADMIN_TOKEN;
-            }
-
-            // Добавляем пароль для админских операций
-            if (url.includes('/api/admin/')) {
-                options.headers['X-Admin-Password'] = ADMIN_PASSWORD;
-            }
-        }
-
-        const response = await fetch(url, options);
-
-        // Проверяем 404 ошибку
-        if (response.status === 404) {
-            // Если это админ, не показываем 404 страницу
-            if (!checkAdminAccess()) {
-                showBlockPage();
-            }
-            throw new Error('404 - Страница недоступна');
-        }
-
-        return response;
-    } catch (error) {
-        // Если это не 404 ошибка, просто пробрасываем дальше
-        if (error.message.includes('404') || error.message.includes('Blocked')) {
-            throw error;
-        }
-        throw error;
-    }
-}
-
 // Получение всех пользователей
 async function getAllUsers() {
     // Проверяем блокировку
@@ -854,7 +663,7 @@ async function getAllUsers() {
 
     if (CONFIG.USE_REAL_API) {
         try {
-            const response = await safeFetch(`${CONFIG.API_URL}/users`);
+            const response = await fetch(`${CONFIG.API_URL}/users?_=${Date.now()}`);
             if (response.ok) {
                 const users = await response.json();
                 return users;
@@ -863,23 +672,17 @@ async function getAllUsers() {
             }
         } catch (error) {
             console.warn('Не удалось получить данные с сервера:', error);
-            // Если это 404 ошибка, уже показали страницу
-            if (error.message.includes('404') || error.message.includes('Blocked')) {
-                return [];
-            }
             // Используем локальные данные в случае ошибки
-            if (checkAdminAccess()) {
+            if (isAdmin) {
                 return localUsers;
             }
             return [];
         }
     } else {
         // Локальный режим - только для админа
-        if (checkAdminAccess()) {
+        if (isAdmin) {
             return localUsers;
         } else {
-            // Показываем 404 страницу для не-админов
-            showBlockPage();
             return [];
         }
     }
@@ -888,7 +691,7 @@ async function getAllUsers() {
 // Получение статистики
 async function getStats() {
     try {
-        const response = await safeFetch(`${CONFIG.API_URL}/stats`);
+        const response = await fetch(`${CONFIG.API_URL}/stats?_=${Date.now()}`);
         if (response.ok) {
             const stats = await response.json();
             return stats;
@@ -898,28 +701,13 @@ async function getStats() {
     } catch (error) {
         console.warn('Не удалось получить статистику с сервера:', error);
 
-        // Если это 404 ошибка, уже показали страницу
-        if (error.message.includes('404') || error.message.includes('Blocked')) {
-            return {
-                total_users: 0,
-                server_time: new Date().toISOString(),
-                status: 'blocked',
-                version: '1.0.0',
-                mode: 'local',
-                message: 'Локальный режим активен'
-            };
-        }
-
-        // Проверяем локальный режим
-        const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-        const isAdminActive = checkAdminAccess();
-
+        // Возвращаем локальную статистику
         return {
-            total_users: isLocalMode && !isAdminActive ? 0 : localUsers.length,
+            total_users: localUsers.length,
             server_time: new Date().toISOString(),
-            status: isLocalMode ? 'local' : 'offline',
+            status: 'offline',
             version: '1.0.0',
-            mode: isLocalMode ? 'local' : 'server'
+            mode: currentServerMode
         };
     }
 }
@@ -931,21 +719,15 @@ function displayUsers(users, containerId = 'usersGrid') {
 
     container.innerHTML = '';
 
-    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-    const isAdminActive = checkAdminAccess();
-
     if (users.length === 0) {
         // Показываем сообщение если нет пользователей
-        if (isLocalMode && !isAdminActive) {
+        if (currentServerMode === 'local' && !isAdmin) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1;">
                     <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
                     <h3 style="color: #64748b; margin-bottom: 1rem;">Локальный режим активен</h3>
                     <p>В данный момент администратор работает в локальном режиме.</p>
                     <p>Данные временно недоступны для просмотра.</p>
-                    <p style="margin-top: 1rem; color: #3b82f6;">
-                        <i class="fas fa-info-circle"></i> Только администратор может видеть данные в этом режиме
-                    </p>
                 </div>
             `;
         } else {
@@ -996,7 +778,7 @@ function updateStatsDisplay(stats) {
     if (usersValueEl) usersValueEl.textContent = stats.total_users || 0;
 
     if (statusEl) {
-        if (stats.status === 'blocked' || (stats.mode === 'local' && !checkAdminAccess())) {
+        if (currentServerMode === 'local' && !isAdmin) {
             statusEl.textContent = 'Заблокирован';
             statusEl.style.color = '#ef4444';
         } else {
@@ -1005,12 +787,12 @@ function updateStatsDisplay(stats) {
         }
     }
     if (modeTextEl) {
-        if (stats.mode === 'local' && !checkAdminAccess()) {
+        if (currentServerMode === 'local' && !isAdmin) {
             modeTextEl.textContent = 'Режим: Локальный (доступ закрыт)';
             modeTextEl.style.color = '#ef4444';
         } else {
-            modeTextEl.textContent = stats.mode === 'local' ? 'Режим: Локальный' : 'Режим: Серверный';
-            modeTextEl.style.color = stats.mode === 'local' ? '#f59e0b' : '#4ade80';
+            modeTextEl.textContent = currentServerMode === 'local' ? 'Режим: Локальный' : 'Режим: Серверный';
+            modeTextEl.style.color = currentServerMode === 'local' ? '#f59e0b' : '#4ade80';
         }
     }
 }
@@ -1041,31 +823,6 @@ async function loadInitialData() {
 
 // Вызываем инициализацию сразу при загрузке
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM загружен, инициализируем систему...');
     initializeSystem();
-    
-    // Загружаем данные через небольшую задержку
-    setTimeout(() => {
-        if (!isBlocked) {
-            loadInitialData();
-        }
-    }, 500);
-    
-    // Добавляем CSS для анимаций
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-    `;
-    document.head.appendChild(style);
 });

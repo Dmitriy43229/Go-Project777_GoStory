@@ -1052,156 +1052,158 @@
 
         // ============================ ФУНКЦИИ ДЛЯ СТРАНИЦЫ "О ПРОЕКТЕ" ============================
 
-// Функция для кнопки "Войти" на странице "О проекте"
-function showAdminLoginModal() {
-    if (checkAdminAccess()) {
-        // Админ уже вошел - переключаемся на главную с режимом
-        window.location.href = 'index.html';
-    } else {
-        // Показываем модальное окно входа
-        document.getElementById('aboutAdminModal').style.display = 'flex';
-        document.getElementById('aboutPassword').focus();
-    }
-}
-
-async function aboutAdminLogin() {
-    const password = document.getElementById('aboutPassword').value;
-    const errorDiv = document.getElementById('aboutError');
-
-    if (password === "admin123") {
-        // Создаем сессию
-        const sessionId = 'admin_' + Date.now();
-        const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-
-        localStorage.setItem('usermanager_admin_session', sessionId);
-        localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
-
-        errorDiv.style.display = 'none';
-        document.getElementById('aboutAdminModal').style.display = 'none';
-
-        // Получаем текущий режим сервера
-        try {
-            const response = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('usermanager_use_real_api', data.mode === 'server' ? 'true' : 'false');
-            }
-        } catch (error) {
-            console.log('Не удалось получить режим сервера');
-            localStorage.setItem('usermanager_use_real_api', 'false');
-        }
-
-        // Перенаправляем на главную
-        alert('✅ Успешный вход как администратор!');
-        window.location.href = 'index.html';
-    } else {
-        errorDiv.style.display = 'block';
-        document.getElementById('aboutPassword').value = '';
-        document.getElementById('aboutPassword').focus();
-    }
-}
-
-// Функция переключения режима для about.html
-async function toggleServerMode() {
-    if (!checkAdminAccess()) {
-        showAdminLoginModal();
-        return;
-    }
-
-    try {
-        // Получаем текущий режим сервера
-        const modeResponse = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
-        if (!modeResponse.ok) throw new Error('Не удалось получить режим');
-        
-        const modeData = await modeResponse.json();
-        const currentMode = modeData.mode;
-        const newMode = currentMode === 'server' ? 'local' : 'server';
-        const modeName = newMode === 'server' ? 'Серверный' : 'Локальный';
-
-        // Меняем режим на сервере
-        const response = await fetch('http://localhost:8068/api/admin/mode', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Admin-Password': 'admin123'
-            },
-            body: JSON.stringify({
-                mode: newMode,
-                password: 'admin123'
-            })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (newMode === 'local') {
-                alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+        // Функция для кнопки "Войти" на странице "О проекте"
+        function showAdminLoginModal() {
+            if (checkAdminAccess()) {
+                // Админ уже вошел - переключаемся на главную с режимом
+                window.location.href = 'index.html';
             } else {
-                alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+                // Показываем модальное окно входа
+                document.getElementById('aboutAdminModal').style.display = 'flex';
+                document.getElementById('aboutPassword').focus();
             }
-            
-            // Обновляем кнопки
-            updateModeButtons();
-            
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || 'Ошибка сервера');
         }
 
-    } catch (error) {
-        console.error('Ошибка переключения режима:', error);
-        alert(`❌ Ошибка: ${error.message}\n\nПроверьте, запущен ли сервер на localhost:8068`);
-    }
-}
+        async function aboutAdminLogin() {
+            const password = document.getElementById('aboutPassword').value;
+            const errorDiv = document.getElementById('aboutError');
 
-// Функция для обновления кнопок режима
-function updateModeButtons() {
-    const adminBtn = document.getElementById('adminModeToggle');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const isAdminActive = checkAdminAccess();
+            if (password === "admin123") {
+                // Создаем сессию
+                const sessionId = 'admin_' + Date.now();
+                const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
 
-    if (adminBtn && logoutBtn) {
-        if (isAdminActive) {
-            adminBtn.style.display = 'flex';
-            logoutBtn.style.display = 'flex';
-            
-            // Получаем текущий режим для отображения на кнопке
-            fetch('http://localhost:8068/api/mode?_=' + Date.now())
-                .then(response => response.json())
-                .then(data => {
-                    adminBtn.innerHTML = `
+                localStorage.setItem('usermanager_admin_session', sessionId);
+                localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+
+                errorDiv.style.display = 'none';
+                document.getElementById('aboutAdminModal').style.display = 'none';
+
+                // Получаем текущий режим сервера
+                try {
+                    const response = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
+                    if (response.ok) {
+                        const data = await response.json();
+                        localStorage.setItem('usermanager_use_real_api', data.mode === 'server' ? 'true' : 'false');
+                    }
+                } catch (error) {
+                    console.log('Не удалось получить режим сервера');
+                    localStorage.setItem('usermanager_use_real_api', 'false');
+                }
+
+                // Перенаправляем на главную
+                alert('✅ Успешный вход как администратор!');
+                window.location.href = 'index.html';
+            } else {
+                errorDiv.style.display = 'block';
+                document.getElementById('aboutPassword').value = '';
+                document.getElementById('aboutPassword').focus();
+            }
+        }
+
+        // Функция переключения режима для about.html
+        async function toggleServerMode() {
+            if (!checkAdminAccess()) {
+                showAdminLoginModal();
+                return;
+            }
+
+            try {
+                // Получаем текущий режим сервера
+                const modeResponse = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
+                if (!modeResponse.ok) throw new Error('Не удалось получить режим');
+
+                const modeData = await modeResponse.json();
+                const currentMode = modeData.mode;
+                const newMode = currentMode === 'server' ? 'local' : 'server';
+                const modeName = newMode === 'server' ? 'Серверный' : 'Локальный';
+
+                // Меняем режим на сервере
+                const response = await fetch('http://localhost:8068/api/admin/mode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': 'admin123'
+                    },
+                    body: JSON.stringify({
+                        mode: newMode,
+                        password: 'admin123'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    if (newMode === 'local') {
+                        alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+                    } else {
+                        alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+                    }
+
+                    // Обновляем кнопки
+                    updateModeButtons();
+
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка сервера');
+                }
+
+            } catch (error) {
+                console.error('Ошибка переключения режима:', error);
+                alert(`❌ Ошибка: ${error.message}\n\nПроверьте, запущен ли сервер на localhost:8068`);
+            }
+        }
+
+        // Функция для обновления кнопок режима
+        function updateModeButtons() {
+            const adminBtn = document.getElementById('adminModeToggle');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const isAdminActive = checkAdminAccess();
+
+            if (adminBtn && logoutBtn) {
+                if (isAdminActive) {
+                    adminBtn.style.display = 'flex';
+                    logoutBtn.style.display = 'flex';
+
+                    // Получаем текущий режим для отображения на кнопке
+                    fetch('http://localhost:8068/api/mode?_=' + Date.now())
+                        .then(response => response.json())
+                        .then(data => {
+                            adminBtn.innerHTML = `
                         <i class="fas fa-cogs"></i>
                         <span>Режим: ${data.mode === 'local' ? 'Локальный' : 'Серверный'}</span>
                     `;
-                })
-                .catch(() => {
-                    adminBtn.innerHTML = `
+                        })
+                        .catch(() => {
+                            adminBtn.innerHTML = `
                         <i class="fas fa-cogs"></i>
                         <span>Режим: Неизвестно</span>
                     `;
-                });
-        } else {
-            adminBtn.style.display = 'none';
-            logoutBtn.style.display = 'none';
+                        });
+                } else {
+                    adminBtn.style.display = 'none';
+                    logoutBtn.style.display = 'none';
+                }
+            }
         }
-    }
-}
 
-// Обновляем обработчик DOMContentLoaded для about.html
-document.addEventListener('DOMContentLoaded', function () {
-    initTheme(); // Инициализируем тему
-    createStars();
-    updateModeButtons();
+        // Обновляем обработчик DOMContentLoaded для about.html
+        document.addEventListener('DOMContentLoaded', function () {
+            initTheme(); // Инициализируем тему
+            createStars();
+            updateModeButtons();
 
-    // Добавляем обработчик клавиши Enter в модальном окне
-    document.getElementById('aboutPassword')?.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            aboutAdminLogin();
-        }
-    });
-});
+            // Добавляем обработчик клавиши Enter в модальном окне
+            document.getElementById('aboutPassword')?.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    aboutAdminLogin();
+                }
+            });
+        });
 
     </script>
+    <script src="script.js"></script>
+
 </body>
 
 </html>

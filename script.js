@@ -46,8 +46,12 @@
 
 const CONFIG = {
     USE_REAL_API: true,
-    API_URL: 'http://localhost:8068/api',
-    WS_URL: 'ws://localhost:8068/ws',
+    API_URL: window.location.protocol === 'https:'
+        ? 'https://' + window.location.hostname + ':8068/api'
+        : 'http://' + window.location.hostname + ':8068/api',
+    WS_URL: window.location.protocol === 'https:'
+        ? 'wss://' + window.location.hostname + ':8068/ws'
+        : 'ws://' + window.location.hostname + ':8068/ws',
     STORAGE_KEY: 'usermanager_local_data',
     VERSION: '2.1.0',
     LAST_UPDATE: new Date().toISOString(),
@@ -644,7 +648,7 @@ async function loadInitialData() {
         // Показываем локальные данные только если не заблокированы
         if (!isBlocked) {
             displayLocalUsers();
-             createCharts(dbGetAllUsers());
+            createCharts(dbGetAllUsers());
         }
     }
 }
@@ -827,156 +831,224 @@ function dbGetAllUsers() {
 }
 
 function createCharts(users) {
-    if (document.body.classList.contains('blocked')) return;
+    // Проверям, заблокирована ли страница
+    if (document.body.classList.contains('blocked')) {
+        console.log('🚫 Графики не создаются: страница заблокирована');
+
+        return;
+    }
+
+    // Проверяем, загружен ли Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js не загружен! Откладываем создание графиков...');
+        setTimeout(() => {
+            if (typeof Chart !== 'undefined') {
+                createCharts(users);
+            } else {
+                console.error('❌ Chart.js все еще не загружен');
+            }
+        }, 1000);
+        return;
+    }
+
+    // Проверяем наличие canvas элементов
+    const activityCanvas = document.getElementById('activityChart');
+    const distributionCanvas = document.getElementById('distributionChart');
+    const registrationCanvas = document.getElementById('registrationChart');
+
+    if (!activityCanvas || !distributionCanvas || !registrationCanvas) {
+        console.error('❌ Не найдены canvas элементы для графиков');
+        return;
+    }
+
+    // Очищаем старые графики если они есть
+    [activityCanvas, distributionCanvas, registrationCanvas].forEach(canvas => {
+        const chartInstance = Chart.getChart(canvas);
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+    });
+
+    console.log('📊 Создаем графики...');
 
     // 1. ДИАГРАММА АКТИВНОСТИ ПО НЕДЕЛЯМ
-    const activityCtx = document.getElementById('activityChart')?.getContext('2d');
-    if (activityCtx) {
-        const userCount = users.length || 3;
-        const baseActivity = [userCount * 3, userCount * 4, userCount * 5, userCount * 6,
-        userCount * 5, userCount * 4, userCount * 3];
-
-        new Chart(activityCtx, {
-            type: 'line',
-            data: {
-                labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                datasets: [{
-                    label: 'Активных пользователей',
-                    data: baseActivity,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0'
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                        },
-                        grid: {
-                            color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                        },
-                        grid: {
-                            color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
-                        }
-                    }
-                }
-            }
-        });
+    try {
+        const activityCtx = activityCanvas.getContext('2d');
+        if (activityCtx) {
+            // ... код создания графика активности ...
+        }
+    } catch (error) {
+        console.error('❌ Ошибка создания графика активности:', error);
     }
 
     // 2. ДИАГРАММА РАСПРЕДЕЛЕНИЯ РОЛЕЙ
-    const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
-    if (distributionCtx) {
-        new Chart(distributionCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Администраторы', 'Модераторы', 'Пользователи', 'Гости'],
-                datasets: [{
-                    data: [1, Math.max(1, Math.floor(users.length * 0.2)), Math.max(3, users.length), Math.max(5, users.length * 2)],
-                    backgroundColor: [
-                        '#ef4444',    // Администраторы
-                        '#f59e0b',    // Модераторы
-                        '#3b82f6',    // Пользователи
-                        '#64748b'     // Гости
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0',
-                            padding: 15
-                        }
-                    }
-                }
-            }
-        });
+    try {
+        const distributionCtx = distributionCanvas.getContext('2d');
+        if (distributionCtx) {
+            // ... код создания круговой диаграммы ...
+        }
+    } catch (error) {
+        console.error('❌ Ошибка создания круговой диаграммы:', error);
     }
 
     // 3. ДИАГРАММА РЕГИСТРАЦИИ ПО МЕСЯЦАМ
-    const registrationCtx = document.getElementById('registrationChart')?.getContext('2d');
-    if (registrationCtx) {
-        const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-        const registrations = new Array(12).fill(0);
-
-        for (let i = 0; i < 12; i++) {
-            registrations[i] = Math.floor(Math.random() * 10) + users.length;
+    try {
+        const registrationCtx = registrationCanvas.getContext('2d');
+        if (registrationCtx) {
+            // ... код создания столбчатой диаграммы ...
         }
+    } catch (error) {
+        console.error('❌ Ошибка создания столбчатой диаграммы:', error);
+    }
+}
 
-        new Chart(registrationCtx, {
-            type: 'bar',
-            data: {
-                labels: months,
-                datasets: [{
-                    label: 'Новых пользователей',
-                    data: registrations,
-                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                    borderColor: '#1d4ed8',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
+// 1. ДИАГРАММА АКТИВНОСТИ ПО НЕДЕЛЯМ
+const activityCtx = document.getElementById('activityChart')?.getContext('2d');
+if (activityCtx) {
+    const userCount = users.length || 3;
+    const baseActivity = [userCount * 3, userCount * 4, userCount * 5, userCount * 6,
+    userCount * 5, userCount * 4, userCount * 3];
+
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+            datasets: [{
+                label: 'Активных пользователей',
+                data: baseActivity,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0'
+                    }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0'
-                        }
+            scales: {
+                x: {
+                    ticks: {
+                        color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
+                    },
+                    grid: {
+                        color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
                     }
                 },
-                scales: {
-                    x: {
-                        ticks: {
-                            color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                        },
-                        grid: {
-                            display: false
-                        }
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
                     },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                        },
-                        grid: {
-                            color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
-                        }
+                    grid: {
+                        color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
                     }
                 }
             }
-        });
+        }
+    });
+}
+
+// 2. ДИАГРАММА РАСПРЕДЕЛЕНИЯ РОЛЕЙ
+const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
+if (distributionCtx) {
+    new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Администраторы', 'Модераторы', 'Пользователи', 'Гости'],
+            datasets: [{
+                data: [1, Math.max(1, Math.floor(users.length * 0.2)), Math.max(3, users.length), Math.max(5, users.length * 2)],
+                backgroundColor: [
+                    '#ef4444',    // Администраторы
+                    '#f59e0b',    // Модераторы
+                    '#3b82f6',    // Пользователи
+                    '#64748b'     // Гости
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0',
+                        padding: 15
+                    }
+                }
+            }
+        }
+    });
+}
+
+// 3. ДИАГРАММА РЕГИСТРАЦИИ ПО МЕСЯЦАМ
+const registrationCtx = document.getElementById('registrationChart')?.getContext('2d');
+if (registrationCtx) {
+    const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const registrations = new Array(12).fill(0);
+
+    for (let i = 0; i < 12; i++) {
+        registrations[i] = Math.floor(Math.random() * 10) + users.length;
     }
+
+    new Chart(registrationCtx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Новых пользователей',
+                data: registrations,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: '#1d4ed8',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
+                    },
+                    grid: {
+                        color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
+                    }
+                }
+            }
+        }
+    });
 }
 
 // ============================ ИНИЦИАЛИЗАЦИЯ ============================
@@ -1010,3 +1082,31 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+// Функция принудительной перезагрузки графиков
+function reloadCharts() {
+    console.log('🔄 Принудительная перезагрузка графиков...');
+    
+    // Очищаем все существующие графики
+    ['activityChart', 'distributionChart', 'registrationChart'].forEach(id => {
+        const canvas = document.getElementById(id);
+        if (canvas) {
+            const chartInstance = Chart.getChart(canvas);
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+        }
+    });
+    
+    // Создаем новые графики
+    setTimeout(() => {
+        if (typeof Chart !== 'undefined') {
+            loadChartsData();
+        } else {
+            console.error('❌ Chart.js не загружен, не могу создать графики');
+        }
+    }, 500);
+}
+
+// Экспортируем функцию в глобальную область видимости
+window.reloadCharts = reloadCharts;

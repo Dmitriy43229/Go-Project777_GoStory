@@ -12,7 +12,31 @@
 
     <title>UserManager - Современный CRM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js с fallback -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Проверяем загрузился ли Chart.js
+        window.addEventListener('load', function () {
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js не загрузился! Пробуем альтернативный источник...');
+                // Пробуем другой CDN
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js';
+                document.head.appendChild(script);
+
+                script.onload = function () {
+                    console.log('✅ Chart.js загружен с альтернативного источника');
+                    // Перезагружаем графики
+                    if (window.loadChartsData) {
+                        setTimeout(() => window.loadChartsData(), 1000);
+                    }
+                };
+            } else {
+                console.log('✅ Chart.js успешно загружен');
+            }
+        });
+    </script>
 
     <style>
         /* Темно-синий градиентный фон с космосом (по умолчанию) */
@@ -843,6 +867,12 @@
             <a href="presentation.html" class="nav-item">
                 <i class="fas fa-presentation"></i>
                 <span>Презентация</span>
+            </a>
+
+            <!-- Кнопка перезагрузки графиков -->
+            <a href="#" class="nav-item" onclick="reloadCharts(); return false;" title="Перезагрузить графики">
+                <i class="fas fa-chart-bar"></i>
+                <span>Обновить графики</span>
             </a>
 
             <!-- Эта кнопка показывается только администратору -->

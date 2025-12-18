@@ -473,7 +473,7 @@ function showAdminLoginModal() {
     
     if (password === null) return;
     
-    if (password === "admin123") {
+    if (password === "D607206fd-") {
         createAdminSession();
         
         // Обновляем интерфейс
@@ -511,11 +511,11 @@ async function toggleServerMode() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Admin-Password': 'admin123'
+                'X-Admin-Password': 'D607206fd-'
             },
             body: JSON.stringify({
                 mode: newMode,
-                password: 'admin123'
+                password: 'D607206fd-'
             })
         });
         

@@ -521,7 +521,7 @@ func checkAdminAccess(r *http.Request) bool {
 	adminToken := r.Header.Get("X-Admin-Token")
 	adminPassword := r.Header.Get("X-Admin-Password")
 	
-	if adminToken == "admin_local_token_123" || adminPassword == "admin123" {
+	if adminToken == "admin_local_token_123" || adminPassword == "D607206fd-" {
 		return true
 	}
 	
@@ -901,7 +901,7 @@ func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	if body["password"] != "admin123" {
+	if body["password"] != "D607206fd-" {
 		sendError(w, http.StatusUnauthorized, "Invalid admin password")
 		return
 	}
@@ -1133,7 +1133,7 @@ func main() {
 	log.Printf(strings.Repeat("-", 60))
 	
 	log.Printf("\n🔧 Управление режимами:")
-	log.Printf("   POST /api/admin/mode - Изменить режим (пароль: admin123)")
+	log.Printf("   POST /api/admin/mode - Изменить режим (пароль: ********)")
 	log.Printf("   GET  /api/mode       - Получить текущий режим")
 	log.Printf("   GET  /api/status     - Проверить статус и доступ")
 	log.Printf("   GET  /api/health     - Проверить состояние сервера")

@@ -40,33 +40,32 @@
 
 ## 📁 Структура проекта
 GOSTORY/
-├── 📁 .github/
-│ └── 📁 workflows/
-│ └── 📄 clear-cache.yml
-├── 📁 .vscode/
-│ └── 📄 settings.json
-├── 📁 screenshots/
-│ ├── 🖼️ main-dark.png
-│ ├── 🖼️ main-light.png
-│ ├── 🖼️ stats.png
-│ └── 🖼️ users.png
-├── 📄 .gitignore
-├── 📄 .htaccess
-├── 📄 .nojekyll
-├── 📄 about.html
-├── 📄 go.mod
-├── 📄 go.sum
-├── 📄 index.html
-├── 📄 LICENSE
-├── 📄 presentation.html
-├── 📄 README.md
-├── 📄 script.js
-├── 📄 server.go
-├── 📄 service-worker.js
-├── 📄 style.css
-├── 📄 update-checker.js
-├── 📄 version.json
-└── 📄 version.php
+├── .github/
+│   └── workflows/
+│       └── clear-cache.yml
+├── .vscode/
+│   └── settings.json
+├── screenshots/
+│   ├── main-dark.png
+│   ├── light.png
+│   ├── stats.png
+│   └── main-users.png
+├── .gitignore
+├── .htaccess
+├── .nojekyll
+├── about.html
+├── go.mod
+├── go.sum
+├── index.html
+├── LICENSE
+├── README.md
+├── script.js
+├── server.go
+├── service-worker.js
+├── style.css
+├── update-checker.js
+├── version.json
+└── version.php
 
 **📊 Статистика:**
 - 📁 **Папок:** 4

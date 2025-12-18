@@ -351,37 +351,23 @@ func handleClientMessages(conn *websocket.Conn, ip, clientID string) {
 	}
 }
 
-// CORS middleware - УЛУЧШЕННАЯ ВЕРСИЯ
+// CORS middleware
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
-	 return func(w http.ResponseWriter, r *http.Request) {
-        origin := r.Header.Get("Origin")
-        if origin == "" {
-            origin = "*"
-        }
-        
-        // Более безопасные заголовки
-        w.Header().Set("Access-Control-Allow-Origin", origin)
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token, X-Requested-With, Accept, Origin")
-        w.Header().Set("Access-Control-Allow-Credentials", "true")
-        w.Header().Set("Access-Control-Max-Age", "86400") // 24 часа
-        w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-        w.Header().Set("Pragma", "no-cache")
-        w.Header().Set("Expires", "0")
-        w.Header().Set("Vary", "Origin")
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 
-        // Добавляем безопасные заголовки
-        w.Header().Set("X-Content-Type-Options", "nosniff")
-        w.Header().Set("X-Frame-Options", "DENY")
-        w.Header().Set("X-XSS-Protection", "1; mode=block")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
-        if r.Method == "OPTIONS" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
-
-        next(w, r)
-    }
+		next(w, r)
+	}
 }
 
 // Проверка режима работы с оптимизацией

@@ -41,15 +41,15 @@
 ## 📁 Структура проекта
 GOSTORY/
 ├── 📁 .github/
-│ └── 📁 workflows/
-│ └── 📄 clear-cache.yml
+│   └── 📁 workflows/
+│   └── 📄 clear-cache.yml
 ├── 📁 .vscode/
-│ └── 📄 settings.json
+│   └── 📄 settings.json
 ├── 📁 screenshots/
-│ ├── 🖼️ main-dark.png
-│ ├── 🖼️ main-light.png
-│ ├── 🖼️ stats.png
-│ └── 🖼️ users.png
+│   ├── 🖼️ main-dark.png
+│   ├── 🖼️ main-light.png
+│   ├── 🖼️ stats.png
+│   └── 🖼️ users.png
 ├── 📄 .gitignore
 ├── 📄 .htaccess
 ├── 📄 .nojekyll

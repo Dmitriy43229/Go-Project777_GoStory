@@ -274,6 +274,13 @@ function handleWebSocketMessage(data) {
             currentServerMode = data.data.mode || 'server';
             updateCurrentMode(currentServerMode);
             updateClientsCount(data.data.clients || 1);
+            
+            // Проверяем, не заблокирован ли пользователь
+            if (currentServerMode === 'local' && !isAdmin) {
+                console.log('🚫 Обычный пользователь в локальном режиме - показываем блокировку');
+                showBlockPage();
+                isBlocked = true;
+            }
             break;
             
         case 'mode_changed':
@@ -282,7 +289,15 @@ function handleWebSocketMessage(data) {
             updateCurrentMode(currentServerMode);
             updateAdminButtons();
             
-            // Обновляем данные
+            // КРИТИЧЕСКО ВАЖНО: Если режим стал локальным и пользователь не админ
+            if (currentServerMode === 'local' && !isAdmin) {
+                console.log('🚫 Режим изменился на локальный - блокируем обычного пользователя');
+                showBlockPage();
+                isBlocked = true;
+                return; // Не загружаем данные
+            }
+            
+            // Если не заблокированы, обновляем данные
             if (!isBlocked) {
                 loadInitialData();
             }
@@ -467,6 +482,12 @@ function showAdminLoginModal() {
         
         alert('✅ Успешный вход как администратор!');
         
+        // Разблокируем пользователя если был заблокирован
+        if (isBlocked && currentServerMode === 'local') {
+            isBlocked = false;
+            document.body.classList.remove('blocked');
+        }
+        
         // Перезагружаем данные
         loadInitialData();
         
@@ -596,14 +617,16 @@ async function loadInitialData() {
             updateCurrentMode(status.mode);
             updateClientsCount(status.clients || 1);
             
-            // Проверяем блокировку
+            // КРИТИЧЕСКО ВАЖНО: Проверяем блокировку
             if (status.mode === 'local' && !isAdmin) {
+                console.log('🚫 Обычный пользователь в локальном режиме - показываем блокировку');
                 showBlockPage();
-                return;
+                isBlocked = true;
+                return; // Прерываем дальнейшую загрузку
             }
         }
         
-        // Загружаем статистику
+        // Если не заблокированы, загружаем остальные данные
         const statsResponse = await fetchWithTimeout(`${CONFIG.API_URL}/stats`, 3000);
         if (statsResponse.ok) {
             const stats = await statsResponse.json();
@@ -615,8 +638,10 @@ async function loadInitialData() {
         
     } catch (error) {
         console.warn('⚠️ Не удалось загрузить данные с сервера:', error);
-        // Показываем локальные данные
-        displayLocalUsers();
+        // Показываем локальные данные только если не заблокированы
+        if (!isBlocked) {
+            displayLocalUsers();
+        }
     }
 }
 

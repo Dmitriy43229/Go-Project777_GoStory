@@ -976,6 +976,22 @@
                 slide.style.animationDelay = `${index * 0.2 + 0.1}s`;
             });
         });
+
+
+
+// Обновляем обработчик DOMContentLoaded для presentation.html
+document.addEventListener('DOMContentLoaded', function () {
+    initTheme(); // Инициализируем тему
+    createStars();
+    updateModeButtons();
+
+    // Анимация появления слайдов
+    const slides = document.querySelectorAll('.slide');
+    slides.forEach((slide, index) => {
+        slide.style.animationDelay = `${index * 0.2 + 0.1}s`;
+    });
+});
+
     </script>
 </body>
 

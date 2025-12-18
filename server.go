@@ -162,6 +162,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		"mode":     currentMode,
 		"clients":  len(clients),
 		"is_admin": checkAdminAccess(r),
+		"server_time": time.Now().Format("2006-01-02 15:04:05"),
 	}
 	sendToClient(conn, "connected", welcomeMsg)
 	
@@ -710,79 +711,82 @@ func apiStatusHandler(w http.ResponseWriter, r *http.Request) {
 // Новые обработчики для управления режимом
 
 func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	
-	// Проверяем админский пароль
-	var body map[string]string
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sendError(w, http.StatusBadRequest, "Invalid JSON")
-		return
-	}
-	
-	if body["password"] != "admin123" {
-		sendError(w, http.StatusUnauthorized, "Invalid admin password")
-		return
-	}
-	
-	newMode := body["mode"]
-	if newMode != "server" && newMode != "local" {
-		sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
-		return
-	}
-	
-	modeMutex.Lock()
-	oldMode := serverMode
-	serverMode = newMode
-	lastModeChange = time.Now()
-	modeMutex.Unlock()
-	
-	// Отправляем обновление ВСЕМ подключенным клиентам через WebSocket
-	broadcastToAll("mode_changed", map[string]interface{}{
-		"old_mode": oldMode,
-		"new_mode": newMode,
-		"time":     time.Now().Unix(),
-		"force_reload": true,
-	})
-	
-	// Также отправляем команду на принудительную перезагрузку
-	broadcastToAll("force_reload", map[string]interface{}{
-		"reason": "mode_changed",
-		"time":   time.Now().Unix(),
-	})
-	
-	// Логируем изменение
-	log.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!")
-	log.Printf("   Старый режим: %s", oldMode)
-	log.Printf("   Новый режим: %s", newMode)
-	log.Printf("   Время: %s", time.Now().Format("2006-01-02 15:04:05"))
-	log.Printf("   IP админ: %s", r.RemoteAddr)
-	log.Printf("   Активных клиентов: %d", len(clients))
-	
-	if newMode == "local" {
-		log.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!")
-		log.Printf("   ✅ Только администратор может работать с системой")
-	} else {
-		log.Printf("   ✅ Теперь все пользователи видят общие данные")
-	}
-	
-	response := map[string]interface{}{
-		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
-		"mode":    newMode,
-		"time":    time.Now().Format("2006-01-02 15:04:05"),
-		"clients": len(clients),
-		"warning": "",
-	}
-	
-	if newMode == "local" {
-		response["warning"] = "Обычные пользователи увидят 404 страницу"
-	} else {
-		response["warning"] = "Все пользователи видят данные"
-	}
-	
-	sendJSON(w, http.StatusOK, response)
+	  if r.Method != http.MethodPost {
+        sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+        return
+    }
+    
+    // Проверяем админский пароль
+    var body map[string]string
+    if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+        sendError(w, http.StatusBadRequest, "Invalid JSON")
+        return
+    }
+    
+    if body["password"] != "admin123" {
+        sendError(w, http.StatusUnauthorized, "Invalid admin password")
+        return
+    }
+    
+    newMode := body["mode"] // <- ЭТА СТРОКА ДОЛЖНА БЫТЬ ОПРЕДЕЛЕНА
+    if newMode != "server" && newMode != "local" {
+        sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
+        return
+    }
+    
+    modeMutex.Lock()
+    oldMode := serverMode
+    serverMode = newMode
+    lastModeChange = time.Now()
+    modeMutex.Unlock()
+    
+    // Отправляем обновление ВСЕМ подключенным клиентам через WebSocket
+    broadcastToAll("mode_changed", map[string]interface{}{
+        "old_mode": oldMode,
+        "new_mode": newMode,
+        "time":     time.Now().Unix(),
+        "force_reload": true,
+    })
+    
+    // Небольшая задержка для гарантии отправки
+    time.Sleep(100 * time.Millisecond)
+    
+    // Также отправляем команду на принудительную перезагрузку
+    broadcastToAll("force_reload", map[string]interface{}{
+        "reason": "mode_changed_to_" + newMode, // <- ТУТ ИСПОЛЬЗУЕМ newMode
+        "time":   time.Now().Unix(),
+    })
+    
+    // Логируем изменение
+    log.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!")
+    log.Printf("   Старый режим: %s", oldMode)
+    log.Printf("   Новый режим: %s", newMode)
+    log.Printf("   Время: %s", time.Now().Format("2006-01-02 15:04:05"))
+    log.Printf("   IP админ: %s", r.RemoteAddr)
+    log.Printf("   Активных клиентов: %d", len(clients))
+    
+    if newMode == "local" {
+        log.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!")
+        log.Printf("   ✅ Только администратор может работать с системой")
+    } else {
+        log.Printf("   ✅ Теперь все пользователи видят общие данные")
+    }
+    
+    response := map[string]interface{}{
+        "message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
+        "mode":    newMode,
+        "time":    time.Now().Format("2006-01-02 15:04:05"),
+        "clients": len(clients),
+        "warning": "",
+    }
+    
+    if newMode == "local" {
+        response["warning"] = "Обычные пользователи увидят 404 страницу"
+    } else {
+        response["warning"] = "Все пользователи видят данные"
+    }
+    
+    sendJSON(w, http.StatusOK, response)
 }
 
 func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
@@ -849,7 +853,7 @@ func apiClientsHandler(w http.ResponseWriter, r *http.Request) {
 	
 	infoMu.RLock()
 	clientsList := make([]map[string]interface{}, 0, len(clientInfo))
-	for conn, info := range clientInfo {
+	for _, info := range clientInfo {
 		clientsList = append(clientsList, map[string]interface{}{
 			"ip":         info.IP,
 			"is_admin":   info.IsAdmin,

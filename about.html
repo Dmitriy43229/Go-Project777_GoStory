@@ -514,6 +514,131 @@
             box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
             background: linear-gradient(45deg, #dc2626, #b91c1c);
         }
+
+        /* Переключатель темы для about.html */
+        .theme-toggle-container {
+            margin-left: 1rem;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: #bbdefb;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-family: inherit;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Светлая тема для about.html */
+        body.light-theme {
+            background: linear-gradient(135deg,
+                    #f8fafc 0%,
+                    #f1f5f9 25%,
+                    #e2e8f0 50%,
+                    #cbd5e1 75%,
+                    #f8fafc 100%);
+            color: #334155;
+        }
+
+        body.light-theme .about-hero {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .benefit-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .benefit-card:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        body.light-theme .benefit-title {
+            background: linear-gradient(45deg, #1d4ed8, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.light-theme .benefit-description {
+            color: #64748b;
+        }
+
+        body.light-theme .tech-section {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .tech-item {
+            background: rgba(255, 255, 255, 0.9);
+            color: #334155;
+        }
+
+        body.light-theme .timeline-content {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        body.light-theme .stat-item {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .team-member {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        body.light-theme .nav-item {
+            color: #64748b;
+        }
+
+        body.light-theme .nav-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1e293b;
+        }
+
+        body.light-theme .nav-item.active {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        body.light-theme .footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .footer-link {
+            color: #64748b;
+        }
+
+        body.light-theme .footer-link:hover {
+            color: #1d4ed8;
+        }
+
+        body.light-theme .footer-logo {
+            background: linear-gradient(45deg, #1d4ed8, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.light-theme .theme-toggle {
+            background: rgba(0, 0, 0, 0.05);
+            color: #64748b;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 
@@ -563,6 +688,13 @@
                 <i class="fas fa-user-shield"></i>
                 <span>Вход администратора</span>
             </a>
+
+            <!-- Кнопка переключения темы -->
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <i class="fas fa-moon" id="themeIcon"></i>
+                <span id="themeText">Темная тема</span>
+            </button>
+
         </nav>
 
         <!-- Герой секция -->
@@ -917,6 +1049,158 @@
                 }
             });
         });
+
+        // ============================ ФУНКЦИИ ДЛЯ СТРАНИЦЫ "О ПРОЕКТЕ" ============================
+
+// Функция для кнопки "Войти" на странице "О проекте"
+function showAdminLoginModal() {
+    if (checkAdminAccess()) {
+        // Админ уже вошел - переключаемся на главную с режимом
+        window.location.href = 'index.html';
+    } else {
+        // Показываем модальное окно входа
+        document.getElementById('aboutAdminModal').style.display = 'flex';
+        document.getElementById('aboutPassword').focus();
+    }
+}
+
+async function aboutAdminLogin() {
+    const password = document.getElementById('aboutPassword').value;
+    const errorDiv = document.getElementById('aboutError');
+
+    if (password === "admin123") {
+        // Создаем сессию
+        const sessionId = 'admin_' + Date.now();
+        const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+
+        localStorage.setItem('usermanager_admin_session', sessionId);
+        localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+
+        errorDiv.style.display = 'none';
+        document.getElementById('aboutAdminModal').style.display = 'none';
+
+        // Получаем текущий режим сервера
+        try {
+            const response = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('usermanager_use_real_api', data.mode === 'server' ? 'true' : 'false');
+            }
+        } catch (error) {
+            console.log('Не удалось получить режим сервера');
+            localStorage.setItem('usermanager_use_real_api', 'false');
+        }
+
+        // Перенаправляем на главную
+        alert('✅ Успешный вход как администратор!');
+        window.location.href = 'index.html';
+    } else {
+        errorDiv.style.display = 'block';
+        document.getElementById('aboutPassword').value = '';
+        document.getElementById('aboutPassword').focus();
+    }
+}
+
+// Функция переключения режима для about.html
+async function toggleServerMode() {
+    if (!checkAdminAccess()) {
+        showAdminLoginModal();
+        return;
+    }
+
+    try {
+        // Получаем текущий режим сервера
+        const modeResponse = await fetch('http://localhost:8068/api/mode?_=' + Date.now());
+        if (!modeResponse.ok) throw new Error('Не удалось получить режим');
+        
+        const modeData = await modeResponse.json();
+        const currentMode = modeData.mode;
+        const newMode = currentMode === 'server' ? 'local' : 'server';
+        const modeName = newMode === 'server' ? 'Серверный' : 'Локальный';
+
+        // Меняем режим на сервере
+        const response = await fetch('http://localhost:8068/api/admin/mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': 'admin123'
+            },
+            body: JSON.stringify({
+                mode: newMode,
+                password: 'admin123'
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (newMode === 'local') {
+                alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+            } else {
+                alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.\n\n📢 Уведомлено клиентов: ${data.clients || 0}`);
+            }
+            
+            // Обновляем кнопки
+            updateModeButtons();
+            
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка сервера');
+        }
+
+    } catch (error) {
+        console.error('Ошибка переключения режима:', error);
+        alert(`❌ Ошибка: ${error.message}\n\nПроверьте, запущен ли сервер на localhost:8068`);
+    }
+}
+
+// Функция для обновления кнопок режима
+function updateModeButtons() {
+    const adminBtn = document.getElementById('adminModeToggle');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const isAdminActive = checkAdminAccess();
+
+    if (adminBtn && logoutBtn) {
+        if (isAdminActive) {
+            adminBtn.style.display = 'flex';
+            logoutBtn.style.display = 'flex';
+            
+            // Получаем текущий режим для отображения на кнопке
+            fetch('http://localhost:8068/api/mode?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    adminBtn.innerHTML = `
+                        <i class="fas fa-cogs"></i>
+                        <span>Режим: ${data.mode === 'local' ? 'Локальный' : 'Серверный'}</span>
+                    `;
+                })
+                .catch(() => {
+                    adminBtn.innerHTML = `
+                        <i class="fas fa-cogs"></i>
+                        <span>Режим: Неизвестно</span>
+                    `;
+                });
+        } else {
+            adminBtn.style.display = 'none';
+            logoutBtn.style.display = 'none';
+        }
+    }
+}
+
+// Обновляем обработчик DOMContentLoaded для about.html
+document.addEventListener('DOMContentLoaded', function () {
+    initTheme(); // Инициализируем тему
+    createStars();
+    updateModeButtons();
+
+    // Добавляем обработчик клавиши Enter в модальном окне
+    document.getElementById('aboutPassword')?.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            aboutAdminLogin();
+        }
+    });
+});
+
     </script>
 </body>
 

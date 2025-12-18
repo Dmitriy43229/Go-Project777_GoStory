@@ -51,6 +51,128 @@ const CONFIG = {
     LAST_UPDATE: new Date().toISOString()
 };
 
+// ============================ ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ВСЕХ СТРАНИЦ ============================
+
+// ============================ ФУНКЦИИ ДЛЯ ТЕМЫ ============================
+function initTheme() {
+    const savedTheme = localStorage.getItem('usermanager_theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        updateThemeIcon(true);
+    } else {
+        document.body.classList.remove('light-theme');
+        updateThemeIcon(false);
+    }
+    createStars(); // Создаем звезды после установки темы
+}
+
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-theme');
+    localStorage.setItem('usermanager_theme', isLight ? 'light' : 'dark');
+    updateThemeIcon(isLight);
+    createStars(); // Пересоздаем звезды при смене темы
+}
+
+function updateThemeIcon(isLight) {
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+    if (themeIcon && themeText) {
+        if (isLight) {
+            themeIcon.className = 'fas fa-sun';
+            themeText.textContent = 'Светлая тема';
+        } else {
+            themeIcon.className = 'fas fa-moon';
+            themeText.textContent = 'Темная тема';
+        }
+    }
+}
+
+// ============================ ФУНКЦИИ ДЛЯ ЗВЕЗД ============================
+function createStars() {
+    const starsContainer = document.getElementById('stars');
+    if (!starsContainer) return;
+
+    // Очищаем только если не светлая тема
+    if (document.body.classList.contains('light-theme')) {
+        starsContainer.innerHTML = '';
+        return;
+    }
+
+    starsContainer.innerHTML = '';
+    const starCount = 150;
+
+    for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+
+        const size = Math.random() * 3 + 1;
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const duration = Math.random() * 5 + 3;
+        const delay = Math.random() * 5;
+
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${x}%`;
+        star.style.top = `${y}%`;
+        star.style.setProperty('--duration', `${duration}s`);
+        star.style.setProperty('--delay', `${delay}s`);
+
+        starsContainer.appendChild(star);
+    }
+}
+
+// ============================ ФУНКЦИИ ДЛЯ АДМИНИСТРАТОРА ============================
+function checkAdminAccess() {
+    const savedAdmin = localStorage.getItem('usermanager_admin_session');
+    const expiry = localStorage.getItem('usermanager_admin_expiry');
+
+    if (savedAdmin && expiry) {
+        if (Date.now() < parseInt(expiry)) {
+            return true;
+        } else {
+            // Очищаем просроченную сессию
+            localStorage.removeItem('usermanager_admin_session');
+            localStorage.removeItem('usermanager_admin_expiry');
+            return false;
+        }
+    }
+    return false;
+}
+
+function logoutAdmin() {
+    if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
+        // Очищаем сессию
+        localStorage.removeItem('usermanager_admin_session');
+        localStorage.removeItem('usermanager_admin_expiry');
+
+        alert('✅ Вы вышли из режима администратора.');
+        setTimeout(() => location.reload(true), 1000);
+    }
+}
+
+// ============================ ОБЩИЕ УТИЛИТЫ ============================
+function clearCache() {
+    if (confirm('Очистить весь кеш браузера и перезагрузить страницу?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+
+        if ('caches' in window) {
+            caches.keys().then(function (names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+
+        alert('✅ Весь кеш очищен. Страница будет перезагружена.');
+
+        setTimeout(() => {
+            window.location.href = window.location.pathname + '?nocache=' + Date.now();
+        }, 1000);
+    }
+}
+
 // ================== СИСТЕМА ДО АДМИНИСТРАТОРА ==================
 const ADMIN_PASSWORD = "admin123"; // Только вы знаете этот пароль
 const ADMIN_TOKEN = "admin_local_token_123"; // Токен для локального режима
@@ -73,11 +195,11 @@ async function getServerMode() {
         const response = await fetch(`${CONFIG.API_URL}/mode?_=${Date.now()}`);
         if (response.ok) {
             const data = await response.json();
-            
+
             // Сохраняем режим сервера в localStorage для сравнения
             localStorage.setItem('usermanager_server_mode', data.mode);
             localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
-            
+
             return data.mode;
         }
     } catch (error) {
@@ -92,11 +214,11 @@ async function getServerStatus() {
         const response = await fetch(`${CONFIG.API_URL}/status?_=${Date.now()}`);
         if (response.ok) {
             const data = await response.json();
-            
+
             // Сохраняем режим сервера
             localStorage.setItem('usermanager_server_mode', data.mode);
             localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
-            
+
             return data;
         }
     } catch (error) {
@@ -109,17 +231,17 @@ async function getServerStatus() {
 function checkForModeChange() {
     const savedServerMode = localStorage.getItem('usermanager_server_mode');
     const lastCheck = localStorage.getItem('usermanager_last_mode_check');
-    
+
     // Если прошло больше 30 секунд с последней проверки, или режим отличается
-    if (!lastCheck || Date.now() - parseInt(lastCheck) > 30000 || 
+    if (!lastCheck || Date.now() - parseInt(lastCheck) > 30000 ||
         (savedServerMode && savedServerMode !== currentServerMode)) {
-        
+
         console.log('🔄 Проверка изменения режима сервера...');
         getServerMode().then(mode => {
             if (mode && mode !== currentServerMode) {
                 console.log(`🎯 Режим изменился на сервере: ${currentServerMode} -> ${mode}`);
                 currentServerMode = mode;
-                
+
                 // Принудительно обновляем настройки
                 if (mode === 'local') {
                     if (isAdmin) {
@@ -132,14 +254,14 @@ function checkForModeChange() {
                 } else {
                     CONFIG.USE_REAL_API = true;
                     localStorage.setItem('usermanager_use_real_api', 'true');
-                    
+
                     // Если был заблокирован - разблокируем
                     if (isBlocked) {
                         console.log('✅ Разблокировка: серверный режим восстановлен');
                         location.reload(true);
                     }
                 }
-                
+
                 // Обновляем интерфейс
                 updateInterface();
             }
@@ -152,27 +274,27 @@ function connectToEvents() {
     if (eventSource) {
         eventSource.close();
     }
-    
+
     try {
         eventSource = new EventSource(`${CONFIG.API_URL}/events`);
-        
-        eventSource.onopen = function() {
+
+        eventSource.onopen = function () {
             console.log('🔗 Подключен к серверу событий');
         };
-        
-        eventSource.onmessage = function(event) {
+
+        eventSource.onmessage = function (event) {
             try {
                 const data = JSON.parse(event.data);
                 console.log('📨 Получено событие:', data);
-                
+
                 if (data.event === 'mode_changed') {
                     console.log(`🔄 Режим изменился на: ${data.data.mode}`);
                     currentServerMode = data.data.mode;
-                    
+
                     // Обновляем локальные настройки
                     localStorage.setItem('usermanager_server_mode', data.data.mode);
                     localStorage.setItem('usermanager_last_mode_check', Date.now().toString());
-                    
+
                     // Если режим изменился на серверный и мы были заблокированы
                     if (data.data.mode === 'server' && isBlocked) {
                         console.log('✅ Разблокировка: включен серверный режим');
@@ -183,34 +305,34 @@ function connectToEvents() {
                             }, 1000);
                         }
                     }
-                    
+
                     // Если режим изменился на локальный и мы не админ
                     if (data.data.mode === 'local' && !isAdmin) {
                         console.log('🚫 Блокировка: включен локальный режим');
                         showBlockPage();
                     }
-                    
+
                     // Обновляем интерфейс
                     updateInterface();
-                    
+
                     // Принудительно обновляем данные
                     if (data.data.force_reload && !isBlocked) {
                         console.log('⚡ Принудительное обновление данных');
                         loadInitialData();
                     }
-                    
+
                 } else if (data.event === 'connected') {
                     console.log('✅ Подключение установлено, текущий режим:', data.data.mode);
                     currentServerMode = data.data.mode;
                     localStorage.setItem('usermanager_server_mode', data.data.mode);
                     updateInterface();
-                    
+
                 } else if (data.event === 'ping') {
                     console.log('🏓 Ping от сервера');
-                    
+
                 } else if (data.event === 'system_command') {
                     console.log('⚡ Получена системная команда:', data.data.command);
-                    
+
                     if (data.data.command === 'force_reload') {
                         console.log('🔄 Получена команда на принудительную перезагрузку');
                         if (!isReloading) {
@@ -220,20 +342,20 @@ function connectToEvents() {
                             }, 1000);
                         }
                     }
-                    
+
                 } else if (data.event === 'clear_cache') {
                     console.log('🧹 Получена команда на очистку кеша');
                     // Очищаем некоторые данные
                     localStorage.removeItem('usermanager_local_data');
                     sessionStorage.removeItem('already_reloaded');
                 }
-                
+
             } catch (error) {
                 console.log('Ошибка обработки события:', error);
             }
         };
-        
-        eventSource.onerror = function(error) {
+
+        eventSource.onerror = function (error) {
             console.log('❌ Ошибка соединения с сервером событий:', error);
             // Пытаемся переподключиться через 5 секунд
             setTimeout(() => {
@@ -241,7 +363,7 @@ function connectToEvents() {
                 connectToEvents();
             }, 5000);
         };
-        
+
     } catch (error) {
         console.log('Ошибка создания EventSource:', error);
     }
@@ -252,11 +374,11 @@ async function checkBlockStatus() {
     try {
         const status = await getServerStatus();
         console.log('📡 Статус сервера:', status);
-        
+
         // Сохраняем текущий режим сервера
         const oldMode = currentServerMode;
         currentServerMode = status.mode;
-        
+
         // Если режим серверный - НИКОГДА не блокируем
         if (status.mode === 'server') {
             console.log('🌐 Серверный режим - доступ открыт для всех');
@@ -271,22 +393,22 @@ async function checkBlockStatus() {
                     }, 1000);
                 }
             }
-            
+
             // Обновляем локальные настройки
             CONFIG.USE_REAL_API = true;
             localStorage.setItem('usermanager_use_real_api', 'true');
-            
+
             return false;
         }
-        
+
         // Если режим локальный
         if (status.mode === 'local') {
             console.log('🔒 Локальный режим, проверяем доступ...');
-            
+
             // Проверяем, админ ли мы
             const adminAccess = checkAdminAccess();
             console.log('👤 Админский доступ:', adminAccess);
-            
+
             // Если мы админ - разрешаем доступ
             if (adminAccess) {
                 console.log('👑 Администратор - доступ разрешен');
@@ -294,20 +416,20 @@ async function checkBlockStatus() {
                     isBlocked = false;
                     location.reload(true);
                 }
-                
+
                 // Обновляем локальные настройки
                 CONFIG.USE_REAL_API = false;
                 localStorage.setItem('usermanager_use_real_api', 'false');
-                
+
                 return false;
             }
-            
+
             // Если не админ - блокируем
             console.log('🚫 Не админ в локальном режиме - блокировка');
             showBlockPage();
             return true;
         }
-        
+
     } catch (error) {
         console.log('⚠️ Ошибка проверки статуса:', error);
         // При ошибке соединения - не блокируем
@@ -320,7 +442,7 @@ async function checkBlockStatus() {
 function showBlockPage() {
     // Если уже показана блокировка, не делаем ничего
     if (document.body.classList.contains('blocked')) return;
-    
+
     isBlocked = true;
     document.body.classList.add('blocked');
     document.body.innerHTML = '';
@@ -432,27 +554,27 @@ function showBlockPage() {
 // Функция инициализации с немедленной проверкой
 async function initializeSystem() {
     console.log('🚀 Инициализация системы...');
-    
+
     // Сначала проверяем админский доступ
     const adminAccess = checkAdminAccess();
     console.log('👤 Проверка админского доступа:', adminAccess);
-    
+
     // Подключаемся к серверу событий
     connectToEvents();
-    
+
     // Проверяем блокировку
     const blocked = await checkBlockStatus();
     if (blocked) {
         console.log('🚫 Система заблокирована');
         return;
     }
-    
+
     // Получаем текущий режим сервера
     try {
         const serverMode = await getServerMode();
         currentServerMode = serverMode;
         console.log('📡 Режим сервера:', serverMode);
-        
+
         // Устанавливаем локальные настройки в соответствии с режимом сервера
         if (serverMode === 'local') {
             if (!adminAccess) {
@@ -479,13 +601,13 @@ async function initializeSystem() {
         localStorage.setItem('usermanager_use_real_api', 'true');
         currentServerMode = "server";
     }
-    
+
     // Обновляем интерфейс
     updateInterface();
-    
+
     // Запускаем периодическую проверку
     startBlockChecker();
-    
+
     // Загружаем данные
     if (!isBlocked) {
         setTimeout(() => {
@@ -497,16 +619,16 @@ async function initializeSystem() {
 // Обновление интерфейса
 function updateInterface() {
     console.log('🎨 Обновление интерфейса, isAdmin:', isAdmin, 'Режим:', currentServerMode);
-    
+
     // Добавляем кнопку очистки кеша
     addCacheClearButton();
-    
+
     // Обновляем кнопки админа
     updateAdminButtons();
-    
+
     // Обновляем кнопку режима
     updateModeButton();
-    
+
     // Обновляем отображение режима
     updateModeDisplay();
 }
@@ -515,7 +637,7 @@ function updateInterface() {
 function updateModeDisplay() {
     const modeTextEl = document.getElementById('currentModeText');
     const statusEl = document.getElementById('statusValue');
-    
+
     if (modeTextEl) {
         if (currentServerMode === 'local' && !isAdmin) {
             modeTextEl.textContent = 'Режим: Локальный (доступ закрыт)';
@@ -525,7 +647,7 @@ function updateModeDisplay() {
             modeTextEl.style.color = currentServerMode === 'local' ? '#f59e0b' : '#4ade80';
         }
     }
-    
+
     if (statusEl) {
         if (currentServerMode === 'local' && !isAdmin) {
             statusEl.textContent = 'Заблокирован';
@@ -541,12 +663,12 @@ function updateModeDisplay() {
 function updateAdminButtons() {
     const adminBtn = document.getElementById('adminModeToggle');
     const logoutBtn = document.getElementById('logoutBtn');
-    
+
     console.log('🔄 Обновление кнопок админа, isAdmin:', isAdmin);
-    
+
     if (isAdmin) {
         console.log('👑 Отображаем кнопки админа');
-        
+
         // Показываем кнопку переключения режима
         if (adminBtn) {
             adminBtn.style.display = 'flex';
@@ -555,7 +677,7 @@ function updateAdminButtons() {
                 <span>Режим: ${currentServerMode === 'local' ? 'Локальный' : 'Серверный'}</span>
             `;
         }
-        
+
         // Добавляем кнопку выхода если её нет
         if (!logoutBtn) {
             addLogoutButton();
@@ -564,7 +686,7 @@ function updateAdminButtons() {
         }
     } else {
         console.log('👤 Скрываем кнопки админа');
-        
+
         // Скрываем кнопки
         if (adminBtn) adminBtn.style.display = 'none';
         if (logoutBtn) logoutBtn.style.display = 'none';
@@ -575,21 +697,21 @@ function updateAdminButtons() {
 function addLogoutButton() {
     const navMenu = document.querySelector('.nav-menu');
     if (!navMenu) return;
-    
+
     // Проверяем, не существует ли уже кнопка
     if (document.getElementById('logoutBtn')) return;
-    
+
     const logoutBtn = document.createElement('a');
     logoutBtn.id = 'logoutBtn';
     logoutBtn.href = '#';
     logoutBtn.className = 'nav-item logout-btn';
     logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i><span>Выйти</span>';
-    logoutBtn.onclick = function(e) {
+    logoutBtn.onclick = function (e) {
         e.preventDefault();
         logoutAdmin();
     };
     logoutBtn.style.display = isAdmin ? 'flex' : 'none';
-    
+
     // Вставляем перед кнопкой очистки кеша
     const cacheBtn = document.getElementById('cacheClearBtn');
     if (cacheBtn) {
@@ -607,19 +729,19 @@ function logoutAdmin() {
         localStorage.removeItem('usermanager_admin_session');
         localStorage.removeItem('usermanager_admin_expiry');
         localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
-        
+
         // Обновляем состояние
         isAdmin = false;
         adminSessionId = null;
         CONFIG.USE_REAL_API = true;
-        
+
         // Проверяем не заблокирован ли теперь доступ
         checkBlockStatus().then(() => {
             // Обновляем интерфейс
             updateInterface();
-            
+
             alert('✅ Вы вышли из режима администратора.');
-            
+
             // Если сейчас локальный режим, мы будем заблокированы
             if (currentServerMode === 'local') {
                 // Покажем сообщение
@@ -640,11 +762,11 @@ function startBlockChecker() {
     if (blockCheckerInterval) {
         clearInterval(blockCheckerInterval);
     }
-    
+
     // Проверяем каждые 2 секунды
     blockCheckerInterval = setInterval(async () => {
         await checkBlockStatus();
-        
+
         // Также проверяем изменение режима
         checkForModeChange();
     }, BLOCK_CHECK_INTERVAL);
@@ -667,7 +789,7 @@ function checkAdminAccess() {
     if (savedSession && sessionExpiry) {
         const now = Date.now();
         const expiryTime = parseInt(sessionExpiry);
-        
+
         if (now < expiryTime) {
             isAdmin = true;
             adminSessionId = savedSession;
@@ -761,22 +883,22 @@ async function toggleServerMode() {
 
         // Меняем режим на сервере
         const result = await changeServerMode(newMode);
-        
+
         // Обновляем локальные настройки
         localStorage.setItem('usermanager_use_real_api', newMode === 'server' ? 'true' : 'false');
         CONFIG.USE_REAL_API = newMode === 'server';
         currentServerMode = newMode;
-        
+
         // Показываем сообщение
         if (newMode === 'local') {
             alert(`✅ Локальный режим включен!\n\nВСЕ ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ СЕЙЧАС ЖЕ УВИДЯТ БЕЛУЮ СТРАНИЦУ 404!\n\nТолько вы (администратор) можете работать с системой.\n\n📢 Уведомлено клиентов: ${result.clients || 0}`);
         } else {
             alert(`✅ Серверный режим включен!\n\nВсе пользователи теперь видят общие данные.\n\n📢 Уведомлено клиентов: ${result.clients || 0}`);
         }
-        
+
         // Обновляем интерфейс
         updateInterface();
-        
+
         // НЕ перезагружаем страницу - режим уже обновился через SSE
 
     } catch (error) {
@@ -807,27 +929,27 @@ function clearCache() {
         // Очищаем все данные
         localStorage.clear();
         sessionStorage.clear();
-        
+
         // Очищаем кеш Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
                     registration.unregister();
                 }
             });
         }
-        
+
         // Очищаем кеш браузера
         if ('caches' in window) {
-            caches.keys().then(function(names) {
+            caches.keys().then(function (names) {
                 for (let name of names) {
                     caches.delete(name);
                 }
             });
         }
-        
+
         alert('✅ Весь кеш очищен. Страница будет перезагружена.');
-        
+
         // Принудительная перезагрузка с очисткой кеша
         setTimeout(() => {
             window.location.href = window.location.pathname + '?nocache=' + Date.now();
@@ -847,11 +969,11 @@ function addCacheClearButton() {
             cacheBtn.href = '#';
             cacheBtn.className = 'nav-item';
             cacheBtn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Очистить кеш</span>';
-            cacheBtn.onclick = function(e) {
+            cacheBtn.onclick = function (e) {
                 e.preventDefault();
                 clearCache();
             };
-            
+
             // Находим кнопку "Вход администратора" и вставляем перед ней
             const adminLoginBtn = document.querySelector('.nav-item[onclick*="showAdminLoginModal"]');
             if (adminLoginBtn) {
@@ -872,15 +994,15 @@ function addCacheClearButton() {
 // Окно входа для администратора (упрощенное)
 function showAdminLoginModal() {
     const password = prompt('Введите пароль администратора:');
-    
+
     if (password === null) {
         return; // Пользователь отменил ввод
     }
-    
+
     if (password === ADMIN_PASSWORD) {
         // Создаем сессию администратора
         createAdminSession();
-        
+
         // Если режим локальный, устанавливаем локальные настройки
         if (currentServerMode === 'local') {
             localStorage.setItem('usermanager_use_real_api', 'false');
@@ -889,12 +1011,12 @@ function showAdminLoginModal() {
             localStorage.setItem('usermanager_use_real_api', 'true');
             CONFIG.USE_REAL_API = true;
         }
-        
+
         alert('✅ Успешный вход как администратор!\nТеперь вы можете переключать режимы работы системы.');
-        
+
         // Обновляем интерфейс
         updateInterface();
-        
+
         // Перезагружаем страницу
         setTimeout(() => location.reload(true), 500);
     } else if (password !== '') {
@@ -1079,7 +1201,7 @@ async function loadInitialData() {
         }
 
         console.log('📥 Начало загрузки данных...');
-        
+
         // Инициализируем локальные данные
         initLocalData();
 
@@ -1090,7 +1212,7 @@ async function loadInitialData() {
         // Получаем и отображаем пользователей
         const users = await getAllUsers();
         displayUsers(users);
-        
+
         console.log('✅ Данные успешно загружены');
 
     } catch (error) {
@@ -1099,7 +1221,7 @@ async function loadInitialData() {
 }
 
 // Вызываем инициализацию сразу при загрузке
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('📄 DOM загружен, инициализируем систему...');
     initializeSystem();
 });

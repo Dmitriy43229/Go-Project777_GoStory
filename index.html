@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <!-- Anti-cache мета-теги -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    
+
     <title>UserManager - Современный CRM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <style>
         /* Темно-синий градиентный фон с космосом (по умолчанию) */
         body {
@@ -52,9 +52,11 @@
             0% {
                 background-position: 0% 50%;
             }
+
             50% {
                 background-position: 100% 50%;
             }
+
             100% {
                 background-position: 0% 50%;
             }
@@ -86,10 +88,13 @@
         }
 
         @keyframes twinkle {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 0.2;
                 transform: scale(1);
             }
+
             50% {
                 opacity: 1;
                 transform: scale(1.1);
@@ -127,12 +132,16 @@
         }
 
         @keyframes float {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0) rotate(0deg);
             }
+
             33% {
                 transform: translateY(-20px) rotate(120deg);
             }
+
             66% {
                 transform: translateY(20px) rotate(240deg);
             }
@@ -735,7 +744,7 @@
         body.light-theme .footer-link:hover {
             color: #1d4ed8;
         }
-        
+
         /* Индикатор подключения */
         .connection-status {
             position: fixed;
@@ -751,49 +760,57 @@
             transition: all 0.3s;
             backdrop-filter: blur(10px);
         }
-        
+
         .connection-status.connected {
             background: rgba(34, 197, 94, 0.2);
             color: #4ade80;
             border: 1px solid rgba(34, 197, 94, 0.3);
         }
-        
+
         .connection-status.disconnected {
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
-        
+
         .connection-status.reconnecting {
             background: rgba(251, 191, 36, 0.2);
             color: #f59e0b;
             border: 1px solid rgba(251, 191, 36, 0.3);
         }
-        
+
         .connection-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
         }
-        
+
         .connection-status.connected .connection-dot {
             background: #4ade80;
             animation: pulse 2s infinite;
         }
-        
+
         .connection-status.disconnected .connection-dot {
             background: #ef4444;
         }
-        
+
         .connection-status.reconnecting .connection-dot {
             background: #f59e0b;
             animation: pulse 1s infinite;
         }
-        
+
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -804,7 +821,7 @@
 
     <!-- Планета -->
     <div class="planet"></div>
-    
+
     <!-- Индикатор подключения -->
     <div class="connection-status" id="connectionStatus">
         <span class="connection-dot"></span>
@@ -954,133 +971,58 @@
                 </div>
             </div>
 
-            <!-- Графики -->
+            <!-- Графики - ТРИ В РЯД -->
             <div class="charts-container">
                 <div class="chart-card">
-                    <h3 class="chart-title">Активность по дням</h3>
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-line" style="margin-right: 8px;"></i>
+                        Активность по неделям
+                    </h3>
                     <div class="chart-wrapper">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
+
                 <div class="chart-card">
-                    <h3 class="chart-title">Распределение пользователей</h3>
+                    <h3 class="chart-title">
+                        <i class="fas fa-users" style="margin-right: 8px;"></i>
+                        Распределение ролей
+                    </h3>
                     <div class="chart-wrapper">
                         <canvas id="distributionChart"></canvas>
                     </div>
                 </div>
+
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <i class="fas fa-user-plus" style="margin-right: 8px;"></i>
+                        Регистрация по месяцам
+                    </h3>
+                    <div class="chart-wrapper">
+                        <canvas id="registrationChart"></canvas>
+                    </div>
+                </div>
             </div>
+
+            <!-- Футер -->
+            <footer class="footer">
+                <div class="footer-content">
+                    <div class="footer-logo">UserManager Pro</div>
+                    <div class="footer-links">
+                        <a href="index.html" class="footer-link">Главная</a>
+                        <a href="about.html" class="footer-link">О проекте</a>
+                        <a href="presentation.html" class="footer-link">Презентация</a>
+                        <a href="https://github.com/Dmitriy43229/Go-Project777_GoStory" class="footer-link">GitHub</a>
+                    </div>
+                    <p>© 2025 UserManager Pro. Все права защищены.</p>
+                </div>
+            </footer>
         </div>
 
-        <!-- Футер -->
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="footer-logo">UserManager Pro</div>
-                <div class="footer-links">
-                    <a href="index.html" class="footer-link">Главная</a>
-                    <a href="about.html" class="footer-link">О проекте</a>
-                    <a href="presentation.html" class="footer-link">Презентация</a>
-                    <a href="https://github.com/Dmitriy43229/Go-Project777_GoStory" class="footer-link">GitHub</a>
-                </div>
-                <p>© 2024 UserManager Pro. Все права защищены.</p>
-            </div>
-        </footer>
-    </div>
+        <!-- Подключаем только ОДИН скрипт -->
+        <script src="script.js"></script>
 
-    <!-- Подключаем только ОДИН скрипт -->
-    <script src="script.js"></script>
-    
-    <!-- Инициализация графиков (небольшой дополнительный скрипт) -->
-    <script>
-        // Создание графиков
-        function createCharts() {
-            // График активности
-            const activityCtx = document.getElementById('activityChart')?.getContext('2d');
-            if (activityCtx) {
-                new Chart(activityCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                        datasets: [{
-                            label: 'Активных пользователей',
-                            data: [12, 19, 15, 22, 18, 16, 20],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0'
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                                },
-                                grid: {
-                                    color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
-                                }
-                            },
-                            y: {
-                                ticks: {
-                                    color: document.body.classList.contains('light-theme') ? '#64748b' : '#94a3b8'
-                                },
-                                grid: {
-                                    color: document.body.classList.contains('light-theme') ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // График распределения
-            const distributionCtx = document.getElementById('distributionChart')?.getContext('2d');
-            if (distributionCtx) {
-                new Chart(distributionCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Администраторы', 'Модераторы', 'Пользователи', 'Гости'],
-                        datasets: [{
-                            data: [1, 3, 15, 42],
-                            backgroundColor: [
-                                '#3b82f6',
-                                '#8b5cf6',
-                                '#10b981',
-                                '#64748b'
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: document.body.classList.contains('light-theme') ? '#334155' : '#e2e8f0',
-                                    padding: 20
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-        
-        // Инициализируем графики после загрузки страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(createCharts, 1000);
-        });
-    </script>
+        </script>
 </body>
+
 </html>

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,12 +37,16 @@ var (
 	serverMode     = "server" // "server" или "local"
 	modeMutex      sync.RWMutex
 	lastModeChange time.Time
+	startTime      time.Time
 	
 	// WebSocket
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
+		HandshakeTimeout: 5 * time.Second,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
 	}
 	
 	// Клиенты WebSocket
@@ -53,10 +59,11 @@ var (
 )
 
 type ClientData struct {
-	IP       string
-	IsAdmin  bool
-	LastSeen time.Time
+	IP        string
+	IsAdmin   bool
+	LastSeen  time.Time
 	UserAgent string
+	ClientID  string
 }
 
 func init() {
@@ -71,51 +78,94 @@ func init() {
 	db.users[3] = User{ID: 3, Name: "Иван Сидоров", Email: "ivan@company.ru", CreatedAt: now.Add(-24 * time.Hour)}
 	
 	lastModeChange = time.Now()
+	startTime = time.Now()
 }
 
-// Функция отправки сообщения всем клиентам
+// Функция отправки сообщения всем клиентам с оптимизацией
 func broadcastToAll(messageType string, data interface{}) {
+	// Создаем копию клиентов для безопасной итерации
 	clientsMu.RLock()
-	defer clientsMu.RUnlock()
+	clientsCopy := make([]*websocket.Conn, 0, len(clients))
+	for client := range clients {
+		clientsCopy = append(clientsCopy, client)
+	}
+	clientsMu.RUnlock()
 	
+	// Подготавливаем сообщение один раз
 	message := map[string]interface{}{
 		"type": messageType,
 		"data": data,
 		"time": time.Now().Unix(),
 	}
 	
-	jsonMessage, _ := json.Marshal(message)
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("❌ Ошибка маршалинга сообщения: %v", err)
+		return
+	}
 	
 	activeClients := 0
-	for client := range clients {
-		infoMu.RLock()
-		info := clientInfo[client]
-		infoMu.RUnlock()
+	deadClients := make([]*websocket.Conn, 0)
+	
+	for _, client := range clientsCopy {
+		// Проверяем, существует ли еще соединение
+		clientsMu.RLock()
+		exists := clients[client]
+		clientsMu.RUnlock()
 		
-		// Обновляем время последней активности
-		if info != nil {
-			info.LastSeen = time.Now()
+		if !exists {
+			continue
 		}
 		
+		// Обновляем время последней активности
+		infoMu.Lock()
+		if info, exists := clientInfo[client]; exists {
+			info.LastSeen = time.Now()
+		}
+		infoMu.Unlock()
+		
+		// Устанавливаем таймаут на запись
+		client.SetWriteDeadline(time.Now().Add(3 * time.Second))
+		
+		// Отправляем сообщение
 		err := client.WriteMessage(websocket.TextMessage, jsonMessage)
+		
 		if err != nil {
-			log.Printf("Ошибка отправки сообщения клиенту: %v", err)
-			clientsMu.Lock()
-			delete(clients, client)
-			clientsMu.Unlock()
-			infoMu.Lock()
-			delete(clientInfo, client)
-			infoMu.Unlock()
-			client.Close()
+			log.Printf("❌ Ошибка отправки клиенту: %v", err)
+			deadClients = append(deadClients, client)
 		} else {
 			activeClients++
 		}
 	}
 	
-	log.Printf("📢 Отправлено сообщение '%s' для %d активных клиентов", messageType, activeClients)
+	// Удаляем мертвых клиентов
+	if len(deadClients) > 0 {
+		go cleanupDeadClients(deadClients)
+	}
+	
+	if activeClients > 0 {
+		log.Printf("📢 Отправлено сообщение '%s' для %d/%d клиентов", messageType, activeClients, len(clientsCopy))
+	}
 }
 
-// Функция отправки сообщения конкретному клиенту
+// Функция очистки мертвых клиентов
+func cleanupDeadClients(deadClients []*websocket.Conn) {
+	clientsMu.Lock()
+	infoMu.Lock()
+	
+	for _, client := range deadClients {
+		delete(clients, client)
+		delete(clientInfo, client)
+		client.Close()
+	}
+	
+	infoMu.Unlock()
+	clientsMu.Unlock()
+	
+	log.Printf("🧹 Очищено %d мертвых клиентов", len(deadClients))
+}
+
+// Функция отправки сообщения конкретному клиенту с таймаутом
 func sendToClient(client *websocket.Conn, messageType string, data interface{}) error {
 	message := map[string]interface{}{
 		"type": messageType,
@@ -123,22 +173,49 @@ func sendToClient(client *websocket.Conn, messageType string, data interface{}) 
 		"time": time.Now().Unix(),
 	}
 	
-	jsonMessage, _ := json.Marshal(message)
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+	
+	// Устанавливаем таймаут на запись
+	client.SetWriteDeadline(time.Now().Add(3 * time.Second))
 	return client.WriteMessage(websocket.TextMessage, jsonMessage)
 }
 
-// Обработчик WebSocket
+// Обработчик WebSocket с оптимизациями
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Ошибка обновления WebSocket: %v", err)
+		log.Printf("❌ Ошибка обновления WebSocket: %v", err)
 		return
 	}
+	
+	// Устанавливаем таймауты
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		
+		// Обновляем время последней активности
+		infoMu.Lock()
+		if info, exists := clientInfo[conn]; exists {
+			info.LastSeen = time.Now()
+		}
+		infoMu.Unlock()
+		
+		return nil
+	})
 	
 	// Регистрируем клиента
 	clientsMu.Lock()
 	clients[conn] = true
 	clientsMu.Unlock()
+	
+	// Получаем или генерируем ClientID
+	clientID := r.URL.Query().Get("clientId")
+	if clientID == "" {
+		clientID = "client_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
 	
 	// Сохраняем информацию о клиенте
 	ip := strings.Split(r.RemoteAddr, ":")[0]
@@ -148,66 +225,130 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		IsAdmin:   checkAdminAccess(r),
 		LastSeen:  time.Now(),
 		UserAgent: r.UserAgent(),
+		ClientID:  clientID,
 	}
 	infoMu.Unlock()
 	
-	log.Printf("🔗 Новый WebSocket клиент подключен: %s (Всего: %d)", ip, len(clients))
+	log.Printf("🔗 Новый WebSocket клиент подключен: %s (ID: %s, Всего: %d)", ip, clientID, len(clients))
 	
-	// Отправляем приветственное сообщение с текущим режимом
-	modeMutex.RLock()
-	currentMode := serverMode
-	modeMutex.RUnlock()
+	// Отправляем приветственное сообщение с таймаутом
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	
-	welcomeMsg := map[string]interface{}{
-		"mode":     currentMode,
-		"clients":  len(clients),
-		"is_admin": checkAdminAccess(r),
-		"server_time": time.Now().Format("2006-01-02 15:04:05"),
-	}
-	sendToClient(conn, "connected", welcomeMsg)
-	
-	// Обрабатываем сообщения от клиента
 	go func() {
-		defer func() {
-			// Удаляем клиента при отключении
-			clientsMu.Lock()
-			delete(clients, conn)
-			clientsMu.Unlock()
-			infoMu.Lock()
-			delete(clientInfo, conn)
-			infoMu.Unlock()
-			conn.Close()
+		select {
+		case <-ctx.Done():
+			log.Printf("⚠️ Таймаут отправки приветственного сообщения клиенту %s", clientID)
+			return
+		default:
+			modeMutex.RLock()
+			currentMode := serverMode
+			modeMutex.RUnlock()
 			
-			log.Printf("🔗 WebSocket клиент отключен: %s (Осталось: %d)", ip, len(clients))
-		}()
-		
-		for {
-			messageType, message, err := conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Printf("WebSocket ошибка чтения: %v", err)
-				}
-				break
+			welcomeMsg := map[string]interface{}{
+				"mode":        currentMode,
+				"clients":     len(clients),
+				"is_admin":    checkAdminAccess(r),
+				"server_time": time.Now().Format("2006-01-02 15:04:05"),
+				"client_id":   clientID,
 			}
 			
-			if messageType == websocket.TextMessage {
-				var msg map[string]interface{}
-				if err := json.Unmarshal(message, &msg); err == nil {
-					if msg["type"] == "ping" {
-						// Отвечаем на ping
-						sendToClient(conn, "pong", map[string]interface{}{"time": time.Now().Unix()})
-					}
-				}
+			if err := sendToClient(conn, "connected", welcomeMsg); err != nil {
+				log.Printf("❌ Ошибка отправки приветствия клиенту %s: %v", clientID, err)
 			}
-			
-			// Обновляем время последней активности
-			infoMu.Lock()
-			if info, exists := clientInfo[conn]; exists {
-				info.LastSeen = time.Now()
-			}
-			infoMu.Unlock()
 		}
 	}()
+	
+	// Обрабатываем сообщения от клиента
+	go handleClientMessages(conn, ip, clientID)
+}
+
+// Обработка сообщений от клиента
+func handleClientMessages(conn *websocket.Conn, ip, clientID string) {
+	defer func() {
+		// Удаляем клиента при отключении
+		clientsMu.Lock()
+		delete(clients, conn)
+		clientsMu.Unlock()
+		infoMu.Lock()
+		delete(clientInfo, conn)
+		infoMu.Unlock()
+		conn.Close()
+		
+		log.Printf("🔗 WebSocket клиент отключен: %s (ID: %s, Осталось: %d)", ip, clientID, len(clients))
+	}()
+	
+	for {
+		messageType, message, err := conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("❌ WebSocket ошибка чтения от %s: %v", clientID, err)
+			}
+			break
+		}
+		
+		if messageType == websocket.TextMessage {
+			var msg map[string]interface{}
+			if err := json.Unmarshal(message, &msg); err != nil {
+				log.Printf("❌ Ошибка парсинга сообщения от %s: %v", clientID, err)
+				continue
+			}
+			
+			switch msg["type"] {
+			case "ping":
+				// Обновляем время последней активности
+				infoMu.Lock()
+				if info, exists := clientInfo[conn]; exists {
+					info.LastSeen = time.Now()
+				}
+				infoMu.Unlock()
+				
+				// Отвечаем на ping
+				sendToClient(conn, "pong", map[string]interface{}{
+					"time":      time.Now().Unix(),
+					"client_id": msg["clientId"],
+				})
+				
+			case "pong":
+				// Обновляем таймаут чтения
+				conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+				infoMu.Lock()
+				if info, exists := clientInfo[conn]; exists {
+					info.LastSeen = time.Now()
+				}
+				infoMu.Unlock()
+				
+			case "connect":
+				// Обновляем ClientID
+				if newClientID, ok := msg["clientId"].(string); ok && newClientID != "" {
+					infoMu.Lock()
+					if info, exists := clientInfo[conn]; exists {
+						info.ClientID = newClientID
+					}
+					infoMu.Unlock()
+				}
+				
+			case "get_mode":
+				// Отправляем текущий режим
+				modeMutex.RLock()
+				currentMode := serverMode
+				modeMutex.RUnlock()
+				
+				sendToClient(conn, "mode_info", map[string]interface{}{
+					"mode":    currentMode,
+					"clients": len(clients),
+				})
+				
+			default:
+				// Обновляем время последней активности для любого сообщения
+				infoMu.Lock()
+				if info, exists := clientInfo[conn]; exists {
+					info.LastSeen = time.Now()
+				}
+				infoMu.Unlock()
+			}
+		}
+	}
 }
 
 // CORS middleware
@@ -216,6 +357,9 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Password, X-Admin-Token")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -226,7 +370,7 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Проверка режима работы
+// Проверка режима работы с оптимизацией
 func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		modeMutex.RLock()
@@ -237,6 +381,7 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if r.URL.Path == "/api/mode" || r.URL.Path == "/api/admin/mode" || 
 		   r.URL.Path == "/api/stats" || r.URL.Path == "/" ||
 		   r.URL.Path == "/api/status" || r.URL.Path == "/api/info" ||
+		   r.URL.Path == "/api/health" || r.URL.Path == "/api/check-mode" ||
 		   r.URL.Path == "/ws" || strings.HasPrefix(r.URL.Path, "/api/") {
 			next(w, r)
 			return
@@ -344,7 +489,7 @@ func checkModeMiddleware(next http.HandlerFunc) http.HandlerFunc {
     </div>
     <script>
         function checkForUpdates() {
-            fetch('/api/check-mode')
+            fetch('/api/check-mode?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
                     if (data.mode === 'server') {
@@ -501,6 +646,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		"mode":    currentMode,
 		"clients": len(clients),
 		"docs":    "/api/info",
+		"uptime":  time.Since(startTime).String(),
 	})
 }
 
@@ -625,6 +771,8 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 		"go_version":  "1.23.1",
 		"mode":        currentMode,
 		"clients":     len(clients),
+		"uptime":      time.Since(startTime).String(),
+		"memory_mb":   getMemoryUsage(),
 	}
 	
 	// В локальном режиме показываем 0 пользователей для обычных пользователей
@@ -637,6 +785,13 @@ func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	sendJSON(w, http.StatusOK, stats)
+}
+
+// Вспомогательная функция для получения использования памяти
+func getMemoryUsage() float64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return float64(m.Alloc) / 1024 / 1024
 }
 
 func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -656,6 +811,7 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 		"author":      "Dmitriy Kobelev",
 		"mode":        currentMode,
 		"clients":     len(clients),
+		"uptime":      time.Since(startTime).String(),
 		"endpoints": map[string]string{
 			"GET /api/users":           "Get all users",
 			"POST /api/users":          "Create user",
@@ -664,6 +820,7 @@ func apiInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"DELETE /api/users/{id}":   "Delete user",
 			"GET /api/stats":           "Server statistics",
 			"GET /api/info":            "This info",
+			"GET /api/health":          "Health check",
 			"POST /api/admin/mode":     "Change mode (admin only)",
 			"GET /api/mode":            "Get current mode",
 			"GET /api/status":          "Check status and mode",
@@ -691,102 +848,124 @@ func apiStatusHandler(w http.ResponseWriter, r *http.Request) {
 	isAdmin := checkAdminAccess(r)
 	
 	response := map[string]interface{}{
-		"mode":      currentMode,
-		"is_admin":  isAdmin,
-		"timestamp": time.Now().Unix(),
-		"status":    "ok",
-		"clients":   len(clients),
+		"mode":        currentMode,
+		"is_admin":    isAdmin,
+		"timestamp":   time.Now().Unix(),
+		"status":      "ok",
+		"clients":     len(clients),
 		"server_time": time.Now().Format("2006-01-02 15:04:05"),
+		"uptime":      time.Since(startTime).String(),
 	}
 	
 	// Если режим локальный и не админ - сообщаем о блокировке
 	if currentMode == "local" && !isAdmin {
 		response["blocked"] = true
 		response["message"] = "Локальный режим активен"
+		response["status"] = "blocked"
 	}
 	
 	sendJSON(w, http.StatusOK, response)
 }
 
-// Новые обработчики для управления режимом
+// Health check endpoint
+func apiHealthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	healthStatus := map[string]interface{}{
+		"status":    "healthy",
+		"timestamp": time.Now().Unix(),
+		"version":   "1.0.0",
+		"mode":      serverMode,
+		"clients":   len(clients),
+		"uptime":    time.Since(startTime).String(),
+		"memory_mb": getMemoryUsage(),
+	}
+	
+	sendJSON(w, http.StatusOK, healthStatus)
+}
 
+// Новые обработчики для управления режимом
 func apiAdminModeHandler(w http.ResponseWriter, r *http.Request) {
-	  if r.Method != http.MethodPost {
-        sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
-        return
-    }
-    
-    // Проверяем админский пароль
-    var body map[string]string
-    if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-        sendError(w, http.StatusBadRequest, "Invalid JSON")
-        return
-    }
-    
-    if body["password"] != "admin123" {
-        sendError(w, http.StatusUnauthorized, "Invalid admin password")
-        return
-    }
-    
-    newMode := body["mode"] // <- ЭТА СТРОКА ДОЛЖНА БЫТЬ ОПРЕДЕЛЕНА
-    if newMode != "server" && newMode != "local" {
-        sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
-        return
-    }
-    
-    modeMutex.Lock()
-    oldMode := serverMode
-    serverMode = newMode
-    lastModeChange = time.Now()
-    modeMutex.Unlock()
-    
-    // Отправляем обновление ВСЕМ подключенным клиентам через WebSocket
-    broadcastToAll("mode_changed", map[string]interface{}{
-        "old_mode": oldMode,
-        "new_mode": newMode,
-        "time":     time.Now().Unix(),
-        "force_reload": true,
-    })
-    
-    // Небольшая задержка для гарантии отправки
-    time.Sleep(100 * time.Millisecond)
-    
-    // Также отправляем команду на принудительную перезагрузку
-    broadcastToAll("force_reload", map[string]interface{}{
-        "reason": "mode_changed_to_" + newMode, // <- ТУТ ИСПОЛЬЗУЕМ newMode
-        "time":   time.Now().Unix(),
-    })
-    
-    // Логируем изменение
-    log.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!")
-    log.Printf("   Старый режим: %s", oldMode)
-    log.Printf("   Новый режим: %s", newMode)
-    log.Printf("   Время: %s", time.Now().Format("2006-01-02 15:04:05"))
-    log.Printf("   IP админ: %s", r.RemoteAddr)
-    log.Printf("   Активных клиентов: %d", len(clients))
-    
-    if newMode == "local" {
-        log.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!")
-        log.Printf("   ✅ Только администратор может работать с системой")
-    } else {
-        log.Printf("   ✅ Теперь все пользователи видят общие данные")
-    }
-    
-    response := map[string]interface{}{
-        "message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
-        "mode":    newMode,
-        "time":    time.Now().Format("2006-01-02 15:04:05"),
-        "clients": len(clients),
-        "warning": "",
-    }
-    
-    if newMode == "local" {
-        response["warning"] = "Обычные пользователи увидят 404 страницу"
-    } else {
-        response["warning"] = "Все пользователи видят данные"
-    }
-    
-    sendJSON(w, http.StatusOK, response)
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	
+	// Проверяем админский пароль
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	
+	if body["password"] != "admin123" {
+		sendError(w, http.StatusUnauthorized, "Invalid admin password")
+		return
+	}
+	
+	newMode := body["mode"]
+	if newMode != "server" && newMode != "local" {
+		sendError(w, http.StatusBadRequest, "Mode must be 'server' or 'local'")
+		return
+	}
+	
+	modeMutex.Lock()
+	oldMode := serverMode
+	serverMode = newMode
+	lastModeChange = time.Now()
+	modeMutex.Unlock()
+	
+	// Отправляем обновление ВСЕМ подключенным клиентам через WebSocket
+	broadcastToAll("mode_changed", map[string]interface{}{
+		"old_mode":      oldMode,
+		"new_mode":      newMode,
+		"time":          time.Now().Unix(),
+		"force_reload":  true,
+		"changed_by":    r.RemoteAddr,
+	})
+	
+	// Небольшая задержка для гарантии отправки
+	time.Sleep(50 * time.Millisecond)
+	
+	// Также отправляем команду на принудительную перезагрузку
+	broadcastToAll("force_reload", map[string]interface{}{
+		"reason": "mode_changed_to_" + newMode,
+		"time":   time.Now().Unix(),
+	})
+	
+	// Логируем изменение
+	log.Printf("\n🎯 РЕЖИМ ИЗМЕНЕН!")
+	log.Printf("   Старый режим: %s", oldMode)
+	log.Printf("   Новый режим: %s", newMode)
+	log.Printf("   Время: %s", time.Now().Format("2006-01-02 15:04:05"))
+	log.Printf("   IP админ: %s", r.RemoteAddr)
+	log.Printf("   Активных клиентов: %d", len(clients))
+	
+	if newMode == "local" {
+		log.Printf("   ⚠️  ВНИМАНИЕ: Все обычные пользователи теперь увидят белую страницу 404!")
+		log.Printf("   ✅ Только администратор может работать с системой")
+	} else {
+		log.Printf("   ✅ Теперь все пользователи видят общие данные")
+	}
+	
+	response := map[string]interface{}{
+		"message": fmt.Sprintf("Режим изменен с '%s' на '%s'", oldMode, newMode),
+		"mode":    newMode,
+		"time":    time.Now().Format("2006-01-02 15:04:05"),
+		"clients": len(clients),
+		"warning": "",
+	}
+	
+	if newMode == "local" {
+		response["warning"] = "Обычные пользователи увидят 404 страницу"
+	} else {
+		response["warning"] = "Все пользователи видят данные"
+	}
+	
+	sendJSON(w, http.StatusOK, response)
 }
 
 func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
@@ -801,10 +980,11 @@ func apiGetModeHandler(w http.ResponseWriter, r *http.Request) {
 	modeMutex.RUnlock()
 	
 	sendJSON(w, http.StatusOK, map[string]interface{}{
-		"mode": currentMode,
-		"last_change": lastChange.Format(time.RFC3339),
-		"clients": len(clients),
-		"timestamp": time.Now().Unix(),
+		"mode":         currentMode,
+		"last_change":  lastChange.Format(time.RFC3339),
+		"clients":      len(clients),
+		"timestamp":    time.Now().Unix(),
+		"uptime":       time.Since(startTime).String(),
 	})
 }
 
@@ -832,10 +1012,10 @@ func apiCheckModeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	sendJSON(w, http.StatusOK, map[string]interface{}{
-		"mode": currentMode,
-		"last_change": lastChange.Unix(),
+		"mode":         currentMode,
+		"last_change":  lastChange.Unix(),
 		"needs_reload": needsReload,
-		"timestamp": time.Now().Unix(),
+		"timestamp":    time.Now().Unix(),
 	})
 }
 
@@ -855,11 +1035,13 @@ func apiClientsHandler(w http.ResponseWriter, r *http.Request) {
 	clientsList := make([]map[string]interface{}, 0, len(clientInfo))
 	for _, info := range clientInfo {
 		clientsList = append(clientsList, map[string]interface{}{
-			"ip":         info.IP,
-			"is_admin":   info.IsAdmin,
-			"last_seen":  info.LastSeen.Format("2006-01-02 15:04:05"),
-			"user_agent": info.UserAgent,
-			"connected":  time.Since(info.LastSeen) < 30*time.Second,
+			"ip":          info.IP,
+			"client_id":   info.ClientID,
+			"is_admin":    info.IsAdmin,
+			"last_seen":   info.LastSeen.Format("2006-01-02 15:04:05"),
+			"user_agent":  info.UserAgent,
+			"connected":   time.Since(info.LastSeen) < 30*time.Second,
+			"idle_time":   time.Since(info.LastSeen).Round(time.Second).String(),
 		})
 	}
 	infoMu.RUnlock()
@@ -877,22 +1059,59 @@ func startPingService() {
 	go func() {
 		for range ticker.C {
 			broadcastToAll("ping", map[string]interface{}{
-				"time": time.Now().Unix(),
+				"time":    time.Now().Unix(),
 				"clients": len(clients),
 			})
 		}
 	}()
 }
 
+// Функция для периодической очистки неактивных клиентов
+func startClientCleanup() {
+	ticker := time.NewTicker(60 * time.Second)
+	go func() {
+		for range ticker.C {
+			cleanupInactiveClients()
+		}
+	}()
+}
+
+func cleanupInactiveClients() {
+	clientsMu.Lock()
+	infoMu.Lock()
+	
+	inactiveClients := 0
+	now := time.Now()
+	
+	for client, info := range clientInfo {
+		// Если клиент неактивен более 2 минут
+		if now.Sub(info.LastSeen) > 120*time.Second {
+			delete(clients, client)
+			delete(clientInfo, client)
+			client.Close()
+			inactiveClients++
+		}
+	}
+	
+	infoMu.Unlock()
+	clientsMu.Unlock()
+	
+	if inactiveClients > 0 {
+		log.Printf("🧹 Очищено %d неактивных клиентов", inactiveClients)
+	}
+}
+
 func main() {
-	// Запускаем сервис ping
+	// Запускаем сервисы
 	startPingService()
+	startClientCleanup()
 	
 	// Регистрация маршрутов
 	http.HandleFunc("/api/users", enableCORS(checkModeMiddleware(apiUsersHandler)))
 	http.HandleFunc("/api/users/", enableCORS(checkModeMiddleware(apiUserHandler)))
 	http.HandleFunc("/api/stats", enableCORS(apiStatsHandler))
 	http.HandleFunc("/api/info", enableCORS(apiInfoHandler))
+	http.HandleFunc("/api/health", enableCORS(apiHealthHandler))
 	http.HandleFunc("/api/admin/mode", enableCORS(apiAdminModeHandler))
 	http.HandleFunc("/api/mode", enableCORS(apiGetModeHandler))
 	http.HandleFunc("/api/status", enableCORS(apiStatusHandler))
@@ -902,23 +1121,36 @@ func main() {
 	http.HandleFunc("/", enableCORS(homeHandler))
 
 	port := ":8068"
-	log.Printf("🚀 Go API сервер запущен на порту %s", port)
-	log.Printf("📊 База данных инициализирована с %d пользователями", len(db.users))
+	
+	// Статистика сервера
+	log.Printf("\n" + strings.Repeat("=", 60))
+	log.Printf("🚀 UserManager Pro Server v1.0.0")
+	log.Printf(strings.Repeat("=", 60))
+	log.Printf("📊 Сервер запущен на порту %s", port)
+	log.Printf("📁 База данных инициализирована с %d пользователями", len(db.users))
 	log.Printf("🌐 Начальный режим: %s", serverMode)
+	log.Printf("⏱️  Время запуска: %s", startTime.Format("2006-01-02 15:04:05"))
+	log.Printf(strings.Repeat("-", 60))
+	
 	log.Printf("\n🔧 Управление режимами:")
-	log.Printf("   POST /api/admin/mode - Изменить режим (требуется пароль admin123)")
+	log.Printf("   POST /api/admin/mode - Изменить режим (пароль: admin123)")
 	log.Printf("   GET  /api/mode       - Получить текущий режим")
 	log.Printf("   GET  /api/status     - Проверить статус и доступ")
+	log.Printf("   GET  /api/health     - Проверить состояние сервера")
 	log.Printf("   GET  /api/clients    - Получить список подключенных клиентов")
 	log.Printf("   WS   /ws             - WebSocket для мгновенных обновлений")
+	
 	log.Printf("\n🔒 Локальный режим:")
 	log.Printf("   - Обычные пользователи немедленно получают 404 ошибку")
 	log.Printf("   - WebSocket уведомления для всех клиентов")
 	log.Printf("   - Принудительная перезагрузка при смене режима")
+	
 	log.Printf("\n⚡ Мгновенное обновление через WebSocket:")
 	log.Printf("   - Все клиенты получают уведомление при смене режима")
 	log.Printf("   - Автоматическая перезагрузка страниц")
 	log.Printf("   - Режим меняется у всех пользователей одновременно")
+	log.Printf("   - Ping/pong для поддержания соединения")
+	
 	log.Printf("\n🌐 API Endpoints:")
 	log.Printf("   GET  /api/users      - Все пользователи")
 	log.Printf("   POST /api/users      - Создать пользователя")
@@ -927,6 +1159,17 @@ func main() {
 	log.Printf("   GET  /api/status     - Проверить статус системы")
 	log.Printf("   GET  /api/check-mode - Проверить изменение режима")
 	log.Printf("   WS   /ws             - WebSocket для реального времени")
+	
+	log.Printf("\n🔧 Технические особенности:")
+	log.Printf("   - Таймаут подключения: 5 секунд")
+	log.Printf("   - Таймаут чтения: 60 секунд")
+	log.Printf("   - Автоматическая очистка неактивных клиентов")
+	log.Printf("   - Оптимизированная рассылка сообщений")
+	
+	log.Printf(strings.Repeat("=", 60))
+	log.Printf("\n✅ Сервер готов к работе!\n")
 
-	log.Fatal(http.ListenAndServe(port, nil))
+	if err := http.ListenAndServe(port, nil); err != nil {
+		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
+	}
 }

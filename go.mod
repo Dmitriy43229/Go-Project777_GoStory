@@ -1,5 +1,5 @@
-module myapp
+module usermanager-pro
 
-go 1.23.1
+go 1.23
 
-require github.com/gorilla/websocket v1.5.3 // indirect
+require github.com/gorilla/websocket v1.5.3

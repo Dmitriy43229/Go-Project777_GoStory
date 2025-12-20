@@ -34,7 +34,7 @@
     const originalFetch = window.fetch;
     window.fetch = function (url, options = {}) {
         // Добавляем timestamp для GET запросов к API (только если не указаны заголовки no-cache)
-        if (url && typeof url === 'string' && url.includes('/api/') && 
+        if (url && typeof url === 'string' && url.includes('/api/') &&
             (!options.headers || !options.headers['Cache-Control'])) {
             const separator = url.includes('?') ? '&' : '?';
             const timestamp = Date.now();
@@ -176,7 +176,7 @@ function connectWebSocket() {
         clearTimeout(connectionTimeout);
         connectionTimeout = null;
     }
-    
+
     if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
@@ -205,17 +205,17 @@ function connectWebSocket() {
     try {
         // Создаем WebSocket соединение
         ws = new WebSocket(CONFIG.WS_URL);
-        
+
         // Добавляем ID клиента в URL если нужно
         const clientId = generateClientId();
 
-        ws.onopen = function() {
+        ws.onopen = function () {
             console.log('✅ WebSocket подключен успешно');
             clearTimeout(connectionTimeout);
             isConnected = true;
             reconnectAttempts = 0;
             updateConnectionStatus('connected');
-            
+
             // Отправляем информацию о клиенте
             const connectData = {
                 type: 'connect',
@@ -224,19 +224,19 @@ function connectWebSocket() {
                 userAgent: navigator.userAgent,
                 timestamp: Date.now()
             };
-            
+
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify(connectData));
             }
-            
+
             // Запускаем ping
             startPingInterval();
-            
+
             // Запрашиваем текущий режим
             sendWebSocketMessage({ type: 'get_mode' });
         };
 
-        ws.onmessage = function(event) {
+        ws.onmessage = function (event) {
             try {
                 const data = JSON.parse(event.data);
                 handleWebSocketMessage(data);
@@ -245,14 +245,14 @@ function connectWebSocket() {
             }
         };
 
-        ws.onclose = function(event) {
+        ws.onclose = function (event) {
             console.log('🔌 WebSocket отключен:', event.code, event.reason);
             isConnected = false;
             updateConnectionStatus('disconnected');
             handleDisconnection();
         };
 
-        ws.onerror = function(error) {
+        ws.onerror = function (error) {
             console.error('❌ WebSocket ошибка:', error);
             updateConnectionStatus('error');
             // Не закрываем сразу, даем onclose обработать
@@ -267,14 +267,14 @@ function connectWebSocket() {
 
 function handleWebSocketMessage(data) {
     console.log('📨 WebSocket сообщение:', data.type);
-    
-    switch(data.type) {
+
+    switch (data.type) {
         case 'connected':
             console.log('✅ Подтверждение подключения');
             currentServerMode = data.data.mode || 'server';
             updateCurrentMode(currentServerMode);
             updateClientsCount(data.data.clients || 1);
-            
+
             // Проверяем, не заблокирован ли пользователь
             if (currentServerMode === 'local' && !isAdmin) {
                 console.log('🚫 Обычный пользователь в локальном режиме - показываем блокировку');
@@ -282,13 +282,13 @@ function handleWebSocketMessage(data) {
                 isBlocked = true;
             }
             break;
-            
+
         case 'mode_changed':
             console.log('🔄 Изменен режим:', data.data);
             currentServerMode = data.data.new_mode;
             updateCurrentMode(currentServerMode);
             updateAdminButtons();
-            
+
             // КРИТИЧЕСКО ВАЖНО: Если режим стал локальным и пользователь не админ
             if (currentServerMode === 'local' && !isAdmin) {
                 console.log('🚫 Режим изменился на локальный - блокируем обычного пользователя');
@@ -296,12 +296,12 @@ function handleWebSocketMessage(data) {
                 isBlocked = true;
                 return; // Не загружаем данные
             }
-            
+
             // Если не заблокированы, обновляем данные
             if (!isBlocked) {
                 loadInitialData();
             }
-            
+
             // Если нужно принудительно перезагрузить
             if (data.data.force_reload && !isReloading) {
                 isReloading = true;
@@ -311,7 +311,7 @@ function handleWebSocketMessage(data) {
                 }, 1500);
             }
             break;
-            
+
         case 'force_reload':
             console.log('⚡ Команда на перезагрузку');
             if (!isReloading) {
@@ -321,16 +321,16 @@ function handleWebSocketMessage(data) {
                 }, 1000);
             }
             break;
-            
+
         case 'ping':
             // Отвечаем на пинг
             sendWebSocketMessage({ type: 'pong', timestamp: Date.now() });
             break;
-            
+
         case 'clients_update':
             updateClientsCount(data.data.clients);
             break;
-            
+
         case 'error':
             console.error('❌ Ошибка сервера:', data.message);
             break;
@@ -351,11 +351,11 @@ function startPingInterval() {
     if (pingInterval) {
         clearInterval(pingInterval);
     }
-    
+
     pingInterval = setInterval(() => {
         if (ws && ws.readyState === WebSocket.OPEN) {
-            sendWebSocketMessage({ 
-                type: 'ping', 
+            sendWebSocketMessage({
+                type: 'ping',
                 timestamp: Date.now(),
                 clientId: generateClientId()
             });
@@ -369,15 +369,15 @@ function handleDisconnection() {
         clearInterval(pingInterval);
         pingInterval = null;
     }
-    
+
     // Пытаемся переподключиться
     if (reconnectAttempts < CONFIG.MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts++;
         const delay = Math.min(CONFIG.RECONNECT_DELAY * reconnectAttempts, 10000);
-        
+
         console.log(`🔄 Попытка переподключения ${reconnectAttempts}/${CONFIG.MAX_RECONNECT_ATTEMPTS} через ${delay}мс`);
         updateConnectionStatus('reconnecting');
-        
+
         reconnectTimeout = setTimeout(() => {
             connectWebSocket();
         }, delay);
@@ -391,10 +391,10 @@ function handleDisconnection() {
 function updateConnectionStatus(status) {
     const statusEl = document.getElementById('connectionStatus');
     if (!statusEl) return;
-    
+
     // Обновляем классы
     statusEl.className = `connection-status ${status}`;
-    
+
     // Обновляем текст
     const texts = {
         'connecting': 'Подключение...',
@@ -403,7 +403,7 @@ function updateConnectionStatus(status) {
         'reconnecting': 'Переподключение...',
         'error': 'Ошибка'
     };
-    
+
     const dotColors = {
         'connecting': '#f59e0b',
         'connected': '#4ade80',
@@ -411,10 +411,10 @@ function updateConnectionStatus(status) {
         'reconnecting': '#f59e0b',
         'error': '#ef4444'
     };
-    
+
     const text = texts[status] || 'Неизвестно';
     const color = dotColors[status] || '#9ca3af';
-    
+
     statusEl.innerHTML = `
         <span class="connection-dot" style="background: ${color}"></span>
         <span>${text}</span>
@@ -457,10 +457,10 @@ function logoutAdmin() {
     if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
         localStorage.removeItem('usermanager_admin_session');
         localStorage.removeItem('usermanager_admin_expiry');
-        
+
         isAdmin = false;
         updateAdminButtons();
-        
+
         alert('✅ Вы вышли из режима администратора.');
         setTimeout(() => {
             location.reload(true);
@@ -469,30 +469,157 @@ function logoutAdmin() {
 }
 
 function showAdminLoginModal() {
-    const password = prompt('Введите пароль администратора:');
-    
-    if (password === null) return;
-    
-    if (password === "D607206fd-") {
-        createAdminSession();
-        
+    // Создаем модальное окно
+    const modalHtml = `
+        <div id="adminLoginModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        ">
+            <div style="
+                background: ${document.body.classList.contains('light-theme') ? 'white' : '#1e293b'};
+                padding: 2rem;
+                border-radius: 15px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            ">
+                <h3 style="
+                    color: ${document.body.classList.contains('light-theme') ? '#1e293b' : 'white'};
+                    margin-bottom: 1rem;
+                    text-align: center;
+                ">
+                    Вход администратора
+                </h3>
+                <input type="password" 
+                       id="adminPasswordInput" 
+                       placeholder="Введите пароль администратора"
+                       style="
+                           width: 100%;
+                           padding: 0.75rem;
+                           margin-bottom: 1rem;
+                           border-radius: 8px;
+                           border: 1px solid ${document.body.classList.contains('light-theme') ? '#cbd5e1' : '#475569'};
+                           background: ${document.body.classList.contains('light-theme') ? 'white' : '#0f172a'};
+                           color: ${document.body.classList.contains('light-theme') ? '#1e293b' : 'white'};
+                           font-size: 1rem;
+                       ">
+                <div style="display: flex; gap: 1rem;">
+                    <button onclick="processAdminLogin()"
+                            style="
+                                flex: 1;
+                                padding: 0.75rem;
+                                background: #3b82f6;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: background 0.3s;
+                            "
+                            onmouseover="this.style.background='#2563eb'"
+                            onmouseout="this.style.background='#3b82f6'">
+                        Войти
+                    </button>
+                    <button onclick="closeAdminLoginModal()"
+                            style="
+                                flex: 1;
+                                padding: 0.75rem;
+                                background: ${document.body.classList.contains('light-theme') ? '#e2e8f0' : '#475569'};
+                                color: ${document.body.classList.contains('light-theme') ? '#475569' : 'white'};
+                                border: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: background 0.3s;
+                            "
+                            onmouseover="this.style.background='${document.body.classList.contains('light-theme') ? '#cbd5e1' : '#64748b'}'"
+                            onmouseout="this.style.background='${document.body.classList.contains('light-theme') ? '#e2e8f0' : '#475569'}'">
+                        Отмена
+                    </button>
+                </div>
+                <div id="loginError" style="
+                    color: #ef4444;
+                    margin-top: 1rem;
+                    text-align: center;
+                    display: none;
+                    font-size: 0.9rem;
+                ">Неверный пароль</div>
+            </div>
+        </div>
+    `;
+
+    // Вставляем модальное окно
+    const modalDiv = document.createElement('div');
+    modalDiv.innerHTML = modalHtml;
+    document.body.appendChild(modalDiv);
+
+    // Фокус на поле ввода
+    setTimeout(() => {
+        const input = document.getElementById('adminPasswordInput');
+        if (input) input.focus();
+
+        // Добавляем обработчик Enter
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                processAdminLogin();
+            }
+        });
+    }, 100);
+}
+
+function processAdminLogin() {
+    const passwordInput = document.getElementById('adminPasswordInput');
+    const errorDiv = document.getElementById('loginError');
+
+    if (!passwordInput) return;
+
+    if (passwordInput.value === "D607206fd-") {
+        // Создаем сессию
+        const sessionId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+
+        localStorage.setItem('usermanager_admin_session', sessionId);
+        localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
+        isAdmin = true;
+
         // Обновляем интерфейс
         updateAdminButtons();
         updateCurrentMode(currentServerMode);
-        
-        alert('✅ Успешный вход как администратор!');
-        
+
+        // Закрываем модальное окно
+        closeAdminLoginModal();
+
         // Разблокируем пользователя если был заблокирован
         if (isBlocked && currentServerMode === 'local') {
             isBlocked = false;
             document.body.classList.remove('blocked');
         }
-        
+
         // Перезагружаем данные
         loadInitialData();
-        
-    } else if (password !== '') {
-        alert('❌ Неверный пароль администратора');
+
+        // Показываем уведомление
+        alert('✅ Успешный вход как администратор!');
+
+    } else if (passwordInput.value !== '') {
+        errorDiv.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
+    }
+}
+
+function closeAdminLoginModal() {
+    const modal = document.getElementById('adminLoginModal');
+    if (modal) {
+        modal.remove();
     }
 }
 
@@ -501,12 +628,12 @@ async function toggleServerMode() {
         showAdminLoginModal();
         return;
     }
-    
+
     try {
         const newMode = currentServerMode === "server" ? "local" : "server";
-        
+
         console.log(`🔄 Администратор переключает режим на: ${newMode}`);
-        
+
         const response = await fetch('http://localhost:8068/api/admin/mode', {
             method: 'POST',
             headers: {
@@ -518,27 +645,27 @@ async function toggleServerMode() {
                 password: 'D607206fd-'
             })
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             currentServerMode = newMode;
-            
+
             // Обновляем интерфейс
             updateCurrentMode(newMode);
             updateAdminButtons();
-            
+
             // Показываем уведомление
             if (newMode === 'local') {
                 alert(`✅ Локальный режим включен!\n\nТолько администраторы видят данные.\n\nУведомлено клиентов: ${data.clients || 0}`);
             } else {
                 alert(`✅ Серверный режим включен!\n\nВсе пользователи видят общие данные.\n\nУведомлено клиентов: ${data.clients || 0}`);
             }
-            
+
         } else {
             const error = await response.json();
             throw new Error(error.error || 'Ошибка сервера');
         }
-        
+
     } catch (error) {
         console.error('Ошибка переключения режима:', error);
         alert(`❌ Ошибка: ${error.message}\n\nПроверьте подключение к серверу.`);
@@ -549,7 +676,7 @@ async function toggleServerMode() {
 function updateCurrentMode(mode) {
     const modeText = document.getElementById('currentModeText');
     const statusValue = document.getElementById('statusValue');
-    
+
     if (modeText) {
         if (mode === 'local' && !isAdmin) {
             modeText.textContent = 'Режим: Локальный (доступ закрыт)';
@@ -559,7 +686,7 @@ function updateCurrentMode(mode) {
             modeText.style.color = mode === 'local' ? '#f59e0b' : '#4ade80';
         }
     }
-    
+
     if (statusValue) {
         if (mode === 'local' && !isAdmin) {
             statusValue.textContent = 'Заблокирован';
@@ -574,12 +701,12 @@ function updateCurrentMode(mode) {
 function updateAdminButtons() {
     const adminBtn = document.getElementById('adminModeToggle');
     const logoutBtn = document.getElementById('logoutBtn');
-    
+
     if (adminBtn && logoutBtn) {
         if (isAdmin) {
             adminBtn.style.display = 'flex';
             logoutBtn.style.display = 'flex';
-            
+
             // Обновляем текст кнопки
             adminBtn.innerHTML = `
                 <i class="fas fa-cogs"></i>
@@ -605,9 +732,9 @@ async function loadInitialData() {
         console.log('🚫 Загрузка данных пропущена: система заблокирована');
         return;
     }
-    
+
     console.log('📥 Загрузка данных...');
-    
+
     try {
         // Загружаем статус сервера
         const statusResponse = await fetchWithTimeout(`${CONFIG.API_URL}/status`, 3000);
@@ -616,7 +743,7 @@ async function loadInitialData() {
             currentServerMode = status.mode;
             updateCurrentMode(status.mode);
             updateClientsCount(status.clients || 1);
-            
+
             // КРИТИЧЕСКО ВАЖНО: Проверяем блокировку
             if (status.mode === 'local' && !isAdmin) {
                 console.log('🚫 Обычный пользователь в локальном режиме - показываем блокировку');
@@ -625,17 +752,17 @@ async function loadInitialData() {
                 return; // Прерываем дальнейшую загрузку
             }
         }
-        
+
         // Если не заблокированы, загружаем остальные данные
         const statsResponse = await fetchWithTimeout(`${CONFIG.API_URL}/stats`, 3000);
         if (statsResponse.ok) {
             const stats = await statsResponse.json();
             updateStats(stats);
         }
-        
+
         // Загружаем пользователей
         await loadUsers();
-        
+
     } catch (error) {
         console.warn('⚠️ Не удалось загрузить данные с сервера:', error);
         // Показываем локальные данные только если не заблокированы
@@ -670,10 +797,10 @@ function displayLocalUsers() {
 function displayUsers(users) {
     const usersGrid = document.getElementById('usersGrid');
     if (!usersGrid) return;
-    
+
     // Используем DocumentFragment для оптимизации
     const fragment = document.createDocumentFragment();
-    
+
     if (users.length === 0) {
         usersGrid.innerHTML = `
             <div style="text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1;">
@@ -684,14 +811,14 @@ function displayUsers(users) {
         `;
         return;
     }
-    
+
     users.forEach(user => {
         const userCard = document.createElement('div');
         userCard.className = 'user-card';
-        
+
         const createdDate = new Date(user.created_at);
         const formattedDate = createdDate.toLocaleDateString('ru-RU');
-        
+
         userCard.innerHTML = `
             <div style="width: 50px; height: 50px; background: linear-gradient(45deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
                 ${user.name.charAt(0)}
@@ -702,10 +829,10 @@ function displayUsers(users) {
                 <div style="color: #94a3b8; font-size: 0.8rem;">Зарегистрирован: ${formattedDate}</div>
             </div>
         `;
-        
+
         fragment.appendChild(userCard);
     });
-    
+
     usersGrid.innerHTML = '';
     usersGrid.appendChild(fragment);
 }
@@ -714,7 +841,7 @@ function updateStats(stats) {
     const totalUsersEl = document.getElementById('totalUsers');
     const activeUsersEl = document.getElementById('activeUsers');
     const usersValueEl = document.getElementById('usersValue');
-    
+
     if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
     if (activeUsersEl) activeUsersEl.textContent = stats.total_users || 0;
     if (usersValueEl) usersValueEl.textContent = stats.total_users || 0;
@@ -724,7 +851,7 @@ function updateStats(stats) {
 function fetchWithTimeout(url, timeout = 5000) {
     return Promise.race([
         fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now()),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Таймаут запроса')), timeout)
         )
     ]);
@@ -751,10 +878,10 @@ function clearCache() {
 
 function showBlockPage() {
     if (document.body.classList.contains('blocked')) return;
-    
+
     isBlocked = true;
     document.body.classList.add('blocked');
-    
+
     const html = `
         <div style="
             font-family: Arial, sans-serif;
@@ -795,36 +922,36 @@ function showBlockPage() {
             </div>
         </div>
     `;
-    
+
     document.body.innerHTML = html;
 }
 
 // ============================ ИНИЦИАЛИЗАЦИЯ ============================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('🚀 Инициализация приложения...');
-    
+
     // Инициализируем тему
     initTheme();
-    
+
     // Восстанавливаем ID клиента
     clientId = localStorage.getItem('usermanager_client_id') || generateClientId();
-    
+
     // Проверяем админский доступ
     checkAdminAccess();
-    
+
     // Обновляем интерфейс
     updateAdminButtons();
-    
+
     // Подключаем WebSocket
     connectWebSocket();
-    
+
     // Загружаем данные с небольшой задержкой
     setTimeout(() => {
         loadInitialData();
     }, 500);
-    
+
     // Добавляем обработчик перед закрытием страницы
-    window.addEventListener('beforeunload', function() {
+    window.addEventListener('beforeunload', function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'disconnect', clientId: clientId }));
         }

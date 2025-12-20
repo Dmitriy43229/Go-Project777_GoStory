@@ -508,6 +508,38 @@
             box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
             background: linear-gradient(45deg, #dc2626, #b91c1c);
         }
+
+        /* Кнопка переключения темы в стиле index.html */
+        .theme-toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #bbdefb;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            margin-left: 0.5rem;
+        }
+
+        body.light-theme .theme-toggle-btn {
+            background: rgba(0, 0, 0, 0.05);
+            color: #64748b;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        body.light-theme .theme-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 
@@ -557,6 +589,14 @@
                 <i class="fas fa-user-shield"></i>
                 <span>Вход администратора</span>
             </a>
+
+            <!-- Кнопка переключения темы (добавлена в стиле index.html) -->
+            <button class="theme-toggle-btn" onclick="toggleTheme()">
+                <i class="fas fa-moon" id="themeIcon"></i>
+                <span id="themeText">Темная тема</span>
+            </button>
+        </nav>
+
         </nav>
         <!-- Презентация -->
         <div class="presentation">
@@ -977,20 +1017,50 @@
             });
         });
 
+        // Функции для переключения темы (ДОБАВИТЬ ЭТО)
+        function initTheme() {
+            const savedTheme = localStorage.getItem('usermanager_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                updateThemeIcon(true);
+            } else {
+                document.body.classList.remove('light-theme');
+                updateThemeIcon(false);
+            }
+        }
 
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-theme');
+            localStorage.setItem('usermanager_theme', isLight ? 'light' : 'dark');
+            updateThemeIcon(isLight);
+        }
 
-// Обновляем обработчик DOMContentLoaded для presentation.html
-document.addEventListener('DOMContentLoaded', function () {
-    initTheme(); // Инициализируем тему
-    createStars();
-    updateModeButtons();
+        function updateThemeIcon(isLight) {
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            if (themeIcon && themeText) {
+                if (isLight) {
+                    themeIcon.className = 'fas fa-sun';
+                    themeText.textContent = 'Светлая тема';
+                } else {
+                    themeIcon.className = 'fas fa-moon';
+                    themeText.textContent = 'Темная тема';
+                }
+            }
+        }
 
-    // Анимация появления слайдов
-    const slides = document.querySelectorAll('.slide');
-    slides.forEach((slide, index) => {
-        slide.style.animationDelay = `${index * 0.2 + 0.1}s`;
-    });
-});
+        // Обновляем обработчик DOMContentLoaded для presentation.html
+        document.addEventListener('DOMContentLoaded', function () {
+            initTheme(); // Инициализируем тему
+            createStars();
+            updateModeButtons();
+
+            // Анимация появления слайдов
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach((slide, index) => {
+                slide.style.animationDelay = `${index * 0.2 + 0.1}s`;
+            });
+        });
 
     </script>
 </body>

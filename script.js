@@ -950,7 +950,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadInitialData();
     }, 500);
 
-    // Добавляем обработчик перед закрытием страницы
+    // Добавляем обработчик перед закрытием сuтраницы
     window.addEventListener('beforeunload', function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'disconnect', clientId: clientId }));

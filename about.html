@@ -445,26 +445,35 @@
 
         /* Переключатель темы */
         .theme-toggle-container {
-            margin-left: 1rem;
-        }
-
-        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            color: #bbdefb;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            color: #bbdefb;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: none;
             font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            margin-left: 0.5rem;
+            text-decoration: none;
         }
 
-        .theme-toggle:hover {
+        body.light-theme .theme-toggle-container {
+            background: rgba(0, 0, 0, 0.05);
+            color: #64748b;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-toggle-container:hover {
             background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        body.light-theme .theme-toggle-container:hover {
+            background: rgba(0, 0, 0, 0.1);
         }
 
         /* Кнопка администратора */

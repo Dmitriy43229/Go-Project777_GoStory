@@ -874,11 +874,15 @@ func apiHealthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	modeMutex.RLock()
+	currentMode := serverMode
+	modeMutex.RUnlock()
+	
 	healthStatus := map[string]interface{}{
 		"status":    "healthy",
 		"timestamp": time.Now().Unix(),
 		"version":   "1.0.0",
-		"mode":      serverMode,
+		"mode":      currentMode,
 		"clients":   len(clients),
 		"uptime":    time.Since(startTime).String(),
 		"memory_mb": getMemoryUsage(),

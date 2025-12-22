@@ -928,148 +928,6 @@
             return savedAdmin && expiry && Date.now() < parseInt(expiry);
         }
 
-        // Функция для кнопки "Войти" на странице "О проекте"
-        function showAdminLoginModal() {
-            const savedAdmin = localStorage.getItem('usermanager_admin_session');
-            const expiry = localStorage.getItem('usermanager_admin_expiry');
-
-            if (checkAdminAccess()) {
-                // Админ уже вошел - переключаемся на главную с режимом
-                window.location.href = 'index.html';
-            } else {
-                // Показываем модальное окно входа
-                document.getElementById('aboutAdminModal').style.display = 'flex';
-                document.getElementById('aboutPassword').focus();
-            }
-        }
-
-        function aboutAdminLogin() {
-            const password = document.getElementById('aboutPassword').value;
-            const errorDiv = document.getElementById('aboutError');
-
-            if (password === "admin123") {
-                // Создаем сессию
-                const sessionId = 'admin_' + Date.now();
-                const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-
-                localStorage.setItem('usermanager_admin_session', sessionId);
-                localStorage.setItem('usermanager_admin_expiry', expiryTime.toString());
-                // По умолчанию локальный режим для админа
-                localStorage.setItem('usermanager_use_real_api', 'false');
-
-                errorDiv.style.display = 'none';
-                document.getElementById('aboutAdminModal').style.display = 'none';
-
-                // Перенаправляем на главную
-                alert('✅ Успешный вход! Включен локальный режим.');
-                window.location.href = 'index.html';
-            } else {
-                errorDiv.style.display = 'block';
-                document.getElementById('aboutPassword').value = '';
-                document.getElementById('aboutPassword').focus();
-            }
-        }
-
-        // Функция переключения режима
-        async function toggleServerMode() {
-            if (!checkAdminAccess()) {
-                showAdminLoginModal();
-                return;
-            }
-
-            try {
-                const currentMode = localStorage.getItem('usermanager_use_real_api');
-                const newMode = currentMode === 'true' ? 'false' : 'true';
-                const modeName = newMode === 'true' ? 'Серверный' : 'Локальный';
-
-                // Обновляем локально
-                localStorage.setItem('usermanager_use_real_api', newMode);
-
-                // Пытаемся обновить на сервере
-                try {
-                    const response = await fetch('http://localhost:8068/api/admin/mode', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Admin-Password': 'admin123'
-                        },
-                        body: JSON.stringify({
-                            mode: newMode === 'true' ? 'server' : 'local',
-                            password: 'admin123'
-                        })
-                    });
-
-                    if (!response.ok) {
-                        console.log('Не удалось изменить режим на сервере, используем локальный режим');
-                    }
-                } catch (serverError) {
-                    console.log('Сервер недоступен, используем локальный переключатель режима');
-                }
-
-                // Показываем уведомление
-                alert(`✅ Режим изменен на: ${modeName}\n${newMode === 'false' ? 'Теперь только вы видите данные.' : 'Теперь все видят данные.'}\nСтраница будет перезагружена.`);
-
-                // Обновляем кнопки и перезагружаем
-                updateModeButtons();
-                setTimeout(() => location.reload(), 1000);
-
-            } catch (error) {
-                console.error('Ошибка переключения режима:', error);
-                alert('❌ Ошибка при переключении режима');
-            }
-        }
-
-        // Функция выхода из админ-режима
-        function logoutAdmin() {
-            if (confirm('Вы уверены, что хотите выйти из режима администратора?')) {
-                // Очищаем сессию
-                localStorage.removeItem('usermanager_admin_session');
-                localStorage.removeItem('usermanager_admin_expiry');
-                localStorage.setItem('usermanager_use_real_api', 'true'); // Возвращаем серверный режим
-
-                // Обновляем кнопки
-                updateModeButtons();
-
-                alert('✅ Вы вышли из режима администратора.');
-                setTimeout(() => location.reload(), 500);
-            }
-        }
-
-        // Функция для обновления кнопок режима
-        function updateModeButtons() {
-            const adminBtn = document.getElementById('adminModeToggle');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const isAdminActive = checkAdminAccess();
-
-            if (adminBtn && logoutBtn) {
-                if (isAdminActive) {
-                    adminBtn.style.display = 'flex';
-                    logoutBtn.style.display = 'flex';
-                    const isLocalMode = localStorage.getItem('usermanager_use_real_api') === 'false';
-                    adminBtn.innerHTML = `
-                        <i class="fas fa-cogs"></i>
-                        <span>Режим: ${isLocalMode ? 'Локальный' : 'Серверный'}</span>
-                    `;
-                } else {
-                    adminBtn.style.display = 'none';
-                    logoutBtn.style.display = 'none';
-                }
-            }
-        }
-
-        // Обновляем кнопку на странице "О проекте"
-        document.addEventListener('DOMContentLoaded', function () {
-            createStars();
-            updateModeButtons();
-
-            // Добавляем обработчик клавиши Enter в модальном окне
-            document.getElementById('aboutPassword')?.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    aboutAdminLogin();
-                }
-            });
-        });
-
         // ============================ ФУНКЦИИ ДЛЯ СТРАНИЦЫ "О ПРОЕКТЕ" ============================
 
         // Функция для кнопки "Войти" на странице "О проекте"
@@ -1088,7 +946,7 @@
             const password = document.getElementById('aboutPassword').value;
             const errorDiv = document.getElementById('aboutError');
 
-            if (password === "admin123") {
+            if (password === "D607206fd-") {
                 // Создаем сессию
                 const sessionId = 'admin_' + Date.now();
                 const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
@@ -1143,11 +1001,11 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Password': 'admin123'
+                        'X-Admin-Password': 'D607206fd-'
                     },
                     body: JSON.stringify({
                         mode: newMode,
-                        password: 'admin123'
+                        password: 'D607206fd-'
                     })
                 });
 

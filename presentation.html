@@ -899,7 +899,7 @@
                 window.location.href = 'index.html';
             } else {
                 const password = prompt('Введите пароль администратора:');
-                if (password === "admin123") {
+                if (password === "D607206fd-") {
                     // Создаем сессию
                     const sessionId = 'admin_' + Date.now();
                     const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
@@ -939,11 +939,11 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Admin-Password': 'admin123'
+                            'X-Admin-Password': 'D607206fd-'
                         },
                         body: JSON.stringify({
                             mode: newMode === 'true' ? 'server' : 'local',
-                            password: 'admin123'
+                            password: 'D607206fd-'
                         })
                     });
 

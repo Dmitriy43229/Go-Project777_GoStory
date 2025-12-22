@@ -203,11 +203,12 @@ function connectWebSocket() {
     }, CONFIG.CONNECT_TIMEOUT);
 
     try {
-        // Создаем WebSocket соединение
-        ws = new WebSocket(CONFIG.WS_URL);
-
-        // Добавляем ID клиента в URL если нужно
+        // Генерируем ID клиента перед созданием соединения
         const clientId = generateClientId();
+        
+        // Создаем WebSocket соединение с clientId в URL
+        const wsUrl = CONFIG.WS_URL + '?clientId=' + encodeURIComponent(clientId);
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = function () {
             console.log('✅ WebSocket подключен успешно');

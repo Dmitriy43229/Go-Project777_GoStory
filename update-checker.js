@@ -16,7 +16,7 @@ class UpdateChecker {
         
         try {
             // Проверяем версию на сервере
-            const response = await fetch('/version.php?t=' + Date.now());
+            const response = await fetch('/version.json?t=' + Date.now());
             if (response.ok) {
                 const serverVersion = await response.json();
                 

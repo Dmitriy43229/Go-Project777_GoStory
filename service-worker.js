@@ -7,7 +7,7 @@ const urlsToCache = [
     '/presentation.html',
     '/style.css',
     '/script.js',
-    '/main.go'
+    '/server.go'
 ];
 
 // Устанавливаем Service Worker и кешируем ресурсы
